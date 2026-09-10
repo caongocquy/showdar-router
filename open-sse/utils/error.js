@@ -28,8 +28,10 @@ export function buildErrorBody(statusCode, message) {
  * @param {string} message - Error message
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode, message) {
-  return new Response(JSON.stringify(buildErrorBody(statusCode, message)), {
+export function errorResponse(statusCode, message, metadata = null) {
+  const body = buildErrorBody(statusCode, message);
+  if (metadata) body.error.metadata = metadata;
+  return new Response(JSON.stringify(body), {
     status: statusCode,
     headers: {
       "Content-Type": "application/json",
@@ -108,12 +110,15 @@ export async function parseUpstreamError(response, executor = null) {
  * @returns {{ success: false, status: number, error: string, response: Response, resetsAtMs?: number }}
  */
 export function createErrorResult(statusCode, message, resetsAtMs) {
+  const metadata = Number.isFinite(Number(resetsAtMs))
+    ? { headers: { "X-RateLimit-Reset": String(resetsAtMs) } }
+    : null;
   return {
     success: false,
     status: statusCode,
     error: message,
     resetsAtMs,
-    response: errorResponse(statusCode, message)
+    response: errorResponse(statusCode, message, metadata)
   };
 }
 

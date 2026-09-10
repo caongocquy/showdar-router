@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { extractRetryDeadline } from "open-sse/services/retryMetadata.js";
-import { parseUpstreamError } from "open-sse/utils/error.js";
+import { createErrorResult, parseUpstreamError } from "open-sse/utils/error.js";
+import { RouteHealthState } from "open-sse/services/routeHealthState.js";
 
 const NOW = Date.parse("2026-09-10T00:00:00.000Z");
 
@@ -49,6 +50,31 @@ describe("retry metadata precedence", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("preserves the provider reset for route health after runtime error handling", async () => {
+    const parsed = await parseUpstreamError(new Response(JSON.stringify(
+      openRouterBody("X-RateLimit-Reset", "1789084800000"),
+    ), { status: 429, headers: { "content-type": "application/json" } }));
+    const runtimeError = createErrorResult(parsed.statusCode, parsed.message, parsed.resetsAtMs);
+    const routeError = await runtimeError.response.json();
+    const retryAt = extractRetryDeadline({ errorBody: routeError, now: NOW });
+    const route = new RouteHealthState({
+      async getAll() { return {}; },
+      async set() {},
+      async remove() {},
+      async clear() {},
+    });
+
+    const record = await route.recordFailure(
+      "openrouter/openai/gpt-oss-20b:free",
+      { routeState: "cooldown", reason: "quota", routeCooldownMs: 300_000, effectiveStatus: 429 },
+      retryAt,
+      NOW,
+    );
+
+    expect(record.nextProbeAt).toBe(new Date(1789084800000).toISOString());
+    expect(record.nextProbeAt).not.toBe(new Date(NOW + 300_000).toISOString());
   });
 
   it("falls through malformed or expired reset metadata safely", () => {

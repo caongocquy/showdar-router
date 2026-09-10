@@ -33,6 +33,14 @@ function open(url) {
   return spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
 }
 
+function dashboardUrl(port) {
+  return `http://localhost:${port}/dashboard`;
+}
+
+function getTrayChildArgs(args) {
+  return ["--tray", ...args.slice(1)];
+}
+
 function startTrayProcess({ cliPath, port }) {
   const child = spawn(process.execPath, [cliPath, "tray"], {
     detached: true,
@@ -46,18 +54,34 @@ function startTrayProcess({ cliPath, port }) {
 function runTray({ daemon, tray, appRoot, env = process.env, port = null, explicitPort = null, cliPath = path.resolve(__dirname, "..", "cli.js") }) {
   const current = ensureDaemon({ daemon, appRoot, env, port, explicitPort });
   const activePort = current.port || Number(env.SHOWDAR_ROUTER_PORT || env.PORT || daemon.DEFAULT_PORT || DEFAULT_PORT);
+  let instance;
+  const refresh = () => {
+    if (!instance?.sendAction) return;
+    const state = daemon.status({ appRoot, env });
+    const items = require("./cli/tray/tray").buildMenuItems(state.port || activePort, state.running);
+    return Promise.all([
+      instance.sendAction({ type: "update-item", seq_id: 1, item: items[1] }),
+      instance.sendAction({ type: "update-item", seq_id: 2, item: items[2] }),
+    ]);
+  };
   const options = {
     port: activePort,
     running: true,
-    onOpenDashboard: () => open(`http://localhost:${port}/dashboard`),
+    onOpenDashboard: () => open(dashboardUrl(activePort)),
     onOpenLogs: () => open(daemon.paths(env).logFile),
-    onRestart: () => daemon.restart
-      ? daemon.restart({ appRoot, serverPath: daemon.resolveServerPath(appRoot), env })
-      : (daemon.stop({ appRoot, env }), ensureDaemon({ daemon, appRoot, env })),
-    onStop: () => daemon.stop({ appRoot, env }),
-    onQuit: () => {},
+    onRestart: () => {
+      const result = daemon.restart
+        ? daemon.restart({ appRoot, serverPath: daemon.resolveServerPath(appRoot), env })
+        : (daemon.stop({ appRoot, env }), ensureDaemon({ daemon, appRoot, env }));
+      return Promise.resolve(result).then(refresh);
+    },
+    onStop: () => {
+      daemon.stop({ appRoot, env });
+      return refresh();
+    },
+    onQuit: () => daemon.stop({ appRoot, env }),
   };
-  const instance = tray.initTray(options);
+  instance = tray.initTray(options);
   if (!instance) throw new Error("System tray is unavailable on this platform.");
   return { ...current, tray: instance };
 }
@@ -81,4 +105,4 @@ async function runInteractive({ daemon, tray, appRoot, env = process.env, cliPat
   if (choice === 2) startTrayProcess({ cliPath: cliPath || path.resolve(__dirname, "..", "cli.js"), port });
 }
 
-module.exports = { DEFAULT_PORT, interfaceItems, getLaunchMode, ensureDaemon, runInteractive, runTray };
+module.exports = { DEFAULT_PORT, interfaceItems, getLaunchMode, ensureDaemon, runInteractive, runTray, dashboardUrl, getTrayChildArgs };

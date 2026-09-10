@@ -76,6 +76,12 @@ const MENU_INDEX = { TITLE: 0, STATUS: 1, URL: 2, DASHBOARD: 3, LOGS: 4, RESTART
  * Handle menu item click (shared logic)
  */
 function handleClick(index, options) {
+  if (typeof index === "object" && index !== null) {
+    const title = index.item?.title;
+    const titleIndex = buildMenuItems(options.port, options.running !== false)
+      .findIndex((item) => item.title === title);
+    index = titleIndex >= 0 ? titleIndex : index.seq_id;
+  }
   const { onQuit, onOpenDashboard, onOpenLogs, onRestart, onStop, port } = options;
   if (index === MENU_INDEX.DASHBOARD) {
     if (onOpenDashboard) onOpenDashboard();
@@ -85,9 +91,9 @@ function handleClick(index, options) {
   } else if (index === MENU_INDEX.RESTART) {
     if (onRestart) onRestart();
   } else if (index === MENU_INDEX.STOP) {
-    if (onStop) onStop();
+    return Promise.resolve(onStop && onStop()).finally(() => killTray().finally(() => process.exit(0)));
   } else if (index === MENU_INDEX.QUIT) {
-    Promise.resolve(onQuit && onQuit()).finally(() => killTray().finally(() => process.exit(0)));
+    return Promise.resolve(onQuit && onQuit()).finally(() => killTray().finally(() => process.exit(0)));
   }
 }
 
@@ -190,7 +196,7 @@ function initUnixTray(options) {
     isWinTray = false;
 
     trayInstance.onClick((action) => {
-      handleClick(action.seq_id, options);
+      handleClick(action, options);
     });
 
     if (isV2) {

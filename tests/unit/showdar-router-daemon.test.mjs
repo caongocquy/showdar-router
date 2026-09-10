@@ -71,6 +71,7 @@ describe("Showdar Router daemon", () => {
     expect(spawnArgs[1][0]).toContain("custom-server.js");
     expect(spawnArgs[1]).not.toContain("start");
     expect(spawnArgs[1]).not.toContain("dev");
+    expect(spawnArgs[1]).toContain("21298");
     expect(spawnArgs[2].env.PORT).toBe("21298");
     expect(spawnArgs[2].env.SHOWDAR_ROUTER_DATA_DIR).toBe(env.SHOWDAR_ROUTER_DATA_DIR);
     expect(spawnArgs[2].env.HOSTNAME).toBe("0.0.0.0");

@@ -97,8 +97,18 @@ if (requestedCommand === "interactive") {
 
 if (requestedCommand === "tray" || explicitCommand === "--tray" || explicitCommand === "-t") {
   try {
-    try { ensureTrayRuntime({ silent: false }); } catch { /* tray remains optional */ }
-    launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, port: portOption, explicitPort: portOption !== null, cliPath: __filename });
+    if (!env.SHOWDAR_ROUTER_TRAY_CHILD) {
+      const child = spawn(process.execPath, [__filename, ...launcher.getTrayChildArgs(args)], {
+        detached: true,
+        stdio: "ignore",
+        env: { ...env, SHOWDAR_ROUTER_TRAY_CHILD: "1" },
+      });
+      child.unref();
+      console.log("Showdar Router tray started in background");
+    } else {
+      try { ensureTrayRuntime({ silent: false }); } catch { /* tray remains optional */ }
+      launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, port: portOption, explicitPort: portOption !== null, cliPath: __filename });
+    }
   } catch (error) {
     console.error(`Showdar Router: ${error.message}`);
     process.exitCode = 1;
@@ -531,21 +541,6 @@ function killProcessOnPort(port) {
   });
 }
 
-
-// Detect if running in restricted environment (Codespaces, Docker)
-function isRestrictedEnvironment() {
-  // Check for Codespaces
-  if (process.env.CODESPACES === "true" || process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
-    return "GitHub Codespaces";
-  }
-
-  // Check for Docker
-  if (fs.existsSync("/.dockerenv") || (fs.existsSync("/proc/1/cgroup") && fs.readFileSync("/proc/1/cgroup", "utf8").includes("docker"))) {
-    return "Docker";
-  }
-
-  return null;
-}
 
 // Check if new version available, return latest version or null
 function checkForUpdate() {

@@ -1,125 +1,650 @@
-# Showdar Router - FREE AI Router & Token Saver
+<p align="center">
+  <img
+    src="assets/showdar-router-banner.png"
+    alt="Showdar Router"
+    width="100%"
+  />
+</p>
 
-**Never stop coding. Save 20-40% tokens with RTK + auto-fallback to FREE & cheap AI models.**
+<p align="center">
+  <strong>Local-first AI routing gateway for OpenCode and OpenAI-compatible clients.</strong>
+</p>
 
-**Connect All AI Code Tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini, OpenCode, Cline, OpenClaw...) to 40+ AI Providers & 100+ Models.**
-
-[![npm](https://img.shields.io/npm/v/showdar-router.svg)](https://www.npmjs.com/package/showdar-router)
-[![Downloads](https://img.shields.io/npm/dm/showdar-router.svg)](https://www.npmjs.com/package/showdar-router)
-[![Docker Pulls](https://img.shields.io/docker/pulls/decolua/showdar-router.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/showdar-router)
-[![GHCR](https://img.shields.io/badge/GHCR-decolua%2Fshowdar-router-blue?logo=github)](https://github.com/decolua/showdar-router/pkgs/container/showdar-router)
-[![License](https://img.shields.io/npm/l/showdar-router.svg)](https://github.com/decolua/showdar-router/blob/main/LICENSE)
-
-<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Fshowdar-router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-[🌐 Website](https://showdar-router.com) • [📖 Full Docs](https://github.com/decolua/showdar-router)
-
----
-
-## 🤔 Why Showdar Router?
-
-**Stop wasting money, tokens and hitting limits:**
-
-- ❌ Subscription quota expires unused every month
-- ❌ Rate limits stop you mid-coding
-- ❌ Tool outputs (git diff, grep, ls...) burn tokens fast
-- ❌ Expensive APIs ($20-50/month per provider)
-
-**Showdar Router solves this:**
-
-- ✅ **RTK Token Saver** - Auto-compress tool_result, save 20-40% tokens
-- ✅ **Maximize subscriptions** - Track quota, use every bit before reset
-- ✅ **Auto fallback** - Subscription → Cheap → Free, zero downtime
-- ✅ **Multi-account** - Round-robin between accounts per provider
-- ✅ **Universal** - Works with any OpenAI/Claude-compatible CLI
+<p align="center">
+  OpenAI-compatible · Health-aware routing · Ordered fallback · Local-first
+</p>
 
 ---
 
-## ⚡ Quick Start
+Showdar Router gives your AI tools a single local endpoint for multiple providers, credentials, models, and fallback combinations.
 
-**Option 1 — npm (recommended for desktop):**
+Configure your providers once, create a direct model or combo, then point OpenCode or any compatible client at:
+
+```text
+http://127.0.0.1:21298/v1
+```
+
+## Quick Start
+
+Install globally:
 
 ```bash
 npm install -g showdar-router
+```
+
+Launch:
+
+```bash
 showdar-router
-
-# Or run directly with npx
-npx showdar-router
 ```
 
-**Option 2 — Docker (server/VPS):**
+<p align="center">
+  <img
+    src="assets/showdar-router-terminal.png"
+    alt="Showdar Router interactive launcher"
+    width="900"
+  />
+</p>
+
+The interactive launcher lets you open the dashboard, use the terminal UI, or keep Showdar Router running from the system tray.
+
+Default dashboard:
+
+```text
+http://localhost:21298
+```
+
+## Why Showdar Router?
+
+Instead of configuring every AI client against every provider separately:
+
+```mermaid
+flowchart LR
+    A[OpenCode / AI Client] --> B[Showdar Router]
+
+    B --> C[Direct Model]
+    B --> D[Combo]
+
+    D --> E[Model 1]
+    D --> F[Model 2]
+    D --> G[Model 3]
+
+    C --> H[Providers]
+    E --> H
+    F --> H
+    G --> H
+```
+
+Showdar Router acts as the local routing layer between your tools and upstream providers.
+
+It provides:
+
+- One OpenAI-compatible local API.
+- Multiple providers and credentials.
+- Direct model routing.
+- Ordered model combos with fallback.
+- Health-aware cooldown and recovery.
+- Provider and account fallback where supported.
+- Retry and provider reset metadata handling.
+- Usage and quota visibility where available.
+- Web dashboard, CLI, terminal UI, and system tray.
+
+## Routing
+
+Combo candidates always preserve their configured order.
+
+For example:
+
+```text
+coding-fast
+
+1. gemini/gemini-3.7-flash
+2. gemini/gemini-3.6-flash
+3. ollama/minimax-m3
+4. nvidia/nemotron-3-ultra-550b-a55b
+5. openrouter/...
+6. opencode/...
+```
+
+If a route becomes temporarily unavailable:
+
+```mermaid
+flowchart TD
+    A[Request] --> B{Route health}
+
+    B -->|Healthy| C[Try route]
+    B -->|Cooldown| D[Skip route]
+    B -->|Half-open| E[Single probe]
+
+    C --> F{Success?}
+    E --> F
+
+    F -->|Yes| G[Recover route]
+    F -->|No| H[Classify failure]
+
+    H --> I[Apply cooldown]
+    I --> J[Next combo candidate]
+
+    D --> J
+```
+
+Showdar Router can classify and recover from conditions such as:
+
+- quota exhaustion
+- subscription requirements
+- authentication failures
+- unsupported models
+- missing models
+- provider capacity
+- network failures
+- timeouts
+
+Where available, provider recovery metadata such as `Retry-After`, retry delays, and reset timestamps is used instead of repeatedly probing a route that is known to be unavailable.
+
+Showdar Router does **not** reorder combo candidates based on latency.
+
+## Port Selection
+
+The default port is:
+
+```text
+21298
+```
+
+Normally:
+
+```text
+Dashboard  http://localhost:21298
+API        http://127.0.0.1:21298/v1
+```
+
+### Automatic fallback
+
+If the default port is already occupied and you did not explicitly select a port, Showdar Router automatically searches the next available port.
+
+Example:
+
+```console
+$ showdar-router start
+
+⚠ Port 21298 is already in use
+✓ Using fallback port 21299
+
+Dashboard  http://localhost:21299
+API        http://127.0.0.1:21299/v1
+```
+
+The search starts at `21298` and checks up to ten candidate ports.
+
+Check the active port at any time:
 
 ```bash
-docker run -d --name showdar-router -p 21298:21298 \
-  -v "$HOME/.showdar-router:/app/data" -e DATA_DIR=/app/data \
-  decolua/showdar-router:latest
+showdar-router status
 ```
 
-Published images: [Docker Hub](https://hub.docker.com/r/decolua/showdar-router) • [GHCR](https://github.com/decolua/showdar-router/pkgs/container/showdar-router) (multi-platform amd64/arm64).
+### Explicit port
 
-🎉 Dashboard opens at `http://localhost:21298`
-
-**2. Connect a FREE provider (no signup needed):**
-
-Dashboard → Providers → Connect **Kiro AI** (free Claude unlimited) or **OpenCode Free** (no auth) → Done!
-
-**3. Use in your CLI tool:**
-
-```
-Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
-  Endpoint: http://localhost:21298/v1
-  API Key:  [copy from dashboard]
-  Model:    kr/claude-sonnet-4.5
-```
-
-That's it! Start coding with FREE AI models.
-
----
-
-## 🚀 CLI Options
+Use `--port` or `-p` when you need a stable port:
 
 ```bash
-showdar-router                    # Start with default settings
-showdar-router --port 8080        # Custom port
-showdar-router --no-browser       # Don't open browser
-showdar-router --skip-update      # Skip auto-update check
-showdar-router --help             # Show all options
+showdar-router --port 30000
 ```
 
-**Dashboard**: `http://localhost:21298/dashboard`
+If `30000` is already occupied, startup fails:
 
----
+```text
+Error: Port 30000 is already in use.
+```
 
-## 🛠️ Supported CLI Tools
+Showdar Router will **not** silently switch away from an explicitly requested port.
 
-Claude-Code • OpenClaw • Codex • OpenCode • Cursor • Antigravity • Cline • Continue • Droid • Roo • Copilot • Kilo Code • Gemini CLI • Qwen Code • iFlow • Crush • Crusher • Aider
+This prevents client configuration from unexpectedly pointing at the wrong endpoint.
 
-Any tool supporting OpenAI/Claude-compatible API works.
+## OpenCode Setup
 
----
+Start Showdar Router:
 
-## 💾 Data Location
+```bash
+showdar-router
+```
 
-- **macOS/Linux**: `~/.showdar-router/db/data.sqlite`
-- **Windows**: `%APPDATA%/showdar-router/db/data.sqlite`
-- **Docker**: `/app/data/db/data.sqlite` (mount `$HOME/.showdar-router` to persist)
+Configure at least one provider and model or combo from the dashboard.
 
----
+Then configure your OpenAI-compatible client to use:
 
-## 📚 Documentation
+```text
+http://127.0.0.1:21298/v1
+```
 
-Full docs, advanced setup, video tutorials & development guide:
+For example, if your combo is named:
 
-- **GitHub**: https://github.com/decolua/showdar-router
-- **Full README**: https://github.com/decolua/showdar-router/blob/main/app/README.md
-- **Website**: https://showdar-router.com
+```text
+coding-fast
+```
 
----
+use `coding-fast` as the model identifier from your client.
 
-## 🙏 Acknowledgments
+If Showdar Router selected a fallback port:
 
-- **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** - Original Go implementation
+```console
+$ showdar-router status
 
-## 📄 License
+Showdar Router: running
+URL: http://localhost:21299
+```
 
-MIT License - see [LICENSE](LICENSE) for details.
+use:
+
+```text
+http://127.0.0.1:21299/v1
+```
+
+instead.
+
+### Router API key
+
+Provider credentials and the Showdar Router client API key are separate concepts.
+
+When **Require API Key** is disabled, trusted clients running locally can access the local LLM endpoint without a Showdar Router API key.
+
+When **Require API Key** is enabled, clients must provide a valid Showdar Router key.
+
+Example client options:
+
+```json
+{
+  "baseURL": "http://127.0.0.1:21298/v1",
+  "apiKey": "sk-showdar-example"
+}
+```
+
+Never commit real provider credentials or router API keys.
+
+## Interactive Launcher
+
+Running:
+
+```bash
+showdar-router
+```
+
+from an interactive terminal opens the launcher:
+
+```text
+╭─────────────────────────────────────────────╮
+│ Showdar Router                              │
+│ Server  http://localhost:21298              │
+├─────────────────────────────────────────────┤
+│ › Web UI                                    │
+│   Terminal UI                               │
+│   Hide to Tray                              │
+│   Exit                                      │
+╰─────────────────────────────────────────────╯
+```
+
+Available interfaces:
+
+**Web UI** opens the dashboard in your browser.
+
+**Terminal UI** opens the interactive CLI.
+
+**Hide to Tray** keeps the daemon running and attaches the system tray controller.
+
+**Exit** closes the launcher without stopping an already-running daemon.
+
+In non-interactive environments, running without arguments starts the daemon directly.
+
+## CLI
+
+Start the server:
+
+```bash
+showdar-router start
+```
+
+Stop it:
+
+```bash
+showdar-router stop
+```
+
+Restart it:
+
+```bash
+showdar-router restart
+```
+
+Check status and the actual active port:
+
+```bash
+showdar-router status
+```
+
+Read logs:
+
+```bash
+showdar-router logs
+```
+
+Follow logs:
+
+```bash
+showdar-router logs -f
+```
+
+Open the tray controller:
+
+```bash
+showdar-router tray
+```
+
+or:
+
+```bash
+showdar-router --tray
+showdar-router -t
+```
+
+Use a custom port:
+
+```bash
+showdar-router --port 30000
+```
+
+Version:
+
+```bash
+showdar-router version
+```
+
+Help:
+
+```bash
+showdar-router help
+```
+
+## System Tray
+
+The tray is a lightweight control plane for the existing Showdar Router daemon.
+
+It does **not** launch a second server.
+
+Typical tray actions include:
+
+```text
+Showdar Router
+────────────────────
+Running · :21298
+
+Open Dashboard
+Open Logs
+Restart Server
+Stop Server
+────────────────────
+Quit Tray
+```
+
+`Quit Tray` closes only the tray process.
+
+`Stop Server` explicitly stops the Showdar Router daemon.
+
+If the daemon is using an automatic fallback port, the tray resolves and displays the actual active port.
+
+## Dashboard
+
+The dashboard provides configuration and visibility for the current Showdar Router runtime.
+
+Main areas include:
+
+| Area                   | Purpose                                        |
+| ---------------------- | ---------------------------------------------- |
+| Endpoint & Key         | Local endpoint and client access               |
+| Providers              | Provider connections and credentials           |
+| Combo & Vision Adapter | Model combinations and routing                 |
+| Usage                  | Request and token usage                        |
+| Quota Tracker          | Provider quota information                     |
+| Token Saver            | Token optimization controls                    |
+| CLI Tools              | CLI integrations and configuration             |
+| Media Providers        | Embedding, image, video, TTS, STT and web APIs |
+| Proxy Pools            | Proxy configuration                            |
+| Console Log            | Runtime logs                                   |
+| Settings               | Router configuration                           |
+
+Availability depends on the provider and enabled features.
+
+## Health-Aware Recovery
+
+Showdar Router keeps route health separate from credential/account health.
+
+A route can transition through:
+
+```text
+healthy
+   │
+   ▼
+cooldown
+   │
+   ▼
+half-open
+   │
+   ├── success ──► healthy
+   │
+   └── failure ──► cooldown
+```
+
+Only one half-open probe is allowed for a recovering route at a time.
+
+When a provider returns an explicit recovery hint, Showdar Router can use information such as:
+
+```text
+resetAt
+resetsAt
+Retry-After
+retryDelay
+retryAfter
+X-RateLimit-Reset
+```
+
+before falling back to bounded internal cooldown behavior.
+
+This avoids repeatedly calling providers that have already communicated when they will become available again.
+
+## Empty Response Fallback
+
+An HTTP `200` response does not necessarily mean a usable chat completion was produced.
+
+For streaming chat requests, a response with no meaningful content, reasoning, or tool frames can be treated as a failed route.
+
+The combo may then continue to the next candidate instead of returning an empty successful response to the client.
+
+## Security
+
+Showdar Router distinguishes trusted local requests from remote requests.
+
+Disabling **Require API Key** is intended for trusted local access. It does not automatically make LAN, tunnel, reverse-proxy, or public traffic trusted.
+
+Production requests pass through:
+
+```mermaid
+flowchart LR
+    A[OpenCode / Client] --> B[Showdar Router daemon]
+    B --> C[Trusted peer wrapper]
+    C --> D[Next standalone server]
+    D --> E[API / Dashboard]
+```
+
+The wrapper derives trusted local-peer information from the actual connection rather than blindly trusting client-supplied host or forwarding headers.
+
+Spoofing headers such as a localhost host name or loopback forwarded address is not sufficient to gain trusted-local status.
+
+For remote client access, enable **Require API Key** and configure network exposure deliberately.
+
+Do not expose an unsecured Showdar Router API directly to the public internet.
+
+## Data & Runtime
+
+Default data directory:
+
+```text
+~/.showdar-router
+```
+
+Runtime state:
+
+```text
+~/.showdar-router/run/
+```
+
+Default PID file:
+
+```text
+~/.showdar-router/run/showdar-router.pid
+```
+
+Logs:
+
+```text
+~/.showdar-router/logs/showdar-router.log
+```
+
+The runtime state also tracks the actual active port when automatic port fallback is used.
+
+## Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run in development:
+
+```bash
+npm run dev
+```
+
+Build production assets:
+
+```bash
+npm run build
+```
+
+Install the local CLI from the checkout:
+
+```bash
+./scripts/install-local.sh
+```
+
+Then:
+
+```bash
+showdar-router
+```
+
+Docker is not required for the supported Showdar Router runtime.
+
+## Environment
+
+Canonical Showdar Router environment variables include:
+
+```text
+SHOWDAR_ROUTER_PORT
+SHOWDAR_ROUTER_DATA_DIR
+```
+
+Defaults:
+
+```text
+SHOWDAR_ROUTER_PORT=21298
+SHOWDAR_ROUTER_DATA_DIR=~/.showdar-router
+```
+
+CLI arguments take precedence where applicable.
+
+## Testing
+
+Run the focused routing release gate:
+
+```bash
+npm run test:routing
+```
+
+It covers the fork's critical routing behavior, including:
+
+- combo fallback
+- route health
+- recovery metadata
+- account/provider fallback
+- retry behavior
+- empty response handling
+
+Run the production runtime smoke test:
+
+```bash
+npm run test:runtime
+```
+
+Build from a clean Next output:
+
+```bash
+rm -rf .next
+npm run build
+```
+
+The inherited upstream broad test suite can also be run with:
+
+```bash
+npm test
+```
+
+The broad inherited suite is not represented as the primary Showdar Router release gate.
+
+## Supported Runtime
+
+The primary user flow is:
+
+```text
+npm install -g showdar-router
+        │
+        ▼
+   showdar-router
+        │
+        ▼
+ CLI / Launcher / Tray
+        │
+        ▼
+       Daemon
+        │
+        ▼
+ Trusted peer wrapper
+        │
+        ▼
+ Next standalone server
+        │
+        ▼
+ OpenAI-compatible API
+```
+
+The supported distribution target is the local npm/CLI installation.
+
+## Upstream
+
+Showdar Router is an independent fork and evolution of [decolua/9router](https://github.com/decolua/9router).
+
+The project preserves upstream attribution and compatibility where appropriate while maintaining its own product identity, runtime, routing behavior, and release process.
+
+Showdar Router is not affiliated with OpenAI, OpenCode, Anthropic, Google, NVIDIA, Ollama, OpenRouter, or other providers referenced by the project.
+
+## License
+
+Licensed under the [MIT License](https://github.com/caongocquy/showdar-router/blob/main/LICENSE).
+
+Showdar Router is based on 9router by decolua. Upstream copyright and
+license notices are preserved.

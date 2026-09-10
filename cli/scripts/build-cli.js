@@ -23,6 +23,7 @@ const EXCLUDE_PATTERNS = [
   "*.log",          // Log files
   "tmp",            // Temp files
   ".DS_Store",      // macOS files
+  ".build-home",    // Build-time HOME directory (contains SQLite, JWT secrets)
 ];
 
 function shouldExclude(name) {

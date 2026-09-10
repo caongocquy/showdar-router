@@ -74,13 +74,15 @@ function DonateChannelCard({ channel }) {
         <div className="text-xs text-text-muted mb-3 text-center">{description}</div>
       )}
       {qr && (
-        <img
-          src={qr}
-          alt={`${label} QR`}
-          className="w-full max-w-[180px] aspect-square object-contain rounded-lg bg-white p-1"
-        loading="lazy"
-        decoding="async"
-        />
+        <div className="w-[180px] h-[180px] overflow-hidden rounded-lg bg-white">
+          <img
+            src={qr}
+            alt={`${label} QR`}
+            className="w-full aspect-square object-contain scale-[3]"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
       )}
     </>
   );

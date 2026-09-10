@@ -147,7 +147,7 @@ function start({ appRoot, serverPath, env = process.env, port = null, explicitPo
 
   fs.closeSync(fs.openSync(state.logFile, "a"));
   const log = fs.openSync(state.logFile, "a");
-  const child = spawnImpl(process.execPath, [serverPath, "--port", String(port)], {
+  const child = spawnImpl(process.execPath, [serverPath, "--port", String(actualPort)], {
     cwd: appRoot,
     detached: true,
     stdio: ["ignore", log, log],

@@ -1,15 +1,16 @@
 {
   "name": "showdar-router",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Showdar Router CLI - Start and manage the Showdar Router server",
   "bin": {
-    "showdar-router": "./cli.js"
+    "showdar-router": "cli.js"
   },
   "files": [
     "cli.js",
     "src",
     "hooks",
     "app",
+    "assets",
     "README.md",
     "LICENSE"
   ],
@@ -38,9 +39,22 @@
     "cli",
     "proxy",
     "ai",
-    "api"
+    "api",
+    "llm",
+    "openai",
+    "anthropic",
+    "gateway"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caongocquy/showdar-router.git"
+  },
+  "homepage": "https://github.com/caongocquy/showdar-router",
+  "bugs": {
+    "url": "https://github.com/caongocquy/showdar-router/issues"
+  },
+  "author": "caongocquy",
   "devDependencies": {
     "esbuild": "^0.25.12",
     "nodemon": "^3.1.14"
