@@ -22,4 +22,20 @@ describe("fusion cancellation and reuse", () => {
     await handleFusionChat({ body: { messages: [{ role: "user", content: "q" }] }, models: ["p/a", "p/b", "p/slow"], handleSingleModel: call, log, judgeModel: "p/judge", tuning: { stragglerGraceMs: 1, panelHardTimeoutMs: 1000 } });
     expect(aborted).toBe(true);
   });
+
+  it("does not dequeue new panel work after quorum", async () => {
+    const started = [];
+    const call = vi.fn(async (_body, model) => {
+      started.push(model);
+      if (model === "p/a" || model === "p/b") return response(model);
+      return new Promise((resolve) => setTimeout(() => resolve(response(model)), 200));
+    });
+    await handleFusionChat({
+      body: { messages: [{ role: "user", content: "q" }] },
+      models: ["p/a", "p/b", "p/c", "p/d", "p/e", "p/f", "p/g", "p/h"],
+      handleSingleModel: call, log, judgeModel: "p/judge",
+      tuning: { minPanel: 2, maxConcurrent: 4, stragglerGraceMs: 1, panelHardTimeoutMs: 1000 },
+    });
+    expect(started.filter((model) => model !== "p/judge")).toEqual(["p/a", "p/b", "p/c", "p/d"]);
+  });
 });

@@ -8,7 +8,7 @@ import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
 import { planComboCandidates } from "./comboPlanner.js";
-import { scheduleComboModels, resetComboRoundRobin } from "./comboRoundRobin.js";
+import { scheduleComboModels, selectComboModels, commitComboPrimary, resetComboRoundRobin } from "./comboRoundRobin.js";
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
 // stripped). Must be prioritized. Soft (e.g. search) only degrades a feature.
@@ -256,12 +256,13 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
     return new Response(JSON.stringify({ error: { message: `No combo model supports required capabilities: ${plan.missingCapabilities.join(", ")}` } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   let rotatedModels = comboStrategy === "round-robin"
-    ? getRotatedModels(plan.models, comboName, comboStrategy, comboStickyLimit)
+    ? selectComboModels(plan.models, models, comboName)
     : plan.models;
   
   let lastError = null;
   let earliestRetryAfter = plan.skipped.reduce((earliest, item) => item.nextProbeAt && (!earliest || new Date(item.nextProbeAt) < new Date(earliest)) ? item.nextProbeAt : earliest, null);
   let lastStatus = null;
+  let primaryCommitted = false;
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
@@ -281,6 +282,10 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       }
     }
 
+    if (comboStrategy === "round-robin" && !primaryCommitted) {
+      commitComboPrimary(modelStr, models, comboName, comboStickyLimit);
+      primaryCommitted = true;
+    }
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
@@ -518,20 +523,22 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
       resolve(out);
     };
     const pump = () => {
-      if (done) return;
+      if (done || graceTimer) return;
       while (active < concurrency && next < models.length) {
         const i = next++;
         active++;
         Promise.resolve(invoke(models[i], controller.signal))
-          .then((v) => { out[i] = v; })
+          .then((v) => {
+            out[i] = v;
+            if (v?.kind === "success") {
+              ok++;
+              if (ok >= minPanel && !graceTimer) graceTimer = setTimeout(finish, stragglerGraceMs);
+            }
+          })
           .catch((e) => { out[i] = { __error: e }; })
           .finally(() => {
             active--; settled++;
-            if (out[i]?.ok) ok++;
-            if (settled === models.length || (ok >= minPanel && !graceTimer)) {
-              if (ok >= minPanel && settled !== models.length) graceTimer = setTimeout(finish, stragglerGraceMs);
-              else if (settled === models.length) finish();
-            }
+            if (settled === models.length) finish();
             pump();
           });
       }
@@ -539,6 +546,22 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
     const hardTimer = setTimeout(finish, panelHardTimeoutMs);
     pump();
   });
+}
+
+async function replayPanelResponse(response, body) {
+  if (body?.stream !== true) return response;
+  let json;
+  try { json = await response.clone().json(); } catch { return response; }
+  const choice = json?.choices?.[0] || {};
+  const message = choice.message || {};
+  const id = json.id || `chatcmpl-${Date.now()}`;
+  const chunks = [
+    { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }] },
+    { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: typeof message.content === "string" ? message.content : "" }, finish_reason: null }] },
+    { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: choice.finish_reason || "stop" }] },
+  ];
+  const payload = `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`;
+  return new Response(payload, { status: response.status, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
 }
 
 /**
@@ -617,13 +640,26 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     }
     const result = await handleSingleModel(panelBody, model, true, { signal });
     if (signal.aborted) return result;
+    if (!result?.ok) {
+      await onModelFailure?.(model, { status: result?.status || 502, errorText: "Fusion panel failed" });
+      return { kind: "failure", model, response: result };
+    }
+    let text;
     try {
-      if (result?.ok) await onModelSuccess?.(model);
-      else await onModelFailure?.(model, { status: result?.status || 502, errorText: "Fusion panel failed" });
+      text = extractPanelText(await result.clone().json());
+    } catch {
+      text = "";
+    }
+    if (!text) {
+      await onModelFailure?.(model, { status: 502, errorText: "Empty or invalid successful chat response" });
+      return { kind: "failure", model, response: result, errorText: "Empty or invalid successful chat response" };
+    }
+    try {
+      await onModelSuccess?.(model);
     } catch (healthError) {
       log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
     }
-    return result;
+    return { kind: "success", model, response: result, text };
   }, { ...cfg, minPanel, parentSignal: requestSignal });
   log.info("FUSION", `fan-out collected in ${Date.now() - t0}ms`);
 
@@ -635,19 +671,9 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     if (!res) { log.warn("FUSION", `Panel ${model} dropped (straggler/timeout)`); continue; }
     if (res.__timeout) { log.warn("FUSION", `Panel ${model} timed out`); continue; }
     if (res.__error) { log.warn("FUSION", `Panel ${model} threw`, { error: res.__error?.message || String(res.__error) }); continue; }
-    if (!res.ok) { log.warn("FUSION", `Panel ${model} failed`, { status: res.status }); continue; }
-    try {
-      const json = await res.clone().json();
-      const text = extractPanelText(json);
-      if (text) {
-        answers.push({ model, text });
-        log.info("FUSION", `Panel ${model} ok (${text.length} chars)`);
-      } else {
-        log.warn("FUSION", `Panel ${model} returned empty content`);
-      }
-    } catch (e) {
-      log.warn("FUSION", `Panel ${model} unparseable`, { error: e.message || String(e) });
-    }
+    if (res.kind !== "success") { log.warn("FUSION", `Panel ${model} failed`); continue; }
+    answers.push({ model, text: res.text, response: res.response });
+    log.info("FUSION", `Panel ${model} ok (${res.text.length} chars)`);
   }
 
   // 3. Degrade gracefully when the panel is too thin to fuse.
@@ -660,19 +686,44 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }
   if (answers.length === 1) {
     log.info("FUSION", `Only ${answers[0].model} succeeded — answering directly (no fusion)`);
-    return settled[panel.indexOf(answers[0].model)];
+    return replayPanelResponse(answers[0].response, body);
   }
 
   // 4. Judge analyzes + writes one final answer (streams to client if requested).
   const judgeBody = appendUserTurn(body, buildJudgePrompt(answers));
   const judges = [judge, ...panel.filter((model) => model !== judge)];
+  let judgeRetryAfter = null;
   log.info("FUSION", `Judging ${answers.length} answers with ${judge}`);
   for (const candidate of judges) {
     const decision = beforeModelAttempt ? await beforeModelAttempt(candidate) : { skip: false };
     if (decision?.skip) continue;
     const result = await handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal });
-    if (result?.ok) return result;
-    if (onModelFailure) await onModelFailure(candidate, { status: result?.status || 502, errorText: "Fusion judge failed" });
+    if (requestSignal?.aborted || result?.status === 499) return result;
+    if (result?.ok) {
+      let meaningful = false;
+      try { meaningful = !!extractPanelText(await result.clone().json()); } catch { /* invalid success */ }
+      if (meaningful) {
+        await onModelSuccess?.(candidate);
+        return result;
+      }
+      await onModelFailure?.(candidate, { status: 502, errorText: "Empty or invalid successful chat response" });
+      continue;
+    }
+    let errorText = result?.statusText || "Fusion judge failed";
+    let errorBody = null;
+    try {
+      errorBody = await result.clone().json();
+      errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
+    } catch { /* non-JSON provider error */ }
+    const retryAfter = extractRetryDeadline({
+      retryAfterHeader: result?.headers?.get?.("retry-after") || null,
+      errorBody,
+      errorText,
+    });
+    if (retryAfter && (!judgeRetryAfter || new Date(retryAfter) < new Date(judgeRetryAfter))) judgeRetryAfter = retryAfter;
+    await onModelFailure?.(candidate, { status: result?.status || 502, errorText: String(errorText), retryAfter });
+    if (!checkFallbackError(result?.status || 502, String(errorText)).shouldFallback) return result;
   }
+  if (judgeRetryAfter) return unavailableResponse(503, "All fusion judge models failed", judgeRetryAfter, formatRetryAfter(judgeRetryAfter));
   return new Response(JSON.stringify({ error: { message: "All fusion judge models failed" } }), { status: 503, headers: { "Content-Type": "application/json" } });
 }

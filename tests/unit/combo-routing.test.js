@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { getRotatedModels, resetComboRotation } from "../../open-sse/services/combo.js";
+import { getRotatedModels, resetComboRotation, handleComboChat } from "../../open-sse/services/combo.js";
 
 describe("combo round-robin routing", () => {
   beforeEach(() => {
@@ -54,5 +54,14 @@ describe("combo round-robin routing", () => {
 
     expect(getRotatedModels(models, "code-xhigh", "fallback", 2)).toEqual(models);
     expect(getRotatedModels(models, "code-xhigh", "fallback", 2)).toEqual(models);
+  });
+
+  it("keeps the logical cursor when eligibility shrinks and expands", async () => {
+    const seen = [];
+    const run = (models) => handleComboChat({ body: {}, models, comboName: "dynamic", comboStrategy: "round-robin", handleSingleModel: async (_body, model) => { seen.push(model); return new Response("ok", { status: 200 }); }, log: { info() {}, warn() {} } });
+    await run(["p/a", "p/b", "p/c"]);
+    await run(["p/b", "p/c"]);
+    await run(["p/a", "p/b", "p/c"]);
+    expect(seen).toEqual(["p/a", "p/b", "p/c"]);
   });
 });

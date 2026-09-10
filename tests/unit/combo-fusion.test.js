@@ -17,6 +17,10 @@ function errResponse(status = 500) {
   return make();
 }
 
+function realResponse(content) {
+  return new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content } }] }), { headers: { "content-type": "application/json" } });
+}
+
 describe("fusion combo", () => {
   it("answers directly with a single-model panel (nothing to fuse)", async () => {
     const handleSingleModel = vi.fn(async () => okResponse("solo"));
@@ -212,5 +216,19 @@ describe("fusion combo", () => {
     
     // Flattened tool_result
     expect(panelBody.messages[2].content).toBe("[Tool result: done]");
+  });
+
+  it("does not count an empty HTTP 200 toward quorum and replays a lone answer as SSE", async () => {
+    const calls = vi.fn(async (_body, model) => model === "p/empty" ? realResponse("") : realResponse("answer"));
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }], stream: true },
+      models: ["p/empty", "p/answer"], handleSingleModel: calls, log,
+      tuning: { stragglerGraceMs: 1, panelHardTimeoutMs: 1000 }
+    });
+    expect(calls).toHaveBeenCalledTimes(2);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    const text = await res.text();
+    expect(text).toContain('"content":"answer"');
+    expect(text.endsWith("data: [DONE]\n\n")).toBe(true);
   });
 });
