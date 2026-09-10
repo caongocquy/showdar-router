@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish-npm:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+      publish_status: ${{ steps.publish.outputs.status }}
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Use Trusted Publishing-compatible npm
+        run: |
+          npm install --global npm@11.5.1
+          node --version
+          npm --version
+
+      - name: Validate tag and package metadata
+        id: metadata
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Invalid release tag: $TAG" >&2
+            exit 1
+          }
+
+          tag_version="${TAG#v}"
+          package_version="$(node -p "require('./cli/package.json').version")"
+          package_name="$(node -p "require('./cli/package.json').name")"
+          bin_path="$(node -p "require('./cli/package.json').bin['showdar-router']")"
+
+          [[ "$tag_version" == "$package_version" ]] || {
+            echo "Tag $tag_version does not match cli/package.json $package_version" >&2
+            exit 1
+          }
+          [[ "$package_name" == "showdar-router" ]] || {
+            echo "Unexpected package name: $package_name" >&2
+            exit 1
+          }
+          [[ "$bin_path" == "cli.js" ]] || {
+            echo "Unexpected showdar-router bin target: $bin_path" >&2
+            exit 1
+          }
+
+          echo "version=$tag_version" >> "$GITHUB_OUTPUT"
+
+      - name: Install repository dependencies
+        run: |
+          npm install --no-package-lock
+          npm --prefix cli install --no-package-lock --ignore-scripts
+
+      - name: Run focused release verification
+        run: |
+          npx vitest run \
+            tests/unit/launcher-tray.test.mjs \
+            tests/unit/showdar-router-daemon.test.mjs \
+            tests/unit/retry-metadata.test.js \
+            tests/unit/donate-modal.test.js
+
+      - name: Build and validate npm package
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm run build
+          npm pack --dry-run --json > /tmp/showdar-router-pack.json
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const pack = JSON.parse(fs.readFileSync("/tmp/showdar-router-pack.json", "utf8"))[0];
+          const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const files = new Set(pack.files.map((file) => file.path));
+          if (manifest.version !== process.env.VERSION) throw new Error("Package version changed during build");
+          for (const file of [
+            "cli.js",
+            "app/custom-server.js",
+            "app/server.js",
+            "assets/showdar-router-banner.png",
+            "assets/showdar-router-terminal.png",
+            "README.md",
+            "LICENSE",
+          ]) {
+            if (!files.has(file)) throw new Error(`Missing package file: ${file}`);
+          }
+          console.log(JSON.stringify({ name: pack.name, version: pack.version, size: pack.size, unpackedSize: pack.unpackedSize, files: pack.entryCount }));
+          NODE
+
+      - name: Publish or confirm existing npm version
+        id: publish
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          query_file="$(mktemp)"
+          error_file="$(mktemp)"
+          set +e
+          npm view "showdar-router@$VERSION" version --json > "$query_file" 2> "$error_file"
+          query_status=$?
+          set -e
+
+          if [[ "$query_status" -eq 0 ]]; then
+            published_version="$(node -p "JSON.parse(require('fs').readFileSync('$query_file', 'utf8'))")"
+            [[ "$published_version" == "$VERSION" ]] || {
+              echo "Registry returned unexpected version: $published_version" >&2
+              exit 1
+            }
+            echo "status=already-exists" >> "$GITHUB_OUTPUT"
+            echo "showdar-router@$VERSION already exists; skipping publish"
+          elif grep -qiE 'E404|404 Not Found|not found' "$error_file"; then
+            npm publish --access public --provenance
+            echo "status=published" >> "$GITHUB_OUTPUT"
+          else
+            cat "$error_file" >&2
+            exit "$query_status"
+          fi
+
+  github-release:
+    name: Create GitHub Release
+    needs: publish-npm
+    if: ${{ needs.publish-npm.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create or confirm GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Invalid release tag: $TAG" >&2
+            exit 1
+          }
+
+          release_file="$(mktemp)"
+          if gh release view "$TAG" --json tagName,name,isDraft,isPrerelease > "$release_file"; then
+            node - "$release_file" "$TAG" <<'NODE'
+            const fs = require("node:fs");
+            const release = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+            const tag = process.argv[3];
+            if (release.tagName !== tag || release.name !== `Showdar Router ${tag}` || release.isDraft || release.isPrerelease) {
+              throw new Error("Existing GitHub Release does not match the requested release");
+            }
+            console.log(`Existing GitHub Release ${tag} matches; skipping duplicate`);
+            NODE
+          else
+            gh release create "$TAG" \
+              --verify-tag \
+              --title "Showdar Router $TAG" \
+              --generate-notes
+          fi
