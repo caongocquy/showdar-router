@@ -1,6 +1,8 @@
 import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
+import { classifyRouteFailure } from "open-sse/services/routeFailureClassifier.js";
+import { extractRetryDeadline } from "open-sse/services/retryMetadata.js";
 import { MAX_RATE_LIMIT_COOLDOWN_MS } from "open-sse/config/errorConfig.js";
 import { resolveProviderId, FREE_PROVIDERS } from "@/shared/constants/providers.js";
 import { getAntigravityQuotaCache } from "./antigravityQuota.js";
@@ -236,11 +238,27 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
  * @param {string|null} model - The specific model that triggered the error
  * @returns {{ shouldFallback: boolean, cooldownMs: number }}
  */
-export async function markAccountUnavailable(connectionId, status, errorText, provider = null, model = null, resetsAtMs = null) {
+export async function markAccountUnavailable(connectionId, status, errorText, provider = null, model = null, resetsAtMs = null, options = {}) {
   if (!connectionId || connectionId === "noauth") return { shouldFallback: false, cooldownMs: 0 };
   const connections = await getProviderConnections({ provider });
   const conn = connections.find(c => c.id === connectionId);
   const backoffLevel = conn?.backoffLevel || 0;
+  const retryDeadline = extractRetryDeadline({ resetAt: resetsAtMs, errorText });
+
+  // Chat combo routing owns model/provider failures. Do not poison credentials
+  // for errors where changing API keys cannot help. Other modalities retain
+  // upstream behavior unless they explicitly opt into route-aware scoping.
+  if (options?.routeAware) {
+    const classification = classifyRouteFailure(status, errorText, backoffLevel);
+    if (classification.scope !== "credential") {
+      log.warn("AUTH", `non-credential failure; credential remains healthy [${classification.effectiveStatus}] ${classification.reason}`);
+      return {
+        shouldFallback: false,
+        cooldownMs: classification.routeCooldownMs,
+        classification,
+      };
+    }
+  }
 
   // GitHub premium-request exhaustion is account-wide until the next UTC month.
   const githubResetAtMs = githubMonthlyResetMs(status, errorText, provider);
@@ -251,12 +269,9 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
     shouldFallback = true;
     cooldownMs = githubResetAtMs - Date.now();
     newBackoffLevel = 0;
-  } else if (resetsAtMs && resetsAtMs > Date.now()) {
+  } else if (retryDeadline) {
     shouldFallback = true;
-    // Antigravity quota API provides exact per-model resetAt. Do not truncate it.
-    cooldownMs = resolveProviderId(provider) === "antigravity"
-      ? resetsAtMs - Date.now()
-      : Math.min(resetsAtMs - Date.now(), MAX_RATE_LIMIT_COOLDOWN_MS);
+    cooldownMs = Math.max(0, new Date(retryDeadline).getTime() - Date.now());
     newBackoffLevel = 0;
   } else {
     ({ shouldFallback, cooldownMs, newBackoffLevel } = checkFallbackError(status, errorText, backoffLevel));

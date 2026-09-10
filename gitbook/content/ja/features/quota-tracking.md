@@ -6,7 +6,7 @@
 
 ## 概要
 
-9Routerはすべてのプロバイダーに対して包括的なクォータトラッキングを提供:
+Showdar Routerはすべてのプロバイダーに対して包括的なクォータトラッキングを提供:
 
 - **リアルタイムトークン消費** - リクエストごとの使用トークンを表示
 - **クォータ上限と残量** - 使用量 vs 上限を追跡
@@ -561,7 +561,7 @@ Dashboard → Analytics → Monthly Report:
 ### クォータステータスを取得
 
 ```bash
-GET http://localhost:20128/api/quota
+GET http://localhost:20129/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### 使用統計を取得
 
 ```bash
-GET http://localhost:20128/api/usage?period=today
+GET http://localhost:20129/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
@@ -669,7 +669,7 @@ Response:
 1. ダッシュボードを更新 (F5)
 2. システム時刻が正しいか確認
 3. タイムゾーン設定を確認
-4. 問題が続く場合は9Routerを再起動
+4. 問題が続く場合はShowdar Routerを再起動
 
 **問題: アラートが受信されない**
 

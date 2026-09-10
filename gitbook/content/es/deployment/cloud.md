@@ -1,6 +1,6 @@
 # ☁️ Despliegue en la nube
 
-Despliega 9Router en VPS o Docker para acceso remoto y uso en producción.
+Despliega Showdar Router en VPS o Docker para acceso remoto y uso en producción.
 
 ---
 
@@ -49,7 +49,7 @@ export NODE_ENV="production"
 |----------|---------|-------------|
 | `JWT_SECRET` | Auto-generado | **¡DEBE cambiarse en producción!** Usado para firmar tokens JWT |
 | `INITIAL_PASSWORD` | `123456` | Contraseña de login del dashboard |
-| `DATA_DIR` | `~/.9router` | Ruta de almacenamiento de la base de datos |
+| `DATA_DIR` | `~/.showdar-router` | Ruta de almacenamiento de la base de datos |
 | `NODE_ENV` | `development` | Establece a `production` para despliegue |
 | `ENABLE_REQUEST_LOGS` | `false` | Habilita logs de debug de request/response |
 
@@ -74,8 +74,8 @@ PM2 mantiene tu aplicación corriendo y la reinicia en caso de crash:
 # Instalar PM2 globalmente
 npm install -g pm2
 
-# Iniciar 9Router con PM2
-pm2 start npm --name 9router -- start
+# Iniciar Showdar Router con PM2
+pm2 start npm --name showdar-router -- start
 
 # Guardar la configuración de PM2
 pm2 save
@@ -89,13 +89,13 @@ pm2 startup
 
 ```bash
 # Ver logs
-pm2 logs 9router
+pm2 logs showdar-router
 
 # Reiniciar aplicación
-pm2 restart 9router
+pm2 restart showdar-router
 
 # Detener aplicación
-pm2 stop 9router
+pm2 stop showdar-router
 
 # Ver estado
 pm2 status
@@ -130,7 +130,7 @@ COPY . .
 RUN npm run build
 
 # Expose ports
-EXPOSE 3000 20128
+EXPOSE 3000 20129
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -147,17 +147,17 @@ CMD ["npm", "run", "start"]
 
 ```bash
 # Construir imagen
-docker build -t 9router .
+docker build -t showdar-router .
 
 # Ejecutar contenedor
 docker run -d \
-  --name 9router \
+  --name showdar-router \
   -p 3000:3000 \
-  -p 20128:20128 \
+  -p 20129:20129 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
   -v 9router-data:/app/data \
-  9router
+  showdar-router
 ```
 
 ### Opción 2: Docker Compose
@@ -168,12 +168,12 @@ Crea `docker-compose.yml`:
 version: '3.8'
 
 services:
-  9router:
+  showdar-router:
     build: .
-    container_name: 9router
+    container_name: showdar-router
     ports:
       - "3000:3000"
-      - "20128:20128"
+      - "20129:20129"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secure-secret-change-this
@@ -247,7 +247,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    # Proxy to 9Router
+    # Proxy to Showdar Router
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -266,7 +266,7 @@ server {
 
     # API endpoint
     location /v1 {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:20129;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -333,9 +333,9 @@ sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# Si NO usas proxy reverso, permite los puertos de 9Router
+# Si NO usas proxy reverso, permite los puertos de Showdar Router
 sudo ufw allow 3000/tcp
-sudo ufw allow 20128/tcp
+sudo ufw allow 20129/tcp
 
 # Habilitar firewall
 sudo ufw enable
@@ -363,12 +363,12 @@ ssh -L 3000:localhost:3000 user@your-server.com
 # Actualizar paquetes del sistema
 sudo apt update && sudo apt upgrade -y
 
-# Actualizar 9Router
+# Actualizar Showdar Router
 cd /path/to/9router/app
 git pull
 npm install
 npm run build
-pm2 restart 9router
+pm2 restart showdar-router
 ```
 
 ### 5. Estrategia de respaldo
@@ -392,7 +392,7 @@ tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
 pm2 status
 
 # Ver logs
-pm2 logs 9router --lines 100
+pm2 logs showdar-router --lines 100
 
 # Monitorear recursos
 pm2 monit
@@ -418,7 +418,7 @@ htop
 df -h
 
 # Conexiones de red
-netstat -tulpn | grep -E '3000|20128'
+netstat -tulpn | grep -E '3000|20129'
 ```
 
 ---
@@ -429,20 +429,20 @@ netstat -tulpn | grep -E '3000|20128'
 
 ```bash
 # Verificar logs
-pm2 logs 9router
+pm2 logs showdar-router
 
 # Verificar si los puertos están en uso
 sudo lsof -i :3000
-sudo lsof -i :20128
+sudo lsof -i :20129
 
 # Verificar variables de entorno
-pm2 env 9router
+pm2 env showdar-router
 ```
 
 ### Nginx 502 Bad Gateway
 
 ```bash
-# Verificar si 9Router está corriendo
+# Verificar si Showdar Router está corriendo
 pm2 status
 
 # Verificar logs de error de Nginx

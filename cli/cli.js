@@ -67,7 +67,48 @@ const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRunt
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
 
-// Subcommands (`9router xai video …`) run against an already-running gateway
+const daemonCommands = new Set(["start", "stop", "restart", "status", "logs", "version", "help"]);
+const requestedCommand = args[0] || "start";
+if (daemonCommands.has(requestedCommand)) {
+  const daemon = require("./src/daemon");
+  const cliRoot = __dirname;
+  const appRoot = daemon.resolveAppRoot(cliRoot);
+  const appServer = daemon.resolveServerPath(appRoot);
+  const env = { ...process.env };
+  const state = daemon.paths(env);
+  const printHelp = () => console.log(`Showdar Router\n\nUsage: showdar-router [start|stop|restart|status|logs [-f]|version|help]\n\nDefault port: ${daemon.DEFAULT_PORT}\nData directory: ~/.showdar-router`);
+  try {
+    if (requestedCommand === "help") return printHelp();
+    if (requestedCommand === "version") return console.log(`Showdar Router ${pkg.version}`);
+    if (requestedCommand === "logs") {
+      fs.mkdirSync(state.logDir, { recursive: true });
+      const follow = args[1] === "-f";
+      require("child_process").execFileSync(follow ? "tail" : "tail", follow ? ["-f", state.logFile] : ["-n", "100", state.logFile], { stdio: "inherit" });
+      return;
+    }
+    if (requestedCommand === "stop") {
+      daemon.stop({ appRoot, env });
+      console.log("Showdar Router stopped");
+      return;
+    }
+    if (requestedCommand === "status") {
+      const current = daemon.status({ appRoot, env });
+      if (!current.running) return console.log("Showdar Router: stopped");
+      console.log(`Showdar Router: running\nPID: ${current.pid}\nURL: http://localhost:${current.port}`);
+      return;
+    }
+    if (requestedCommand === "restart") daemon.stop({ appRoot, env });
+    const running = daemon.start({ appRoot, serverPath: appServer, env });
+    console.log(`Showdar Router started\nPID: ${running.pid}\nURL: http://localhost:${running.port}\nLogs: ${running.logFile}`);
+    return;
+  } catch (error) {
+    console.error(`Showdar Router: ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
+}
+
+// Subcommands (`showdar-router xai video …`) run against an already-running gateway
 // and bypass the launcher flow (no runtime self-heal, no server spawn).
 if (args[0] === "xai" && args[1] === "video") {
   const { run } = require("./src/cli/commands/xaiVideo");
@@ -80,7 +121,7 @@ if (args[0] === "xai" && args[1] === "video") {
   return;
 }
 
-// Self-heal SQLite runtime deps (sql.js + better-sqlite3) into ~/.9router/runtime
+// Self-heal SQLite runtime deps (sql.js + better-sqlite3) into ~/.showdar-router/runtime
 // so the server can resolve them via NODE_PATH. Best-effort — sql.js is required,
 // better-sqlite3 is optional. Logs to stderr only on failure.
 try { ensureSqliteRuntime({ silent: true }); } catch {}
@@ -92,7 +133,7 @@ try { ensureTrayRuntime({ silent: true }); } catch {}
 const APP_NAME = pkg.name; // Use from package.json
 const INSTALL_CMD_LATEST = `npm i -g ${APP_NAME}@latest --prefer-online`;
 
-const DEFAULT_PORT = 20128;
+const DEFAULT_PORT = 20129;
 const DEFAULT_HOST = "0.0.0.0";
 
 // First non-internal IPv4 — the address remote peers actually reach when bound to 0.0.0.0.
@@ -110,9 +151,9 @@ function getDisplayHost() {
   return host === DEFAULT_HOST ? "localhost" : host;
 }
 const MAX_PORT_ATTEMPTS = 10;
-// Identifiers for killAllAppProcesses - only kill 9router specifically
+// Identifiers for killAllAppProcesses - only kill showdar-router specifically
 const PROCESS_IDENTIFIERS = [
-  '9router'  // Only package name - avoid killing other apps
+  'showdar-router'
 ];
 
 // Parse arguments
@@ -188,8 +229,8 @@ function compareVersions(a, b) {
 // Get app data dir (matches app/src/lib/dataDir.js convention)
 function getAppDataDir() {
   return process.platform === "win32"
-    ? path.join(process.env.APPDATA || "", "9router")
-    : path.join(os.homedir(), ".9router");
+    ? path.join(process.env.APPDATA || "", "showdar-router")
+    : path.join(os.homedir(), ".showdar-router");
 }
 
 // Kill PID from file (best-effort, removes file after)
@@ -246,7 +287,7 @@ function killCloudflaredByAppPort(appPort) {
   return pids;
 }
 
-// Kill all 9router processes
+// Kill all showdar-router processes
 function killAllAppProcesses(appPort) {
   return new Promise((resolve) => {
     try {
@@ -273,11 +314,11 @@ function killAllAppProcesses(appPort) {
           });
           const lines = output.split("\n").slice(1).filter(l => l.trim());
           lines.forEach(line => {
-            // Whitelist: real node process running 9router/cli.js, or next-server.
-            // Avoids killing editors/grep/strace/cursor that just have "9router" in cmdline.
+            // Whitelist: real node process running showdar-router/cli.js, or next-server.
+            // Avoids killing editors/grep/strace/cursor that just have "showdar-router" in cmdline.
             const cmd = line.toLowerCase();
             const isAppProcess =
-              (cmd.includes("node") && cmd.includes("9router") && (cmd.includes("cli.js") || cmd.includes("\\9router") || cmd.includes("/9router")))
+              (cmd.includes("node") && cmd.includes("showdar-router") && (cmd.includes("cli.js") || cmd.includes("\\showdar-router") || cmd.includes("/showdar-router")))
               || cmd.includes("next-server");
             if (isAppProcess) {
               const match = line.match(/^"(\d+)"/);
@@ -299,11 +340,11 @@ function killAllAppProcesses(appPort) {
           const lines = output.split('\n');
 
           lines.forEach(line => {
-            // Whitelist: real node process running 9router/cli.js, or next-server.
-            // Avoids killing grep/strace/editors/cursor that incidentally match "9router".
+            // Whitelist: real node process running showdar-router/cli.js, or next-server.
+            // Avoids killing grep/strace/editors/cursor that incidentally match "showdar-router".
             const cmd = line.toLowerCase();
             const isAppProcess =
-              (cmd.includes("node") && cmd.includes("9router") && (cmd.includes("cli.js") || cmd.includes("/9router")))
+              (cmd.includes("node") && cmd.includes("showdar-router") && (cmd.includes("cli.js") || cmd.includes("/showdar-router")))
               || cmd.includes("next-server");
             if (isAppProcess) {
               const parts = line.trim().split(/\s+/);
@@ -619,6 +660,7 @@ function startServer(updatePromise) {
       windowsHide: true,
       env: {
         ...buildEnvWithRuntime(process.env),
+        DATA_DIR: getAppDataDir(),
         PORT: port.toString(),
         HOSTNAME: host
       }
@@ -774,7 +816,7 @@ function startServer(updatePromise) {
             process.on("SIGHUP", () => {});
 
             console.log(`\n⏳ Switching to tray mode... (icon already visible in menu bar)`);
-            console.log(`🔔 9Router is running in tray (PID: ${process.pid})`);
+            console.log(`🔔 Showdar Router is running in tray (PID: ${process.pid})`);
             console.log(`   Server: http://${displayHost}:${port}`);
             console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
 
@@ -793,7 +835,7 @@ function startServer(updatePromise) {
           });
           bgProcess.unref();
 
-          console.log(`🔔 9Router is now running in background (PID: ${bgProcess.pid})`);
+          console.log(`🔔 Showdar Router is now running in background (PID: ${bgProcess.pid})`);
           console.log(`   Server: http://${displayHost}:${port}`);
           console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
 
@@ -838,7 +880,7 @@ function startServer(updatePromise) {
     if (restartCount >= MAX_RESTARTS) {
       console.error(`\n⚠️  Server crashed ${MAX_RESTARTS} times. Disabling MIT and restarting...`);
       try {
-        const dbPath = path.join(os.homedir(), process.platform === "win32" ? path.join("AppData", "Roaming", "9router", "db.json") : path.join(".9router", "db.json"));
+        const dbPath = path.join(os.homedir(), process.platform === "win32" ? path.join("AppData", "Roaming", "showdar-router", "db.json") : path.join(".showdar-router", "db.json"));
         if (fs.existsSync(dbPath)) {
           const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"));
           if (db.settings) db.settings.mitmEnabled = false;

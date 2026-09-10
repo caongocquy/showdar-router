@@ -1,15 +1,15 @@
 # 🏠 Localhost Deployment
 
-Run 9Router on your local machine for development and personal use.
+Run Showdar Router on your local machine for development and personal use.
 
 ---
 
 ## 📦 Installation
 
-Install 9Router globally via npm:
+Install Showdar Router globally via npm:
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 **Requirements:**
@@ -20,18 +20,18 @@ npm install -g 9router
 
 ## 🚀 Starting the Server
 
-Start 9Router with a single command:
+Start Showdar Router with a single command:
 
 ```bash
-9router
+showdar-router
 ```
 
 The dashboard will automatically open in your browser at `http://localhost:3000`
 
 **Default Configuration:**
 - **Dashboard**: `http://localhost:3000`
-- **API Endpoint**: `http://localhost:20128/v1`
-- **Data Directory**: `~/.9router`
+- **API Endpoint**: `http://localhost:20129/v1`
+- **Data Directory**: `~/.showdar-router`
 
 ---
 
@@ -42,21 +42,21 @@ The dashboard will automatically open in your browser at `http://localhost:3000`
 Set a custom data directory using environment variable:
 
 ```bash
-DATA_DIR=/path/to/data 9router
+DATA_DIR=/path/to/data showdar-router
 ```
 
 ### Custom Port
 
-The API port (20128) and dashboard port (3000) are configured in the application. To change them, you'll need to modify the source code or use environment variables if supported.
+The API port (20129) and dashboard port (3000) are configured in the application. To change them, you'll need to modify the source code or use environment variables if supported.
 
 ---
 
 ## 🛑 Stopping the Server
 
-Press `Ctrl+C` in the terminal where 9Router is running.
+Press `Ctrl+C` in the terminal where Showdar Router is running.
 
 ```bash
-# In the terminal running 9router
+# In the terminal running showdar-router
 ^C  # Press Ctrl+C
 ```
 
@@ -69,25 +69,25 @@ The server will gracefully shut down and save all data.
 Simply run the start command again:
 
 ```bash
-9router
+showdar-router
 ```
 
 All your configurations, API keys, and combos are preserved in the data directory.
 
 ---
 
-## 📊 Updating 9Router
+## 📊 Updating Showdar Router
 
 Update to the latest version:
 
 ```bash
-npm update -g 9router
+npm update -g showdar-router
 ```
 
 Check your current version:
 
 ```bash
-npm list -g 9router
+npm list -g showdar-router
 ```
 
 ---
@@ -96,11 +96,11 @@ npm list -g 9router
 
 ### Port Already in Use
 
-If port 20128 or 3000 is already in use:
+If port 20129 or 3000 is already in use:
 
 ```bash
 # Find process using the port (macOS/Linux)
-lsof -i :20128
+lsof -i :20129
 lsof -i :3000
 
 # Kill the process
@@ -113,7 +113,7 @@ If you encounter permission errors during installation:
 
 ```bash
 # Use sudo (not recommended)
-sudo npm install -g 9router
+sudo npm install -g showdar-router
 
 # Or fix npm permissions (recommended)
 mkdir ~/.npm-global
@@ -128,10 +128,10 @@ If the data directory is not accessible:
 
 ```bash
 # Check permissions
-ls -la ~/.9router
+ls -la ~/.showdar-router
 
 # Fix permissions
-chmod 755 ~/.9router
+chmod 755 ~/.showdar-router
 ```
 
 ---
@@ -139,7 +139,7 @@ chmod 755 ~/.9router
 ## 📁 Data Directory Structure
 
 ```
-~/.9router/
+~/.showdar-router/
 ├── db.json           # Main database (providers, combos, settings)
 ├── logs/             # Application logs
 └── cache/            # Temporary cache files
@@ -149,10 +149,10 @@ chmod 755 ~/.9router
 
 ```bash
 # Backup
-cp -r ~/.9router ~/.9router.backup
+cp -r ~/.showdar-router ~/.showdar-router.backup
 
 # Restore
-cp -r ~/.9router.backup ~/.9router
+cp -r ~/.showdar-router.backup ~/.showdar-router
 ```
 
 ---

@@ -3,6 +3,7 @@
  */
 
 import { checkFallbackError, formatRetryAfter } from "./accountFallback.js";
+import { extractRetryDeadline } from "./retryMetadata.js";
 import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
@@ -277,7 +278,7 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, validateSuccess = null }) {
   // Apply rotation strategy if enabled
   let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
 
@@ -299,27 +300,76 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+
+    if (beforeModelAttempt) {
+      try {
+        const healthDecision = await beforeModelAttempt(modelStr);
+        if (healthDecision?.skip) {
+          if (healthDecision.nextProbeAt && (!earliestRetryAfter || new Date(healthDecision.nextProbeAt) < new Date(earliestRetryAfter))) {
+            earliestRetryAfter = healthDecision.nextProbeAt;
+          }
+          log.info("COMBO", `Skipping model ${modelStr}: ${healthDecision.reason || "route unhealthy"}`);
+          continue;
+        }
+      } catch (healthError) {
+        log.warn("COMBO", `Route-health precheck failed for ${modelStr}; failing open`, { error: healthError?.message || String(healthError) });
+      }
+    }
+
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
       
-      // Success (2xx) - return response
+      // Success (2xx) - validate chat streams before accepting the route.
       if (result.ok) {
+        let successResponse = result;
+        if (validateSuccess) {
+          const validation = await validateSuccess(result, modelStr);
+          if (!validation?.ok) {
+            const validationStatus = validation?.status || 502;
+            const validationError = validation?.errorText || "Invalid successful response";
+            if (onModelFailure) {
+              try {
+                await onModelFailure(modelStr, { status: validationStatus, errorText: validationError, retryAfter: null });
+              } catch (healthError) {
+                log.warn("COMBO", `Route-health failure update failed for ${modelStr}`, { error: healthError?.message || String(healthError) });
+              }
+            }
+            lastError = validationError;
+            if (!lastStatus) lastStatus = validationStatus;
+            log.warn("COMBO", `Model ${modelStr} returned an empty/invalid success stream, trying next`);
+            continue;
+          }
+          successResponse = validation.response || result;
+        }
+
+        if (onModelSuccess) {
+          try {
+            await onModelSuccess(modelStr);
+          } catch (healthError) {
+            log.warn("COMBO", `Route-health success update failed for ${modelStr}`, { error: healthError?.message || String(healthError) });
+          }
+        }
         log.info("COMBO", `Model ${modelStr} succeeded`);
-        return result;
+        return successResponse;
       }
 
       // Extract error info from response
       let errorText = result.statusText || "";
       let retryAfter = null;
+      let errorBody = null;
       try {
-        const errorBody = await result.clone().json();
+        errorBody = await result.clone().json();
         errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
-        retryAfter = errorBody?.retryAfter || null;
       } catch {
         // Ignore JSON parse errors
       }
+      retryAfter = extractRetryDeadline({
+        retryAfterHeader: result.headers?.get?.("retry-after") || null,
+        errorBody,
+        errorText,
+      });
 
       // Track earliest retryAfter across all combo models
       if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
@@ -331,21 +381,20 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
         try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
       }
 
+      if (onModelFailure) {
+        try {
+          await onModelFailure(modelStr, { status: result.status, errorText, retryAfter });
+        } catch (healthError) {
+          log.warn("COMBO", `Route-health failure update failed for ${modelStr}`, { error: healthError?.message || String(healthError) });
+        }
+      }
+
       // Check if should fallback to next model
-      const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+      const { shouldFallback } = checkFallbackError(result.status, errorText);
 
       if (!shouldFallback) {
         log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
         return result;
-      }
-
-      // For transient errors (503/502/504), wait for cooldown before falling through
-      // so a briefly-overloaded provider gets a chance to recover rather than being
-      // skipped immediately (fixes: combo falls through on transient 503)
-      if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
-          (result.status === 503 || result.status === 502 || result.status === 504)) {
-        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
-        await new Promise(r => setTimeout(r, cooldownMs));
       }
 
       // Fallback to next model
@@ -354,7 +403,15 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
       // Catch unexpected exceptions to ensure fallback continues
-      lastError = error.message || String(error);
+      const thrownError = error?.message || String(error);
+      if (onModelFailure) {
+        try {
+          await onModelFailure(modelStr, { status: 500, errorText: thrownError, retryAfter: null });
+        } catch (healthError) {
+          log.warn("COMBO", `Route-health failure update failed for ${modelStr}`, { error: healthError?.message || String(healthError) });
+        }
+      }
+      lastError = thrownError;
       if (!lastStatus) lastStatus = 500;
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Các vấn đề và giải pháp phổ biến khi dùng 9Router.
+Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 
 ---
 
@@ -78,7 +78,7 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 **Giải pháp:**
 
 1. **Auto-refresh (mặc định):**
-   9Router tự refresh tokens. Đợi 30 giây rồi thử lại.
+   Showdar Router tự refresh tokens. Đợi 30 giây rồi thử lại.
 
 2. **Kết nối lại thủ công:**
    ```
@@ -132,34 +132,34 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 
 ## Connection Refused
 
-**Vấn đề:** Lỗi "ECONNREFUSED" hoặc "Cannot connect to localhost:20128".
+**Vấn đề:** Lỗi "ECONNREFUSED" hoặc "Cannot connect to localhost:20129".
 
 **Nguyên nhân:**
-- 9Router không chạy
-- Port 20128 bị chặn
+- Showdar Router không chạy
+- Port 20129 bị chặn
 - Firewall chặn kết nối
 
 **Giải pháp:**
 
-1. **Khởi động 9Router:**
+1. **Khởi động Showdar Router:**
    ```bash
-   9router
+   showdar-router
    ```
    Dashboard sẽ mở tại http://localhost:3000
 
-2. **Xác minh port 20128:**
+2. **Xác minh port 20129:**
    ```bash
    # Check if port is listening
-   lsof -i :20128
+   lsof -i :20129
    
    # Or on Windows
-   netstat -ano | findstr :20128
+   netstat -ano | findstr :20129
    ```
 
 3. **Kiểm tra firewall:**
    - macOS: System Settings → Network → Firewall
    - Windows: Windows Defender Firewall → Allow app
-   - Linux: `sudo ufw allow 20128`
+   - Linux: `sudo ufw allow 20129`
 
 4. **Dùng cloud endpoint:**
    Nếu localhost không hoạt động (ví dụ: Cursor IDE):
@@ -175,15 +175,15 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 
 **Nguyên nhân:**
 - Port 3000 đã được dùng
-- 9Router bị crash
+- Showdar Router bị crash
 - Vấn đề cache browser
 
 **Giải pháp:**
 
-1. **Kiểm tra 9Router có chạy không:**
+1. **Kiểm tra Showdar Router có chạy không:**
    ```bash
    # Check process
-   ps aux | grep 9router
+   ps aux | grep showdar-router
    
    # Check port 3000
    lsof -i :3000
@@ -199,13 +199,13 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
    taskkill /PID <PID> /F
    ```
 
-3. **Khởi động lại 9Router:**
+3. **Khởi động lại Showdar Router:**
    ```bash
    # Stop
-   pkill -f 9router
+   pkill -f showdar-router
    
    # Start
-   9router
+   showdar-router
    ```
 
 4. **Xóa cache browser:**
@@ -243,7 +243,7 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 
 3. **Liệt kê model khả dụng:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:20129/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 
 4. **Test API key:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:20129/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 
@@ -347,5 +347,5 @@ Các vấn đề và giải pháp phổ biến khi dùng 9Router.
 ## Cần trợ giúp thêm?
 
 - **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentation:** [9router.com/docs](https://9router.com/docs)
+- **Documentation:** [showdar-router.com/docs](https://9router.com/docs)
 - **FAQ:** [faq.md](faq.md)

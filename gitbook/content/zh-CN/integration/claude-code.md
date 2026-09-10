@@ -1,12 +1,12 @@
 # Claude Code 集成
 
-将 9Router 与 Claude Code CLI 集成,通过 9Router 的智能路由系统转发你的 Anthropic API 请求。
+将 Showdar Router 与 Claude Code CLI 集成,通过 Showdar Router 的智能路由系统转发你的 Anthropic API 请求。
 
 ## 前置要求
 
 - 已安装 Claude Code CLI
-- 9Router 本地运行或已配置云端 endpoint
-- 来自 9Router 仪表盘的 API key
+- Showdar Router 本地运行或已配置云端 endpoint
+- 来自 Showdar Router 仪表盘的 API key
 
 ## 设置
 
@@ -15,8 +15,8 @@
 在 shell 配置文件(`~/.bashrc`、`~/.zshrc` 或 `~/.bash_profile`)中设置以下环境变量:
 
 ```bash
-# 9Router 的 Base URL
-export ANTHROPIC_BASE_URL="http://localhost:20128/v1"
+# Showdar Router 的 Base URL
+export ANTHROPIC_BASE_URL="http://localhost:20129/v1"
 
 # 可选: 为别名设置默认模型
 export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-4-5-20251101"
@@ -40,7 +40,7 @@ echo $ANTHROPIC_BASE_URL
 
 ## 模型别名
 
-Claude Code 支持以下模型别名,映射到 9Router 模型:
+Claude Code 支持以下模型别名,映射到 Showdar Router 模型:
 
 | 别名 | 模型 | 环境变量 |
 |-------|-------|---------------------|
@@ -75,7 +75,7 @@ Claude Code 将配置存储在 `~/.claude/settings.json`。如有需要可手动
 
 ```json
 {
-  "baseUrl": "http://localhost:20128/v1",
+  "baseUrl": "http://localhost:20129/v1",
   "defaultModel": "sonnet"
 }
 ```
@@ -86,24 +86,24 @@ Claude Code 将配置存储在 `~/.claude/settings.json`。如有需要可手动
 
 遇到连接错误时:
 
-1. 确认 9Router 正在运行:`curl http://localhost:20128/health`
+1. 确认 Showdar Router 正在运行:`curl http://localhost:20129/health`
 2. 检查环境变量设置是否正确
-3. 确保防火墙没有阻止 20128 端口
+3. 确保防火墙没有阻止 20129 端口
 
 ### 模型未找到
 
 出现 "model not found" 错误时:
 
-1. 确认模型名与 9Router 配置一致
-2. 检查 9Router 仪表盘中提供商连接是否激活
+1. 确认模型名与 Showdar Router 配置一致
+2. 检查 Showdar Router 仪表盘中提供商连接是否激活
 3. 确认所连接的提供商中包含该模型
 
 ## 云端 Endpoint
 
-使用 9Router 云端 endpoint 而非 localhost:
+使用 Showdar Router 云端 endpoint 而非 localhost:
 
 ```bash
 export ANTHROPIC_BASE_URL="https://9router.com"
 ```
 
-确保已在 9Router 云端仪表盘中配置 API key。
+确保已在 Showdar Router 云端仪表盘中配置 API key。

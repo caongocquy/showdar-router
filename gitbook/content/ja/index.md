@@ -1,14 +1,14 @@
-# 9Routerへようこそ
+# Showdar Routerへようこそ
 
 **Claude、Codex、Geminiを無料で利用 • 100万トークンあたり$0.20からの超低価格な代替手段**
 
-9Routerは、インテリジェントなルーティングと自動フォールバックを通じて、サブスクリプションの価値を最大化し、コストを最小限に抑えるAIモデルルーターです。
+Showdar Routerは、インテリジェントなルーティングと自動フォールバックを通じて、サブスクリプションの価値を最大化し、コストを最小限に抑えるAIモデルルーターです。
 
 ---
 
-## 9Routerとは?
+## Showdar Routerとは?
 
-9Routerは、コーディングツール(Cursor、Cline、Claude Desktop)とAIプロバイダーの間に位置するスマートプロキシです。クォータ、コスト、可用性に基づいて、リクエストを最適なモデルへ自動的にルーティングします。
+Showdar Routerは、コーディングツール(Cursor、Cline、Claude Desktop)とAIプロバイダーの間に位置するスマートプロキシです。クォータ、コスト、可用性に基づいて、リクエストを最適なモデルへ自動的にルーティングします。
 
 **お金を無駄にしないために:**
 - ❌ サブスクリプションのクォータが毎月未使用のまま失効
@@ -66,7 +66,7 @@ MiniMax経由で200万: $0.40
 
 ---
 
-## なぜ9Routerを選ぶのか?
+## なぜShowdar Routerを選ぶのか?
 
 ### サブスクリプションを最大化
 
@@ -105,10 +105,10 @@ MiniMax経由で200万: $0.40
 
 ```bash
 # グローバルインストール
-npm install -g 9router
+npm install -g showdar-router
 
 # 起動(ダッシュボードが自動で開きます)
-9router
+showdar-router
 ```
 
 🎉 **ダッシュボードが開く** → プロバイダーを接続 → コーディング開始!
@@ -116,7 +116,7 @@ npm install -g 9router
 **CLIツールで使う:**
 
 ```
-Endpoint: http://localhost:20128/v1
+Endpoint: http://localhost:20129/v1
 API Key: [ダッシュボードから取得]
 Model: cc/claude-opus-4-5-20251101
 ```

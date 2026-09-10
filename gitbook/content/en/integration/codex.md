@@ -1,12 +1,12 @@
 # OpenAI Codex CLI Integration
 
-Integrate 9Router with OpenAI Codex CLI to route your OpenAI API requests through 9Router's intelligent routing system.
+Integrate Showdar Router with OpenAI Codex CLI to route your OpenAI API requests through Showdar Router's intelligent routing system.
 
 ## Prerequisites
 
 - OpenAI Codex CLI installed
-- 9Router running locally or cloud endpoint configured
-- API key from 9Router dashboard
+- Showdar Router running locally or cloud endpoint configured
+- API key from Showdar Router dashboard
 
 ## Setup
 
@@ -15,10 +15,10 @@ Integrate 9Router with OpenAI Codex CLI to route your OpenAI API requests throug
 Set the following environment variables in your shell configuration file (`~/.bashrc`, `~/.zshrc`, or `~/.bash_profile`):
 
 ```bash
-# Base URL for 9Router
-export OPENAI_BASE_URL="http://localhost:20128/v1"
+# Base URL for Showdar Router
+export OPENAI_BASE_URL="http://localhost:20129/v1"
 
-# API Key from 9Router dashboard
+# API Key from Showdar Router dashboard
 export OPENAI_API_KEY="your-9router-api-key"
 ```
 
@@ -39,7 +39,7 @@ echo $OPENAI_API_KEY
 
 ## Available Models
 
-9Router provides the following Codex models:
+Showdar Router provides the following Codex models:
 
 | Model ID | Description |
 |----------|-------------|
@@ -76,7 +76,7 @@ You can also configure Codex CLI using a configuration file. Create or edit `~/.
 
 ```json
 {
-  "baseUrl": "http://localhost:20128/v1",
+  "baseUrl": "http://localhost:20129/v1",
   "apiKey": "your-9router-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
@@ -88,7 +88,7 @@ You can also configure Codex CLI using a configuration file. Create or edit `~/.
 
 If you encounter authentication errors:
 
-1. Verify your API key is correct in 9Router dashboard
+1. Verify your API key is correct in Showdar Router dashboard
 2. Check that `OPENAI_API_KEY` environment variable is set
 3. Ensure the API key has not expired
 
@@ -96,27 +96,27 @@ If you encounter authentication errors:
 
 If you encounter connection errors:
 
-1. Verify 9Router is running: `curl http://localhost:20128/health`
+1. Verify Showdar Router is running: `curl http://localhost:20129/health`
 2. Check environment variables are set correctly
-3. Ensure no firewall is blocking port 20128
+3. Ensure no firewall is blocking port 20129
 
 ### Model Not Available
 
 If you get "model not available" errors:
 
-1. Verify the model name matches your 9Router configuration
-2. Check that the OpenAI provider connection is active in 9Router dashboard
+1. Verify the model name matches your Showdar Router configuration
+2. Check that the OpenAI provider connection is active in Showdar Router dashboard
 3. Ensure the model is available in your connected providers
 
 ## Cloud Endpoint
 
-To use 9Router cloud endpoint instead of localhost:
+To use Showdar Router cloud endpoint instead of localhost:
 
 ```bash
 export OPENAI_BASE_URL="https://9router.com"
 ```
 
-Make sure you have configured your API key in the 9Router cloud dashboard.
+Make sure you have configured your API key in the Showdar Router cloud dashboard.
 
 ## Advanced Configuration
 

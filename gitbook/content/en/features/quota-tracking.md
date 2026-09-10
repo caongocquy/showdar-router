@@ -6,7 +6,7 @@ Track real-time token consumption, monitor quota limits, estimate costs, and get
 
 ## Overview
 
-9Router provides comprehensive quota tracking for all providers:
+Showdar Router provides comprehensive quota tracking for all providers:
 
 - **Real-time token consumption** - See tokens used per request
 - **Quota limits & remaining** - Track usage vs limits
@@ -561,7 +561,7 @@ Optimization:
 ### Get Quota Status
 
 ```bash
-GET http://localhost:20128/api/quota
+GET http://localhost:20129/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### Get Usage Stats
 
 ```bash
-GET http://localhost:20128/api/usage?period=today
+GET http://localhost:20129/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
@@ -669,7 +669,7 @@ Response:
 1. Refresh dashboard (F5)
 2. Check system time is correct
 3. Verify timezone settings
-4. Restart 9Router if issue persists
+4. Restart Showdar Router if issue persists
 
 **Issue: Alerts not received**
 

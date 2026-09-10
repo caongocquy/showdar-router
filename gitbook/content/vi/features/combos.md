@@ -6,7 +6,7 @@ Tạo các tổ hợp model tùy chỉnh với fallback tự động. Combo cho 
 
 ## Combos là gì?
 
-Combos là **chuỗi fallback tùy chỉnh** bạn tạo trong dashboard. Thay vì dùng một model duy nhất, bạn định nghĩa một chuỗi các model mà 9Router sẽ thử theo thứ tự.
+Combos là **chuỗi fallback tùy chỉnh** bạn tạo trong dashboard. Thay vì dùng một model duy nhất, bạn định nghĩa một chuỗi các model mà Showdar Router sẽ thử theo thứ tự.
 
 **Ví dụ:**
 ```
@@ -22,7 +22,7 @@ Models:
 Model: premium-coding
 ```
 
-9Router tự động thử từng model theo thứ tự cho đến khi thành công.
+Showdar Router tự động thử từng model theo thứ tự cho đến khi thành công.
 
 ---
 
@@ -71,7 +71,7 @@ cc/claude-opus-4-5 → cx/gpt-5.2-codex → gc/gemini-3-pro
 ### Bước 1: Mở Dashboard
 
 ```
-http://localhost:20128
+http://localhost:20129
 → Login with your password
 ```
 
@@ -182,7 +182,7 @@ Models:
 ```
 Cline:
   Provider: OpenAI Compatible
-  Base URL: http://localhost:20128/v1
+  Base URL: http://localhost:20129/v1
   Model: budget-combo
 ```
 
@@ -261,7 +261,7 @@ Models:
 **Sử dụng:**
 ```
 Codex CLI:
-  export OPENAI_BASE_URL="http://localhost:20128"
+  export OPENAI_BASE_URL="http://localhost:20129"
   Model: quality-first
 ```
 
@@ -343,7 +343,7 @@ Models:
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
+  OpenAI API Base URL: http://localhost:20129/v1
   OpenAI API Key: [from dashboard]
   Model: premium-coding
 ```
@@ -353,7 +353,7 @@ Settings → Models → Advanced:
 Sửa `~/.claude/config.json`:
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:20129/v1",
   "anthropic_api_key": "your-9router-api-key",
   "model": "budget-combo"
 }
@@ -362,7 +362,7 @@ Sửa `~/.claude/config.json`:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:20129"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex --model quality-first "your prompt"
@@ -372,7 +372,7 @@ codex --model quality-first "your prompt"
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:20129/v1
 API Key: [from dashboard]
 Model: free-combo
 ```
@@ -380,7 +380,7 @@ Model: free-combo
 ### API Request
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:20129/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -480,7 +480,7 @@ Dashboard → Combos → Edit → Budget:
   Monthly limit: $50
 ```
 
-Khi đạt giới hạn, 9Router bỏ qua model trả phí và chỉ dùng free tier.
+Khi đạt giới hạn, Showdar Router bỏ qua model trả phí và chỉ dùng free tier.
 
 ### Bật/Tắt Model trong Combo
 

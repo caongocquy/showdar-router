@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "path";
 import os from "os";
 
-const APP_NAME = "9router";
+const APP_NAME = "showdar-router";
 
 function defaultDir() {
   if (process.platform === "win32") {
@@ -12,7 +12,7 @@ function defaultDir() {
 }
 
 export function getDataDir() {
-  const configured = process.env.DATA_DIR;
+  const configured = process.env.SHOWDAR_ROUTER_DATA_DIR || process.env.DATA_DIR;
   if (!configured) return defaultDir();
 
   // On Windows, ignore Unix-style absolute paths (e.g. /var/lib/...) that come

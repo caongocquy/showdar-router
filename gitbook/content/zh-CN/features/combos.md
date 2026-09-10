@@ -6,7 +6,7 @@
 
 ## 什么是组合?
 
-组合是你在仪表盘中创建的 **自定义回退链**。它不是单一模型,而是定义一组顺序模型,由 9Router 依次尝试。
+组合是你在仪表盘中创建的 **自定义回退链**。它不是单一模型,而是定义一组顺序模型,由 Showdar Router 依次尝试。
 
 **示例:**
 ```
@@ -22,7 +22,7 @@
 Model: premium-coding
 ```
 
-9Router 会按顺序自动尝试每个模型,直到成功为止。
+Showdar Router 会按顺序自动尝试每个模型,直到成功为止。
 
 ---
 
@@ -71,7 +71,7 @@ cc/claude-opus-4-5 → cx/gpt-5.2-codex → gc/gemini-3-pro
 ### 步骤 1:打开仪表盘
 
 ```
-http://localhost:20128
+http://localhost:20129
 → 用密码登录
 ```
 
@@ -182,7 +182,7 @@ Cursor IDE:
 ```
 Cline:
   Provider: OpenAI Compatible
-  Base URL: http://localhost:20128/v1
+  Base URL: http://localhost:20129/v1
   Model: budget-combo
 ```
 
@@ -261,7 +261,7 @@ Claude Desktop:
 **用法:**
 ```
 Codex CLI:
-  export OPENAI_BASE_URL="http://localhost:20128"
+  export OPENAI_BASE_URL="http://localhost:20129"
   Model: quality-first
 ```
 
@@ -343,7 +343,7 @@ Codex CLI:
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
+  OpenAI API Base URL: http://localhost:20129/v1
   OpenAI API Key: [从仪表盘获取]
   Model: premium-coding
 ```
@@ -353,7 +353,7 @@ Settings → Models → Advanced:
 编辑 `~/.claude/config.json`:
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:20129/v1",
   "anthropic_api_key": "your-9router-api-key",
   "model": "budget-combo"
 }
@@ -362,7 +362,7 @@ Settings → Models → Advanced:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:20129"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex --model quality-first "your prompt"
@@ -372,7 +372,7 @@ codex --model quality-first "your prompt"
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:20129/v1
 API Key: [从仪表盘获取]
 Model: free-combo
 ```
@@ -380,7 +380,7 @@ Model: free-combo
 ### API 请求
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:20129/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -480,7 +480,7 @@ quality-first: 生产代码
   每月上限: $50
 ```
 
-达到上限时,9Router 跳过付费模型,仅使用免费层。
+达到上限时,Showdar Router 跳过付费模型,仅使用免费层。
 
 ### 启用/禁用组合中的模型
 

@@ -1,15 +1,15 @@
 # 🏠 ローカルホストデプロイメント
 
-開発と個人利用のため、ローカルマシンで9Routerを実行。
+開発と個人利用のため、ローカルマシンでShowdar Routerを実行。
 
 ---
 
 ## 📦 インストール
 
-npm経由で9Routerをグローバルインストール:
+npm経由でShowdar Routerをグローバルインストール:
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 **要件:**
@@ -20,18 +20,18 @@ npm install -g 9router
 
 ## 🚀 サーバーの起動
 
-一つのコマンドで9Routerを起動:
+一つのコマンドでShowdar Routerを起動:
 
 ```bash
-9router
+showdar-router
 ```
 
 ダッシュボードが自動的にブラウザで `http://localhost:3000` に開きます。
 
 **デフォルト設定:**
 - **ダッシュボード**: `http://localhost:3000`
-- **APIエンドポイント**: `http://localhost:20128/v1`
-- **データディレクトリ**: `~/.9router`
+- **APIエンドポイント**: `http://localhost:20129/v1`
+- **データディレクトリ**: `~/.showdar-router`
 
 ---
 
@@ -42,21 +42,21 @@ npm install -g 9router
 環境変数を使ってカスタムデータディレクトリを設定:
 
 ```bash
-DATA_DIR=/path/to/data 9router
+DATA_DIR=/path/to/data showdar-router
 ```
 
 ### カスタムポート
 
-APIポート(20128)とダッシュボードポート(3000)はアプリケーションで設定されています。変更するにはソースコードを修正するか、サポートされている場合は環境変数を使用してください。
+APIポート(20129)とダッシュボードポート(3000)はアプリケーションで設定されています。変更するにはソースコードを修正するか、サポートされている場合は環境変数を使用してください。
 
 ---
 
 ## 🛑 サーバーの停止
 
-9Routerが実行されているターミナルで `Ctrl+C` を押します。
+Showdar Routerが実行されているターミナルで `Ctrl+C` を押します。
 
 ```bash
-# 9routerを実行しているターミナル
+# showdar-routerを実行しているターミナル
 ^C  # Ctrl+Cを押す
 ```
 
@@ -69,25 +69,25 @@ APIポート(20128)とダッシュボードポート(3000)はアプリケーシ�
 起動コマンドを再度実行するだけです:
 
 ```bash
-9router
+showdar-router
 ```
 
 すべての設定、APIキー、コンボはデータディレクトリに保持されます。
 
 ---
 
-## 📊 9Routerの更新
+## 📊 Showdar Routerの更新
 
 最新バージョンに更新:
 
 ```bash
-npm update -g 9router
+npm update -g showdar-router
 ```
 
 現在のバージョンを確認:
 
 ```bash
-npm list -g 9router
+npm list -g showdar-router
 ```
 
 ---
@@ -96,11 +96,11 @@ npm list -g 9router
 
 ### ポートがすでに使用されている
 
-ポート20128または3000がすでに使用されている場合:
+ポート20129または3000がすでに使用されている場合:
 
 ```bash
 # ポートを使用しているプロセスを検索 (macOS/Linux)
-lsof -i :20128
+lsof -i :20129
 lsof -i :3000
 
 # プロセスを終了
@@ -113,7 +113,7 @@ kill -9 <PID>
 
 ```bash
 # sudoを使用 (非推奨)
-sudo npm install -g 9router
+sudo npm install -g showdar-router
 
 # またはnpm権限を修正 (推奨)
 mkdir ~/.npm-global
@@ -128,10 +128,10 @@ source ~/.bashrc
 
 ```bash
 # 権限を確認
-ls -la ~/.9router
+ls -la ~/.showdar-router
 
 # 権限を修正
-chmod 755 ~/.9router
+chmod 755 ~/.showdar-router
 ```
 
 ---
@@ -139,7 +139,7 @@ chmod 755 ~/.9router
 ## 📁 データディレクトリ構造
 
 ```
-~/.9router/
+~/.showdar-router/
 ├── db.json           # メインデータベース (プロバイダー、コンボ、設定)
 ├── logs/             # アプリケーションログ
 └── cache/            # 一時キャッシュファイル
@@ -149,10 +149,10 @@ chmod 755 ~/.9router
 
 ```bash
 # バックアップ
-cp -r ~/.9router ~/.9router.backup
+cp -r ~/.showdar-router ~/.showdar-router.backup
 
 # 復元
-cp -r ~/.9router.backup ~/.9router
+cp -r ~/.showdar-router.backup ~/.showdar-router
 ```
 
 ---

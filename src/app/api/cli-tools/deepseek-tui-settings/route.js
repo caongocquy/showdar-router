@@ -9,7 +9,7 @@ import os from "os";
 
 const execAsync = promisify(exec);
 
-const PROVIDER_NAME = "9router";
+const PROVIDER_NAME = "showdar-router";
 
 const getDeepSeekDir = () => path.join(os.homedir(), ".deepseek");
 const getDeepSeekConfigPath = () => path.join(getDeepSeekDir(), "config.toml");
@@ -51,7 +51,7 @@ const parseToml = (content) => {
     return result;
 };
 
-// Build TOML config for 9Router (openai provider mode)
+// Build TOML config for Showdar Router (openai provider mode)
 const build9RouterConfig = (baseUrl, apiKey, model) => {
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
     return `provider = "openai"
@@ -92,7 +92,7 @@ const readConfigToml = async () => {
     }
 };
 
-// Detect 9Router by checking if provider is "openai" and base_url points to localhost/127.0.0.1
+// Detect Showdar Router by checking if provider is "openai" and base_url points to localhost/127.0.0.1
 const has9RouterConfig = (config) => {
     if (!config) return false;
     const provider = config.provider;

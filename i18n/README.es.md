@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="../images/9router.png?1" alt="Panel de control de 9Router" width="800"/>
+  <img src="../images/9router.png?1" alt="Panel de control de Showdar Router" width="800"/>
   
-  # 9Router - Enrutador de IA GRATUITO y ahorrador de tokens
+  # Showdar Router - Enrutador de IA GRATUITO y ahorrador de tokens
   
   **Nunca dejes de programar. Ahorra entre 20-40% de tokens con RTK + reserva automática hacia modelos de IA GRATUITOS y económicos.**
   
@@ -23,7 +23,7 @@
 
 ---
 
-## 🤔 ¿Por qué 9Router?
+## 🤔 ¿Por qué Showdar Router?
 
 **Deja de perder dinero, tokens y de chocar contra los límites:**
 
@@ -33,7 +33,7 @@
 - ❌ APIs caras ($20-50/mes por proveedor)
 - ❌ Cambio manual entre proveedores
 
-**9Router resuelve esto:**
+**Showdar Router resuelve esto:**
 
 - ✅ **Ahorrador de tokens RTK** - Comprime automáticamente el contenido de tool_result y ahorra entre 20-40% de tokens por solicitud
 - ✅ **Maximiza las suscripciones** - Realiza el seguimiento de la cuota y usa cada bit antes del restablecimiento
@@ -50,10 +50,10 @@
 │  Your CLI   │  (Claude Code, Codex, OpenClaw, Cursor, Cline...)
 │   Tool      │
 └──────┬──────┘
-       │ http://localhost:20128/v1
+       │ http://localhost:20129/v1
        ↓
 ┌─────────────────────────────────────────────┐
-│           9Router (Smart Router)            │
+│           Showdar Router (Smart Router)            │
 │  • RTK Token Saver (cut tool_result tokens) │
 │  • Format translation (OpenAI ↔ Claude)     │
 │  • Quota tracking                           │
@@ -76,11 +76,11 @@ Result: Never stop coding, minimal cost + 20-40% token savings via RTK
 **1. Instálalo globalmente:**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g showdar-router
+showdar-router
 ```
 
-🎉 El panel de control se abre en `http://localhost:20128`
+🎉 El panel de control se abre en `http://localhost:20129`
 
 **2. Conecta un proveedor GRATUITO (no requiere registro):**
 
@@ -90,7 +90,7 @@ Panel de control → Providers → Conecta **Kiro AI** (Claude gratuito e ilimit
 
 ```
 Ajustes de Claude Code/Codex/OpenClaw/Cursor/Cline:
-  Endpoint: http://localhost:20128/v1
+  Endpoint: http://localhost:20129/v1
   API Key: [copia desde el panel de control]
   Model: kr/claude-sonnet-4.5
 ```
@@ -104,20 +104,20 @@ El paquete de este repositorio es privado (`9router-app`), por lo que ejecutar d
 ```bash
 cp .env.example .env
 npm install
-PORT=20128 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run dev
+PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
 ```
 
 Modo de producción:
 
 ```bash
 npm run build
-PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run start
+PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
 ```
 
 URLs por defecto:
 
-- Panel de control: `http://localhost:20128/dashboard`
-- API compatible con OpenAI: `http://localhost:20128/v1`
+- Panel de control: `http://localhost:20129/dashboard`
+- API compatible con OpenAI: `http://localhost:20129/v1`
 
 ---
 
@@ -129,34 +129,34 @@ URLs por defecto:
   <tr>
   <td align="center" width="320">
   <a href="https://www.youtube.com/watch?v=X69n5Lm06Yw">
-    <img src="https://img.youtube.com/vi/X69n5Lm06Yw/maxresdefault.jpg" alt="Tiết kiệm chi phí LLM với 9Router" width="300"/>
+    <img src="https://img.youtube.com/vi/X69n5Lm06Yw/maxresdefault.jpg" alt="Tiết kiệm chi phí LLM với Showdar Router" width="300"/>
   </a><br/>
   <b>🇻🇳 Tiếng Việt</b><br/>
-  <sub>Tiết kiệm chi phí LLM cho OpenClaw với 9Router<br/>by <a href="https://www.youtube.com/c/M%C3%ACAIblog">Mì AI</a></sub>
+  <sub>Tiết kiệm chi phí LLM cho OpenClaw với Showdar Router<br/>by <a href="https://www.youtube.com/c/M%C3%ACAIblog">Mì AI</a></sub>
 </td>
 <td align="center" width="320">
       <a href="https://youtu.be/VQAw612S27Y">
-        <img src="https://img.youtube.com/vi/VQAw612S27Y/maxresdefault.jpg" alt="9Router + Claude Code FREE Unlimited Setup" width="300"/>
+        <img src="https://img.youtube.com/vi/VQAw612S27Y/maxresdefault.jpg" alt="Showdar Router + Claude Code FREE Unlimited Setup" width="300"/>
       </a><br/>
       <b>🇵🇰 اردو / हिन्दी</b><br/>
-      <sub>9Router + Claude Code FREE Unlimited Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
+      <sub>Showdar Router + Claude Code FREE Unlimited Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=raEyZPg5xE0">
-        <img src="https://img.youtube.com/vi/raEyZPg5xE0/maxresdefault.jpg" alt="9Router Setup Tutorial" width="300"/>
+        <img src="https://img.youtube.com/vi/raEyZPg5xE0/maxresdefault.jpg" alt="Showdar Router Setup Tutorial" width="300"/>
       </a><br/>
       <b>🇺🇸 English</b><br/>
-      <sub>9Router + Claude Code FREE Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
+      <sub>Showdar Router + Claude Code FREE Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
     </td>
     
   </tr>
   <tr>
   <td align="center" width="320">
       <a href="https://youtu.be/3dF5GIYMrcQ?si=bAyfyiHbARJQAHj_">
-        <img src="https://img.youtube.com/vi/3dF5GIYMrcQ/hqdefault.jpg" alt="9Router Setup Tutorial" width="300"/>
+        <img src="https://img.youtube.com/vi/3dF5GIYMrcQ/hqdefault.jpg" alt="Showdar Router Setup Tutorial" width="300"/>
       </a><br/>
       <b>🇺🇸 English</b><br/>
-      <sub>9Router + Claude Code FREE Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
+      <sub>Showdar Router + Claude Code FREE Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=o3qYCyjrFYg">
@@ -170,7 +170,7 @@ URLs por defecto:
         <img src="https://img.youtube.com/vi/Ttpc26m39Dw/maxresdefault.jpg" alt="Claude CLI Free Setup" width="300"/>
       </a><br/>
       <b>🇺🇸 English</b><br/>
-      <sub>Claude CLI Free Setup with 9Router 🚀<br/>by <a href="https://www.youtube.com/@CodeVerseSoban">CodeVerse Soban</a></sub>
+      <sub>Claude CLI Free Setup with Showdar Router 🚀<br/>by <a href="https://www.youtube.com/@CodeVerseSoban">CodeVerse Soban</a></sub>
     </td>
     
   </tr>
@@ -180,7 +180,7 @@ URLs por defecto:
         <img src="https://img.youtube.com/vi/G-5A_D5Pm6Y/maxresdefault.jpg" alt="Cài đặt OpenClaw Free A-Z" width="300"/>
       </a><br/>
       <b>🇻🇳 Tiếng Việt</b><br/>
-      <sub>Cài Đặt OpenClaw Free Từ A-Z + 9Router<br/>by <a href="https://www.youtube.com/@maigia">Mai Gia</a></sub>
+      <sub>Cài Đặt OpenClaw Free Từ A-Z + Showdar Router<br/>by <a href="https://www.youtube.com/@maigia">Mai Gia</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=JXmg8_gccgE">
@@ -194,7 +194,7 @@ URLs por defecto:
         <img src="https://img.youtube.com/vi/CkVZZUSTXAI/mqdefault.jpg" alt="Claude CLI Free Setup" width="300"/>
       </a><br/>
       <b>🇮🇩 Indonesia</b><br/>
-      <sub>Koding 24 Jam Anti Rate Limit! Hemat Token AI 65% | Tutorial Quick Setup 9Router 🚀<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
+      <sub>Koding 24 Jam Anti Rate Limit! Hemat Token AI 65% | Tutorial Quick Setup Showdar Router 🚀<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
     </td>
     
   </tr>
@@ -202,10 +202,10 @@ URLs por defecto:
   <tr>
   <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=TXGv4eofe1I">
-        <img src="https://img.youtube.com/vi/TXGv4eofe1I/mqdefault.jpg" alt="Cara Deploy 9Router di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB" width="300"/>
+        <img src="https://img.youtube.com/vi/TXGv4eofe1I/mqdefault.jpg" alt="Cara Deploy Showdar Router di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB" width="300"/>
       </a><br/>
       <b>🇮🇩 Indonesia</b><br/>
-      <sub>Cara Deploy 9Router di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
+      <sub>Cara Deploy Showdar Router di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
     </td>
   </tr>
 
@@ -213,13 +213,13 @@ URLs por defecto:
 
 </div>
 
-> 🎬 **¿Has hecho un video sobre 9Router?** Envía una [Pull Request](https://github.com/decolua/9router/pulls) añadiendo tu video a esta sección — ¡lo fusionaremos!
+> 🎬 **¿Has hecho un video sobre Showdar Router?** Envía una [Pull Request](https://github.com/decolua/9router/pulls) añadiendo tu video a esta sección — ¡lo fusionaremos!
 
 ---
 
 ## 🛠️ Herramientas CLI compatibles
 
-9Router funciona a la perfección con todas las principales herramientas de código con IA:
+Showdar Router funciona a la perfección con todas las principales herramientas de código con IA:
 
 <div align="center">
   <table>
@@ -468,10 +468,10 @@ Con RTK:    se envían 28K tokens al LLM   (40% ahorrado · mismo contexto · mi
 
 ### 🧠 Ahorrador de tokens Headroom
 
-Headroom es opcional y se ejecuta por separado. 9Router llama al endpoint local `/v1/compress` de Headroom y luego mantiene el enrutamiento, la reserva, la autenticación y el seguimiento de uso normales:
+Headroom es opcional y se ejecuta por separado. Showdar Router llama al endpoint local `/v1/compress` de Headroom y luego mantiene el enrutamiento, la reserva, la autenticación y el seguimiento de uso normales:
 
 ```
-Client → 9Router → Headroom /v1/compress → 9Router → provider
+Client → Showdar Router → Headroom /v1/compress → Showdar Router → provider
 ```
 
 Configuración local:
@@ -493,7 +493,7 @@ http://headroom:8787
 http://host.docker.internal:8787
 ```
 
-Si Headroom está caído o devuelve un error, 9Router falla de forma segura y envía la solicitud original.
+Si Headroom está caído o devuelve un error, Showdar Router falla de forma segura y envía la solicitud original.
 
 ### 🐴 Ponytail (Dev sénior perezoso)
 
@@ -535,7 +535,7 @@ Combo: "my-coding-stack"
 Traducción fluida entre formatos:
 
 - **OpenAI** ↔ **Claude** ↔ **Gemini** ↔ **Cursor** ↔ **Kiro** ↔ **Vertex** ↔ **Antigravity** ↔ **Ollama** ↔ **OpenAI Responses**
-- Tu herramienta CLI envía el formato OpenAI → 9Router lo traduce → El proveedor recibe el formato nativo
+- Tu herramienta CLI envía el formato OpenAI → Showdar Router lo traduce → El proveedor recibe el formato nativo
 - Funciona con cualquier herramienta que admita endpoints OpenAI personalizados
 
 ### 👥 Compatibilidad con varias cuentas
@@ -589,13 +589,13 @@ Traducción fluida entre formatos:
 > **💡 IMPORTANTE - Comprender los costes del panel de control:**
 >
 > El "coste" que se muestra en Analítica de uso es **solo para seguimiento y comparación**.
-> 9Router por sí mismo **nunca te cobra** nada. Solo pagas a los proveedores directamente (si usas servicios de pago).
+> Showdar Router por sí mismo **nunca te cobra** nada. Solo pagas a los proveedores directamente (si usas servicios de pago).
 >
 > **Ejemplo:** Si tu panel muestra "coste total de $290" mientras usas modelos iFlow, esto representa
 > lo que habrías pagado usando APIs de pago directamente. Tu coste real = **$0** (iFlow es gratis e ilimitado).
 >
 > ¡Piénsalo como un "rastreador de ahorros" que muestra cuánto estás ahorrando al usar modelos gratuitos o
-> enrutar a través de 9Router!
+> enrutar a través de Showdar Router!
 
 ### 🌐 Implementa en cualquier lugar
 
@@ -628,15 +628,15 @@ Traducción fluida entre formatos:
 
 ---
 
-### 📊 Cómo entender los costes y la facturación de 9Router
+### 📊 Cómo entender los costes y la facturación de Showdar Router
 
-**Realidad de la facturación de 9Router:**
+**Realidad de la facturación de Showdar Router:**
 
-✅ **El software de 9Router = GRATUITO para siempre** (código abierto, nunca cobra)  
+✅ **El software de Showdar Router = GRATUITO para siempre** (código abierto, nunca cobra)  
 ✅ **Los "costes" del panel = Solo visualización/seguimiento** (no son facturas reales)  
 ✅ **Pagas a los proveedores directamente** (suscripciones o tarifas de API)  
 ✅ **Los proveedores GRATUITOS siguen siendo GRATUITOS** (iFlow, Kiro, Qwen = $0 ilimitado)  
-❌ **9Router nunca envía facturas** ni carga tu tarjeta
+❌ **Showdar Router nunca envía facturas** ni carga tu tarjeta
 
 **Cómo funciona la visualización de costes:**
 
@@ -659,9 +659,9 @@ Comprobación de la realidad:
 **Reglas de pago:**
 
 - **Proveedores de suscripción** (Claude Code, Codex): Págales directamente a través de sus sitios web
-- **Proveedores económicos** (GLM, MiniMax): Págales directamente, 9Router solo enruta
+- **Proveedores económicos** (GLM, MiniMax): Págales directamente, Showdar Router solo enruta
 - **Proveedores GRATUITOS** (iFlow, Kiro, Qwen): Realmente gratuitos para siempre, sin cargos ocultos
-- **9Router**: Nunca cobra nada, jamás
+- **Showdar Router**: Nunca cobra nada, jamás
 
 ---
 
@@ -740,7 +740,7 @@ Acceso mediante: WhatsApp, Telegram, Slack, Discord, iMessage, Signal...
 <details>
 <summary><b>📊 ¿Por qué mi panel muestra costes elevados?</b></summary>
 
-El panel realiza el seguimiento de tu uso de tokens y muestra **costes estimados** como si estuvieras usando APIs de pago directamente. Esto **no es facturación real** — es una referencia para mostrar cuánto estás ahorrando al usar modelos gratuitos o suscripciones existentes a través de 9Router.
+El panel realiza el seguimiento de tu uso de tokens y muestra **costes estimados** como si estuvieras usando APIs de pago directamente. Esto **no es facturación real** — es una referencia para mostrar cuánto estás ahorrando al usar modelos gratuitos o suscripciones existentes a través de Showdar Router.
 
 **Ejemplo:**
 
@@ -754,17 +754,17 @@ La visualización de costes es un "rastreador de ahorros" que te ayuda a compren
 </details>
 
 <details>
-<summary><b>💳 ¿9Router me cobrará algo?</b></summary>
+<summary><b>💳 ¿Showdar Router me cobrará algo?</b></summary>
 
-**No.** 9Router es un software gratuito y de código abierto que se ejecuta en tu propio ordenador. Nunca te cobra nada.
+**No.** Showdar Router es un software gratuito y de código abierto que se ejecuta en tu propio ordenador. Nunca te cobra nada.
 
 **Solo pagas:**
 
 - ✅ **Proveedores de suscripción** (Claude Code $20/mes, Codex $20-200/mes) → Págales directamente en sus sitios web
-- ✅ **Proveedores económicos** (GLM, MiniMax) → Págales directamente, 9Router solo enruta tus solicitudes
-- ❌ **El propio 9Router** → **Nunca cobra nada, jamás**
+- ✅ **Proveedores económicos** (GLM, MiniMax) → Págales directamente, Showdar Router solo enruta tus solicitudes
+- ❌ **El propio Showdar Router** → **Nunca cobra nada, jamás**
 
-9Router es un proxy/enrutador local. No tiene tu tarjeta de crédito, no puede enviar facturas y no tiene sistema de facturación. Es software totalmente gratuito.
+Showdar Router es un proxy/enrutador local. No tiene tu tarjeta de crédito, no puede enviar facturas y no tiene sistema de facturación. Es software totalmente gratuito.
 
 </details>
 
@@ -779,7 +779,7 @@ Estos son servicios gratuitos ofrecidos por esas respectivas empresas:
 - **OpenCode Free**: Proxy de paso sin autenticación, modelos obtenidos automáticamente de `opencode.ai/zen/v1/models`
 - **Vertex AI**: $300 de crédito gratuito para cuentas nuevas de Google Cloud (90 días)
 
-9Router solo enruta tus solicitudes hacia ellos — no hay "trampa" ni facturación futura. Son servicios realmente gratuitos y 9Router los hace fáciles de usar con soporte de reserva.
+Showdar Router solo enruta tus solicitudes hacia ellos — no hay "trampa" ni facturación futura. Son servicios realmente gratuitos y Showdar Router los hace fáciles de usar con soporte de reserva.
 
 **Niveles gratuitos suspendidos (ya no recomendados):**
 
@@ -814,7 +814,7 @@ Estos son servicios gratuitos ofrecidos por esas respectivas empresas:
 
 3. **Usa los proveedores de suscripción al final:**
    - Solo si ya los tienes
-   - 9Router te ayuda a maximizar su valor mediante el seguimiento de cuota
+   - Showdar Router te ayuda a maximizar su valor mediante el seguimiento de cuota
 
 **Resultado:** ¡La mayoría de los usuarios pueden operar con $0/mes usando solo niveles gratuitos!
 
@@ -823,22 +823,22 @@ Estos son servicios gratuitos ofrecidos por esas respectivas empresas:
 <details>
 <summary><b>📈 ¿Qué pasa si mi uso se dispara de repente?</b></summary>
 
-La reserva inteligente de 9Router evita cargos sorpresa:
+La reserva inteligente de Showdar Router evita cargos sorpresa:
 
 **Escenario:** Estás en un sprint de programación y agotas tus cuotas
 
-**Sin 9Router:**
+**Sin Showdar Router:**
 
 - ❌ Chocas contra el límite de velocidad → El trabajo se detiene → Frustración
 - ❌ O: Acumulas accidentalmente facturas enormes de API
 
-**Con 9Router:**
+**Con Showdar Router:**
 
 - ✅ La suscripción alcanza su límite → Reserva automática al nivel económico
 - ✅ El nivel económico se vuelve caro → Reserva automática al nivel gratuito
 - ✅ Nunca dejas de programar → Costes predecibles
 
-**Tú tienes el control:** Establece límites de gasto por proveedor en el panel y 9Router los respeta.
+**Tú tienes el control:** Establece límites de gasto por proveedor en el panel y Showdar Router los respeta.
 
 </details>
 
@@ -863,7 +863,7 @@ Modelos:
   cc/claude-haiku-4-5-20251001
 ```
 
-**Consejo profesional:** Usa Opus para tareas complejas y Sonnet para velocidad. ¡9Router realiza el seguimiento de la cuota por modelo!
+**Consejo profesional:** Usa Opus para tareas complejas y Sonnet para velocidad. ¡Showdar Router realiza el seguimiento de la cuota por modelo!
 
 ### OpenAI Codex (Plus/Pro)
 
@@ -1043,8 +1043,8 @@ Coste: $0 para siempre (+ 20-40% de ahorro de tokens vía RTK)!
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [desde el panel de 9router]
+  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Key: [desde el panel de showdar-router]
   Model: cc/claude-opus-4-7
 ```
 
@@ -1056,7 +1056,7 @@ Edita `~/.claude/config.json`:
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:20129/v1",
   "anthropic_api_key": "tu-clave-api-de-9router"
 }
 ```
@@ -1064,7 +1064,7 @@ Edita `~/.claude/config.json`:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:20129"
 export OPENAI_API_KEY="tu-clave-api-de-9router"
 
 codex "tu prompt"
@@ -1091,8 +1091,8 @@ Panel de control → CLI Tools → OpenClaw → Selecciona el modelo → Aplicar
   },
   "models": {
     "providers": {
-      "9router": {
-        "baseUrl": "http://127.0.0.1:20128/v1",
+      "showdar-router": {
+        "baseUrl": "http://127.0.0.1:20129/v1",
         "apiKey": "sk_9router",
         "api": "openai-completions",
         "models": [
@@ -1107,13 +1107,13 @@ Panel de control → CLI Tools → OpenClaw → Selecciona el modelo → Aplicar
 }
 ```
 
-> **Nota:** OpenClaw solo funciona con 9Router local. Usa `127.0.0.1` en lugar de `localhost` para evitar problemas de resolución IPv6.
+> **Nota:** OpenClaw solo funciona con Showdar Router local. Usa `127.0.0.1` en lugar de `localhost` para evitar problemas de resolución IPv6.
 
 ### Cline / Continue / RooCode
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:20129/v1
 API Key: [desde el panel]
 Model: cc/claude-opus-4-7
 ```
@@ -1128,7 +1128,7 @@ Model: cc/claude-opus-4-7
 ```bash
 # Clona e instala
 git clone https://github.com/decolua/9router.git
-cd 9router
+cd showdar-router
 npm install
 npm run build
 
@@ -1136,10 +1136,10 @@ npm run build
 export JWT_SECRET="tu-secreto-seguro-cámbialo"
 export INITIAL_PASSWORD="tu-contraseña"
 export DATA_DIR="/var/lib/9router"
-export PORT="20128"
+export PORT="20129"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
+export NEXT_PUBLIC_BASE_URL="http://localhost:20129"
 export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
@@ -1149,7 +1149,7 @@ npm run start
 
 # O usa PM2
 npm install -g pm2
-pm2 start npm --name 9router -- start
+pm2 start npm --name showdar-router -- start
 pm2 save
 pm2 startup
 ```
@@ -1165,52 +1165,52 @@ Imágenes publicadas (multi-plataforma `linux/amd64` + `linux/arm64`):
 
 ```bash
 docker run -d \
-  --name 9router \
-  -p 20128:20128 \
-  -v "$HOME/.9router:/app/data" \
+  --name showdar-router \
+  -p 20129:20129 \
+  -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
   decolua/9router:latest
 ```
 
-→ Abre http://localhost:20128
+→ Abre http://localhost:20129
 
 **Compilar desde el código fuente (dev):**
 
 ```bash
 git clone https://github.com/decolua/9router.git
 cd 9router/app
-docker build -t 9router .
-docker run -d --name 9router -p 20128:20128 \
-  -v "$HOME/.9router:/app/data" -e DATA_DIR=/app/data 9router
+docker build -t showdar-router .
+docker run -d --name showdar-router -p 20129:20129 \
+  -v "$HOME/.showdar-router:/app/data" -e DATA_DIR=/app/data showdar-router
 ```
 
 **Valores por defecto del contenedor:**
 
-- `PORT=20128`
+- `PORT=20129`
 - `HOSTNAME=0.0.0.0`
 
 **Comandos útiles:**
 
 ```bash
-docker logs -f 9router
-docker restart 9router
-docker stop 9router && docker rm 9router
+docker logs -f showdar-router
+docker restart showdar-router
+docker stop showdar-router && docker rm showdar-router
 docker pull decolua/9router:latest   # actualiza a la última versión
 ```
 
-**Persistencia de datos:** `$HOME/.9router/db/data.sqlite` en el host ↔ `/app/data/db/data.sqlite` en el contenedor.
+**Persistencia de datos:** `$HOME/.showdar-router/db/data.sqlite` en el host ↔ `/app/data/db/data.sqlite` en el contenedor.
 
 ### Variables de entorno
 
 | Variable                                             | Por defecto                                | Descripción                                                                          |
 | ---------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `JWT_SECRET`                                         | Generado automáticamente (`~/.9router/jwt-secret`) | Secreto de firma JWT para la cookie de autenticación del panel (sobreescríbelo para compartir entre instancias) |
+| `JWT_SECRET`                                         | Generado automáticamente (`~/.showdar-router/jwt-secret`) | Secreto de firma JWT para la cookie de autenticación del panel (sobreescríbelo para compartir entre instancias) |
 | `INITIAL_PASSWORD`                                   | `123456`                                   | Contraseña del primer inicio de sesión cuando no existe un hash guardado             |
-| `DATA_DIR`                                           | `~/.9router`                               | Ubicación principal de datos de la app (SQLite en `$DATA_DIR/db/data.sqlite`)        |
-| `PORT`                                               | por defecto del framework                  | Puerto del servicio (`20128` en los ejemplos)                                        |
+| `DATA_DIR`                                           | `~/.showdar-router`                               | Ubicación principal de datos de la app (SQLite en `$DATA_DIR/db/data.sqlite`)        |
+| `PORT`                                               | por defecto del framework                  | Puerto del servicio (`20129` en los ejemplos)                                        |
 | `HOSTNAME`                                           | por defecto del framework                  | Host de enlace (Docker usa `0.0.0.0` por defecto)                                    |
 | `NODE_ENV`                                           | por defecto del runtime                    | Establece `production` para el despliegue                                            |
-| `BASE_URL`                                           | `http://localhost:20128`                   | URL base interna del lado del servidor usada por los trabajos de sincronización en la nube |
+| `BASE_URL`                                           | `http://localhost:20129`                   | URL base interna del lado del servidor usada por los trabajos de sincronización en la nube |
 | `CLOUD_URL`                                          | `https://9router.com`                      | URL base del endpoint de sincronización en la nube del lado del servidor             |
 | `NEXT_PUBLIC_BASE_URL`                               | `http://localhost:3000`                    | URL base pública/compatible con versiones anteriores (prefiere `BASE_URL` para el runtime del servidor) |
 | `NEXT_PUBLIC_CLOUD_URL`                              | `https://9router.com`                      | URL de nube pública/compatible (prefiere `CLOUD_URL` para el runtime del servidor)   |
@@ -1234,7 +1234,7 @@ Notas:
 - Estado principal de la app: `${DATA_DIR}/db/data.sqlite` (SQLite — proveedores, combos, alias, claves, ajustes, historial de uso)
 - Copias de seguridad automáticas: `${DATA_DIR}/db/backups/`
 - Registros opcionales de solicitudes/translator: `<repo>/logs/...` cuando `ENABLE_REQUEST_LOGS=true`
-- Tanto `${DATA_DIR}` como `~/.9router` resuelven a la misma ubicación en un contenedor de Docker — el enlace simbólico `/root/.9router -> /app/data` se crea en tiempo de compilación.
+- Tanto `${DATA_DIR}` como `~/.showdar-router` resuelven a la misma ubicación en un contenedor de Docker — el enlace simbólico `/root/.showdar-router -> /app/data` se crea en tiempo de compilación.
 
 </details>
 
@@ -1331,7 +1331,7 @@ Notas:
 
 **Token OAuth caducado**
 
-- 9Router lo renueva automáticamente
+- Showdar Router lo renueva automáticamente
 - Si los problemas persisten: Panel de control → Provider → Reconectar
 
 **Costes elevados**
@@ -1343,7 +1343,7 @@ Notas:
 
 **El panel se abre en el puerto equivocado**
 
-- Establece `PORT=20128` y `NEXT_PUBLIC_BASE_URL=http://localhost:20128`
+- Establece `PORT=20129` y `NEXT_PUBLIC_BASE_URL=http://localhost:20129`
 
 **El primer inicio de sesión no funciona**
 
@@ -1372,7 +1372,7 @@ Notas:
 ### Chat Completions
 
 ```bash
-POST http://localhost:20128/v1/chat/completions
+POST http://localhost:20129/v1/chat/completions
 Authorization: Bearer tu-clave-api
 Content-Type: application/json
 
@@ -1388,7 +1388,7 @@ Content-Type: application/json
 ### Listar modelos
 
 ```bash
-GET http://localhost:20128/v1/models
+GET http://localhost:20129/v1/models
 Authorization: Bearer tu-clave-api
 
 → Devuelve todos los modelos y combos en formato OpenAI
@@ -1396,7 +1396,7 @@ Authorization: Bearer tu-clave-api
 
 ## 📧 Soporte
 
-- **Sitio web**: [9router.com](https://9router.com)
+- **Sitio web**: [showdar-router.com](https://9router.com)
 - **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Problemas**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
 
@@ -1404,7 +1404,7 @@ Authorization: Bearer tu-clave-api
 
 ## 👥 Colaboradores
 
-¡Gracias a todos los colaboradores que ayudaron a mejorar 9Router!
+¡Gracias a todos los colaboradores que ayudaron a mejorar Showdar Router!
 
 [![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/9router/graphs/contributors)
 
@@ -1416,7 +1416,7 @@ Authorization: Bearer tu-clave-api
 
 ## 🔀 Forks
 
-**[OmniRoute](https://github.com/diegosouzapw/OmniRoute)** — Un fork de 9Router en TypeScript con todas las funciones. Añade más de 36 proveedores, reserva automática de 4 niveles, APIs multimodales (imágenes, embeddings, audio, TTS), interruptor de circuitos, caché semántica, evaluaciones de LLM y un panel pulido. Más de 368 pruebas unitarias. Disponible a través de npm y Docker.
+**[OmniRoute](https://github.com/diegosouzapw/OmniRoute)** — Un fork de Showdar Router en TypeScript con todas las funciones. Añade más de 36 proveedores, reserva automática de 4 niveles, APIs multimodales (imágenes, embeddings, audio, TTS), interruptor de circuitos, caché semántica, evaluaciones de LLM y un panel pulido. Más de 368 pruebas unitarias. Disponible a través de npm y Docker.
 
 ---
 
@@ -1425,11 +1425,11 @@ Authorization: Bearer tu-clave-api
 Construido sobre los hombros de gigantes:
 
 - **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** — implementación original en Go que inspiró este port a JavaScript.
-- **[RTK](https://github.com/rtk-ai/rtk)** ![Stars](https://img.shields.io/github/stars/rtk-ai/rtk?style=flat&color=yellow) — ahorrador de tokens en Rust. 9Router porta su pipeline de compresión a JS → **−20-40% de tokens de entrada** en cada solicitud.
-- **[Caveman](https://github.com/JuliusBrussee/caveman)** ![Stars](https://img.shields.io/github/stars/JuliusBrussee/caveman?style=flat&color=yellow) por **[@JuliusBrussee](https://github.com/JuliusBrussee)** — viral _"why use many token when few token do trick"_. 9Router adapta su prompt → **−65% de tokens de salida**.
-- **[Ponytail](https://github.com/DietrichGebert/ponytail)** ![Stars](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat&color=yellow) por **[@DietrichGebert](https://github.com/DietrichGebert)** — habilidad del _"dev sénior perezoso"_. 9Router inyecta su jerarquía primero-YAGNI → **menos tokens, menos código, diffs más cortos**.
+- **[RTK](https://github.com/rtk-ai/rtk)** ![Stars](https://img.shields.io/github/stars/rtk-ai/rtk?style=flat&color=yellow) — ahorrador de tokens en Rust. Showdar Router porta su pipeline de compresión a JS → **−20-40% de tokens de entrada** en cada solicitud.
+- **[Caveman](https://github.com/JuliusBrussee/caveman)** ![Stars](https://img.shields.io/github/stars/JuliusBrussee/caveman?style=flat&color=yellow) por **[@JuliusBrussee](https://github.com/JuliusBrussee)** — viral _"why use many token when few token do trick"_. Showdar Router adapta su prompt → **−65% de tokens de salida**.
+- **[Ponytail](https://github.com/DietrichGebert/ponytail)** ![Stars](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat&color=yellow) por **[@DietrichGebert](https://github.com/DietrichGebert)** — habilidad del _"dev sénior perezoso"_. Showdar Router inyecta su jerarquía primero-YAGNI → **menos tokens, menos código, diffs más cortos**.
 
-Un enorme agradecimiento a estos autores — sin su trabajo, las funciones de ahorro de tokens de 9Router no existirían. ¡Dales una ⭐ en GitHub!
+Un enorme agradecimiento a estos autores — sin su trabajo, las funciones de ahorro de tokens de Showdar Router no existirían. ¡Dales una ⭐ en GitHub!
 
 ---
 

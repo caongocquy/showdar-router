@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  TARGET="$(readlink "$SOURCE")"
+  if [[ "$TARGET" == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    SOURCE="$DIR/$TARGET"
+  fi
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+case "${1:-}" in
+  -h|--help)
+    cat <<'HELP'
+Showdar Router
+
+Usage:
+  showdar-router              Start the local Showdar Router gateway
+  showdar-router --help       Show this help
+  showdar-router --version    Show fork version
+
+Environment:
+  SHOWDAR_ROUTER_PORT       Default: 20129
+  SHOWDAR_ROUTER_DATA_DIR   Default: ~/.showdar-router
+HELP
+    exit 0
+    ;;
+  -v|--version)
+    echo "Showdar Router 0.1.0"
+    exit 0
+    ;;
+esac
+
+exec node "$ROOT/cli/cli.js" "$@"

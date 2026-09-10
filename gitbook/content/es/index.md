@@ -1,14 +1,14 @@
-# Bienvenido a 9Router
+# Bienvenido a Showdar Router
 
 **Usa Claude, Codex, Gemini GRATIS • Alternativas ultra-baratas desde $0.20/1M tokens**
 
-9Router es un router de modelos de IA que maximiza el valor de tus suscripciones y minimiza los costos mediante enrutamiento inteligente y fallback automático.
+Showdar Router es un router de modelos de IA que maximiza el valor de tus suscripciones y minimiza los costos mediante enrutamiento inteligente y fallback automático.
 
 ---
 
-## ¿Qué es 9Router?
+## ¿Qué es Showdar Router?
 
-9Router es un proxy inteligente que se sitúa entre tus herramientas de codificación (Cursor, Cline, Claude Desktop) y los proveedores de IA. Enruta automáticamente las solicitudes al mejor modelo disponible según la cuota, el costo y la disponibilidad.
+Showdar Router es un proxy inteligente que se sitúa entre tus herramientas de codificación (Cursor, Cline, Claude Desktop) y los proveedores de IA. Enruta automáticamente las solicitudes al mejor modelo disponible según la cuota, el costo y la disponibilidad.
 
 **Deja de desperdiciar dinero:**
 - ❌ La cuota de suscripción expira sin usar cada mes
@@ -66,7 +66,7 @@ Total: $5.20/mes vs $2000 en ChatGPT API!
 
 ---
 
-## ¿Por qué elegir 9Router?
+## ¿Por qué elegir Showdar Router?
 
 ### Maximiza tus suscripciones
 
@@ -105,10 +105,10 @@ Comienza en 2 minutos:
 
 ```bash
 # Instala globalmente
-npm install -g 9router
+npm install -g showdar-router
 
 # Inicia (el dashboard se abre automáticamente)
-9router
+showdar-router
 ```
 
 🎉 **Se abre el dashboard** → Conecta proveedores → ¡Empieza a codificar!
@@ -116,7 +116,7 @@ npm install -g 9router
 **Úsalo en tu herramienta CLI:**
 
 ```
-Endpoint: http://localhost:20128/v1
+Endpoint: http://localhost:20129/v1
 API Key: [desde el dashboard]
 Model: cc/claude-opus-4-5-20251101
 ```

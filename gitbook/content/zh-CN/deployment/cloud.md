@@ -1,6 +1,6 @@
 # ☁️ 云端部署
 
-将 9Router 部署到 VPS 或 Docker,实现远程访问和生产使用。
+将 Showdar Router 部署到 VPS 或 Docker,实现远程访问和生产使用。
 
 ---
 
@@ -49,7 +49,7 @@ export NODE_ENV="production"
 |----------|---------|-------------|
 | `JWT_SECRET` | 自动生成 | **生产环境必须修改!** 用于 JWT token 签名 |
 | `INITIAL_PASSWORD` | `123456` | 仪表盘登录密码 |
-| `DATA_DIR` | `~/.9router` | 数据库与数据存储路径 |
+| `DATA_DIR` | `~/.showdar-router` | 数据库与数据存储路径 |
 | `NODE_ENV` | `development` | 部署时设为 `production` |
 | `ENABLE_REQUEST_LOGS` | `false` | 启用 debug 请求/响应日志 |
 
@@ -74,8 +74,8 @@ PM2 让应用持续运行,崩溃时自动重启:
 # 全局安装 PM2
 npm install -g pm2
 
-# 用 PM2 启动 9Router
-pm2 start npm --name 9router -- start
+# 用 PM2 启动 Showdar Router
+pm2 start npm --name showdar-router -- start
 
 # 保存 PM2 配置
 pm2 save
@@ -89,13 +89,13 @@ pm2 startup
 
 ```bash
 # 查看日志
-pm2 logs 9router
+pm2 logs showdar-router
 
 # 重启应用
-pm2 restart 9router
+pm2 restart showdar-router
 
 # 停止应用
-pm2 stop 9router
+pm2 stop showdar-router
 
 # 查看状态
 pm2 status
@@ -130,7 +130,7 @@ COPY . .
 RUN npm run build
 
 # Expose ports
-EXPOSE 3000 20128
+EXPOSE 3000 20129
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -147,17 +147,17 @@ CMD ["npm", "run", "start"]
 
 ```bash
 # 构建镜像
-docker build -t 9router .
+docker build -t showdar-router .
 
 # 运行容器
 docker run -d \
-  --name 9router \
+  --name showdar-router \
   -p 3000:3000 \
-  -p 20128:20128 \
+  -p 20129:20129 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
   -v 9router-data:/app/data \
-  9router
+  showdar-router
 ```
 
 ### 方式 2:Docker Compose
@@ -168,12 +168,12 @@ docker run -d \
 version: '3.8'
 
 services:
-  9router:
+  showdar-router:
     build: .
-    container_name: 9router
+    container_name: showdar-router
     ports:
       - "3000:3000"
-      - "20128:20128"
+      - "20129:20129"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secure-secret-change-this
@@ -247,7 +247,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    # Proxy to 9Router
+    # Proxy to Showdar Router
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -266,7 +266,7 @@ server {
 
     # API endpoint
     location /v1 {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:20129;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -333,9 +333,9 @@ sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# 若不使用反向代理,放开 9Router 端口
+# 若不使用反向代理,放开 Showdar Router 端口
 sudo ufw allow 3000/tcp
-sudo ufw allow 20128/tcp
+sudo ufw allow 20129/tcp
 
 # 启用防火墙
 sudo ufw enable
@@ -363,12 +363,12 @@ ssh -L 3000:localhost:3000 user@your-server.com
 # 更新系统包
 sudo apt update && sudo apt upgrade -y
 
-# 更新 9Router
+# 更新 Showdar Router
 cd /path/to/9router/app
 git pull
 npm install
 npm run build
-pm2 restart 9router
+pm2 restart showdar-router
 ```
 
 ### 5. 备份策略
@@ -392,7 +392,7 @@ tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
 pm2 status
 
 # 查看日志
-pm2 logs 9router --lines 100
+pm2 logs showdar-router --lines 100
 
 # 监控资源
 pm2 monit
@@ -418,7 +418,7 @@ htop
 df -h
 
 # 网络连接
-netstat -tulpn | grep -E '3000|20128'
+netstat -tulpn | grep -E '3000|20129'
 ```
 
 ---
@@ -429,20 +429,20 @@ netstat -tulpn | grep -E '3000|20128'
 
 ```bash
 # 查看日志
-pm2 logs 9router
+pm2 logs showdar-router
 
 # 检查端口是否被占用
 sudo lsof -i :3000
-sudo lsof -i :20128
+sudo lsof -i :20129
 
 # 检查环境变量
-pm2 env 9router
+pm2 env showdar-router
 ```
 
 ### Nginx 502 Bad Gateway
 
 ```bash
-# 检查 9Router 是否运行
+# 检查 Showdar Router 是否运行
 pm2 status
 
 # 查看 Nginx 错误日志
