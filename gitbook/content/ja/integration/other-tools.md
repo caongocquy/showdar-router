@@ -1,10 +1,10 @@
 # その他ツール統合
 
-9RouterはOpenAI API形式をサポートする任意のツールと互換性があります。このガイドでは、様々なツールやカスタムアプリケーション向けの汎用統合パターンを説明します。
+Showdar RouterはOpenAI API形式をサポートする任意のツールと互換性があります。このガイドでは、様々なツールやカスタムアプリケーション向けの汎用統合パターンを説明します。
 
 ## 概要
 
-9RouterはOpenAI互換APIエンドポイントを提供し、以下と動作します:
+Showdar RouterはOpenAI互換APIエンドポイントを提供し、以下と動作します:
 - カスタムスクリプトとアプリケーション
 - APIクライアントとテストツール
 - CLIツールとユーティリティ
@@ -13,20 +13,20 @@
 
 ## 汎用セットアップパターン
 
-任意のOpenAI互換ツールは以下の設定で9Routerに接続できます:
+任意のOpenAI互換ツールは以下の設定でShowdar Routerに接続できます:
 
-**ローカル9Router:**
+**ローカルShowdar Router:**
 ```
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:21298/v1
 API Key: your-api-key-from-dashboard
-Model: 任意の9Routerモデル (cc/*, cx/*, glm/*など)
+Model: 任意のShowdar Routerモデル (cc/*, cx/*, glm/*など)
 ```
 
-**クラウド9Router:**
+**クラウドShowdar Router:**
 ```
 Base URL: https://9router.com/v1
 API Key: your-api-key-from-dashboard
-Model: 任意の9Routerモデル (cc/*, cx/*, glm/*など)
+Model: 任意のShowdar Routerモデル (cc/*, cx/*, glm/*など)
 ```
 
 ## 利用可能なモデル
@@ -53,7 +53,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="your-api-key-from-dashboard",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 response = client.chat.completions.create(
@@ -73,7 +73,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "your-api-key-from-dashboard",
-  baseURL: "http://localhost:20128/v1"
+  baseURL: "http://localhost:21298/v1"
 });
 
 const response = await client.chat.completions.create({
@@ -89,7 +89,7 @@ console.log(response.choices[0].message.content);
 ### cURLコマンド
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-api-key-from-dashboard" \
   -d '{
@@ -104,7 +104,7 @@ curl http://localhost:20128/v1/chat/completions \
 
 **Request:**
 ```
-POST http://localhost:20128/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 ```
 
 **Headers:**
@@ -134,7 +134,7 @@ from langchain.schema import HumanMessage
 llm = ChatOpenAI(
     model_name="cc/claude-sonnet-4-20250514",
     openai_api_key="your-api-key-from-dashboard",
-    openai_api_base="http://localhost:20128/v1",
+    openai_api_base="http://localhost:21298/v1",
     temperature=0.7
 )
 
@@ -151,7 +151,7 @@ from llama_index.llms import OpenAI
 llm = OpenAI(
     model="cc/claude-sonnet-4-20250514",
     api_key="your-api-key-from-dashboard",
-    api_base="http://localhost:20128/v1"
+    api_base="http://localhost:21298/v1"
 )
 
 response = llm.complete("What is machine learning?")
@@ -167,7 +167,7 @@ import openai
 import json
 
 openai.api_key = "your-api-key-from-dashboard"
-openai.api_base = "http://localhost:20128/v1"
+openai.api_base = "http://localhost:21298/v1"
 
 def process_batch(prompts, model="cx/deepseek-chat"):
     results = []
@@ -199,7 +199,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "your-api-key-from-dashboard",
-  baseURL: "http://localhost:20128/v1"
+  baseURL: "http://localhost:21298/v1"
 });
 
 async function streamResponse(prompt) {
@@ -225,7 +225,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="your-api-key-from-dashboard",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 models = [
@@ -254,7 +254,7 @@ for model in models:
 ```bash
 # .envファイル
 ROUTER_API_KEY=your-api-key-from-dashboard
-ROUTER_BASE_URL=http://localhost:20128/v1
+ROUTER_BASE_URL=http://localhost:21298/v1
 ROUTER_MODEL=cc/claude-sonnet-4-20250514
 ```
 
@@ -275,7 +275,7 @@ from openai import OpenAI, OpenAIError
 
 client = OpenAI(
     api_key="your-api-key",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 try:
@@ -296,7 +296,7 @@ from openai import OpenAI, RateLimitError
 
 client = OpenAI(
     api_key="your-api-key",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 def chat_with_retry(prompt, max_retries=3):
@@ -318,18 +318,18 @@ def chat_with_retry(prompt, max_retries=3):
 
 ### 接続の問題
 
-**問題:** 9Routerに接続できない
+**問題:** Showdar Routerに接続できない
 ```bash
-# 9Routerが動作中か確認
-curl http://localhost:20128/health
+# Showdar Routerが動作中か確認
+curl http://localhost:21298/health
 
 # 期待されるレスポンス:
 {"status": "ok"}
 ```
 
 **解決策:**
-- 9Routerが動作中か確認
-- ポート20128がブロックされていないか確認
+- Showdar Routerが動作中か確認
+- ポート21298がブロックされていないか確認
 - 正しいbase URLを確認 (`/v1`を含む)
 
 ### 認証エラー
@@ -353,7 +353,7 @@ Error: Model 'cc/claude-opus' not found
 
 **解決策:**
 - 正確なモデル名を使用 (大文字小文字を区別)
-- 利用可能なモデルを確認: `curl http://localhost:20128/v1/models`
+- 利用可能なモデルを確認: `curl http://localhost:21298/v1/models`
 - プランでモデルが有効になっていることを確認
 
 ### タイムアウトの問題
@@ -366,7 +366,7 @@ Error: Request timed out after 30s
 **解決策:**
 - クライアント設定でタイムアウトを増やす
 - 時間制約のあるタスクには高速モデルを使用
-- 9Routerへのネットワーク接続を確認
+- Showdar Routerへのネットワーク接続を確認
 
 ### レート制限
 

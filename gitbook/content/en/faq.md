@@ -1,12 +1,12 @@
 # Frequently Asked Questions
 
-Common questions about 9Router.
+Common questions about Showdar Router.
 
 ---
 
-## What is 9Router?
+## What is Showdar Router?
 
-**9Router is an AI model router that maximizes your subscription value and minimizes costs.**
+**Showdar Router is an AI model router that maximizes your subscription value and minimizes costs.**
 
 It intelligently routes requests across multiple AI providers using a 3-tier fallback system:
 1. **Subscription tier** - Maximize Claude Code, Codex, Gemini quotas you already pay for
@@ -23,7 +23,7 @@ It intelligently routes requests across multiple AI providers using a 3-tier fal
 
 ## How does pricing work?
 
-**9Router uses a 3-tier pricing strategy:**
+**Showdar Router uses a 3-tier pricing strategy:**
 
 ### Tier 1: Subscription (Maximize First)
 - **Claude Code** (Pro/Max): $20-100/month - 5-hour + weekly quota
@@ -50,9 +50,9 @@ It intelligently routes requests across multiple AI providers using a 3-tier fal
 
 ---
 
-## Is 9Router free?
+## Is Showdar Router free?
 
-**Yes, 9Router itself is 100% free and open source.**
+**Yes, Showdar Router itself is 100% free and open source.**
 
 **Free tier providers available:**
 - **Gemini CLI** - 180K completions/month (FREE Google account)
@@ -96,7 +96,7 @@ See [providers documentation](providers/subscription.md) for details.
 
 ## Can I use multiple providers?
 
-**Yes! This is 9Router's core feature.**
+**Yes! This is Showdar Router's core feature.**
 
 **Combos allow you to chain multiple providers with automatic fallback:**
 
@@ -129,7 +129,7 @@ See [combos documentation](features/combos.md) for examples.
 
 ## How does quota tracking work?
 
-**9Router tracks quota in real-time for all providers:**
+**Showdar Router tracks quota in real-time for all providers:**
 
 **Features:**
 - **Token consumption** - Input/output tokens per request
@@ -154,13 +154,13 @@ See [quota tracking documentation](features/quota-tracking.md) for details.
 
 ---
 
-## Does 9Router work with Cursor?
+## Does Showdar Router work with Cursor?
 
 **Yes, but Cursor requires a cloud endpoint.**
 
 **Problem:** Cursor IDE doesn't support localhost endpoints.
 
-**Solution:** Use 9Router cloud deployment:
+**Solution:** Use Showdar Router cloud deployment:
 
 ```
 Cursor Settings → Models → Advanced:
@@ -192,16 +192,16 @@ See [Cursor integration guide](integration/cursor.md) for details.
 
 ---
 
-## Can I self-host 9Router?
+## Can I self-host Showdar Router?
 
-**Yes! 9Router supports multiple deployment options:**
+**Yes! Showdar Router supports multiple deployment options:**
 
 ### Localhost (Default)
 ```bash
-npm install -g 9router
-9router
+npm install -g showdar-router
+showdar-router
 → Dashboard: http://localhost:3000
-→ API: http://localhost:20128/v1
+→ API: http://localhost:21298/v1
 ```
 
 ### VPS/Cloud
@@ -219,12 +219,12 @@ npm start
 
 ### Docker
 ```bash
-docker build -t 9router .
+docker build -t showdar-router .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
   -v 9router-data:/app/data \
-  9router
+  showdar-router
 ```
 
 ### Cloudflare Workers
@@ -235,7 +235,7 @@ npm run deploy:cloudflare
 
 **Environment variables:**
 - `JWT_SECRET` - **MUST change in production!**
-- `DATA_DIR` - Database storage path (default: `~/.9router`)
+- `DATA_DIR` - Database storage path (default: `~/.showdar-router`)
 - `INITIAL_PASSWORD` - Dashboard login (default: `123456`)
 - `NODE_ENV` - Set to `production` for deploy
 
@@ -245,11 +245,11 @@ See [deployment guide](getting-started/installation.md#deployment) for details.
 
 ## Is my data secure?
 
-**Yes, 9Router prioritizes security and privacy:**
+**Yes, Showdar Router prioritizes security and privacy:**
 
 **Local storage:**
-- All data stored locally in `~/.9router` (or custom `DATA_DIR`)
-- No data sent to 9Router servers
+- All data stored locally in `~/.showdar-router` (or custom `DATA_DIR`)
+- No data sent to Showdar Router servers
 - OAuth tokens encrypted with JWT
 
 **No telemetry:**
@@ -268,26 +268,26 @@ See [deployment guide](getting-started/installation.md#deployment) for details.
 - Enable HTTPS for cloud deployments
 - Rotate API keys regularly
 
-**What 9Router stores:**
+**What Showdar Router stores:**
 - Provider OAuth tokens (encrypted)
 - API keys (encrypted)
 - Usage statistics (local only)
 - Combo configurations
 
-**What 9Router does NOT store:**
+**What Showdar Router does NOT store:**
 - Your prompts or responses
 - Code you generate
 - Personal information
 
 ---
 
-## How do I update 9Router?
+## How do I update Showdar Router?
 
 **Update methods depend on installation type:**
 
 ### Global NPM Install
 ```bash
-npm update -g 9router
+npm update -g showdar-router
 ```
 
 ### Local Install
@@ -301,23 +301,23 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
-docker stop 9router
-docker rm 9router
+docker pull showdar-router:latest
+docker stop showdar-router
+docker rm showdar-router
 docker run -d \
   -p 3000:3000 \
   -v 9router-data:/app/data \
-  9router:latest
+  showdar-router:latest
 ```
 
 **Check version:**
 ```bash
-9router --version
+showdar-router --version
 ```
 
 **Breaking changes:**
 - Check [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
-- Backup `~/.9router` before major updates
+- Backup `~/.showdar-router` before major updates
 - Review migration guides for major versions
 
 ---
@@ -340,7 +340,7 @@ docker run -d \
    ```bash
    # Fork repo
    git clone https://github.com/YOUR_USERNAME/9router.git
-   cd 9router
+   cd showdar-router
    
    # Create branch
    git checkout -b feature/your-feature
@@ -381,7 +381,7 @@ See [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.
 
 ## Need More Help?
 
-- **Documentation:** [9router.com/docs](https://9router.com/docs)
+- **Documentation:** [showdar-router.com/docs](https://9router.com/docs)
 - **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

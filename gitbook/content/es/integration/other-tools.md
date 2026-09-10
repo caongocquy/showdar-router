@@ -1,10 +1,10 @@
 # Integración con otras herramientas
 
-9Router es compatible con cualquier herramienta que soporte el formato de API de OpenAI. Esta guía cubre patrones de integración genéricos para varias herramientas y aplicaciones personalizadas.
+Showdar Router es compatible con cualquier herramienta que soporte el formato de API de OpenAI. Esta guía cubre patrones de integración genéricos para varias herramientas y aplicaciones personalizadas.
 
 ## Resumen
 
-9Router proporciona un endpoint de API compatible con OpenAI que funciona con:
+Showdar Router proporciona un endpoint de API compatible con OpenAI que funciona con:
 - Scripts y aplicaciones personalizadas
 - Clientes de API y herramientas de testing
 - Herramientas CLI y utilidades
@@ -13,20 +13,20 @@
 
 ## Patrón de configuración genérico
 
-Cualquier herramienta compatible con OpenAI puede conectarse a 9Router usando estas configuraciones:
+Cualquier herramienta compatible con OpenAI puede conectarse a Showdar Router usando estas configuraciones:
 
-**9Router local:**
+**Showdar Router local:**
 ```
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:21298/v1
 API Key: your-api-key-from-dashboard
-Model: cualquier modelo de 9Router (cc/*, cx/*, glm/*, etc.)
+Model: cualquier modelo de Showdar Router (cc/*, cx/*, glm/*, etc.)
 ```
 
-**9Router en la nube:**
+**Showdar Router en la nube:**
 ```
 Base URL: https://9router.com/v1
 API Key: your-api-key-from-dashboard
-Model: cualquier modelo de 9Router (cc/*, cx/*, glm/*, etc.)
+Model: cualquier modelo de Showdar Router (cc/*, cx/*, glm/*, etc.)
 ```
 
 ## Modelos disponibles
@@ -53,7 +53,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="your-api-key-from-dashboard",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 response = client.chat.completions.create(
@@ -73,7 +73,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "your-api-key-from-dashboard",
-  baseURL: "http://localhost:20128/v1"
+  baseURL: "http://localhost:21298/v1"
 });
 
 const response = await client.chat.completions.create({
@@ -89,7 +89,7 @@ console.log(response.choices[0].message.content);
 ### Comando cURL
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-api-key-from-dashboard" \
   -d '{
@@ -104,7 +104,7 @@ curl http://localhost:20128/v1/chat/completions \
 
 **Solicitud:**
 ```
-POST http://localhost:20128/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 ```
 
 **Headers:**
@@ -134,7 +134,7 @@ from langchain.schema import HumanMessage
 llm = ChatOpenAI(
     model_name="cc/claude-sonnet-4-20250514",
     openai_api_key="your-api-key-from-dashboard",
-    openai_api_base="http://localhost:20128/v1",
+    openai_api_base="http://localhost:21298/v1",
     temperature=0.7
 )
 
@@ -151,7 +151,7 @@ from llama_index.llms import OpenAI
 llm = OpenAI(
     model="cc/claude-sonnet-4-20250514",
     api_key="your-api-key-from-dashboard",
-    api_base="http://localhost:20128/v1"
+    api_base="http://localhost:21298/v1"
 )
 
 response = llm.complete("What is machine learning?")
@@ -167,7 +167,7 @@ import openai
 import json
 
 openai.api_key = "your-api-key-from-dashboard"
-openai.api_base = "http://localhost:20128/v1"
+openai.api_base = "http://localhost:21298/v1"
 
 def process_batch(prompts, model="cx/deepseek-chat"):
     results = []
@@ -199,7 +199,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "your-api-key-from-dashboard",
-  baseURL: "http://localhost:20128/v1"
+  baseURL: "http://localhost:21298/v1"
 });
 
 async function streamResponse(prompt) {
@@ -225,7 +225,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="your-api-key-from-dashboard",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 models = [
@@ -254,7 +254,7 @@ Almacena credenciales de forma segura:
 ```bash
 # .env file
 ROUTER_API_KEY=your-api-key-from-dashboard
-ROUTER_BASE_URL=http://localhost:20128/v1
+ROUTER_BASE_URL=http://localhost:21298/v1
 ROUTER_MODEL=cc/claude-sonnet-4-20250514
 ```
 
@@ -275,7 +275,7 @@ from openai import OpenAI, OpenAIError
 
 client = OpenAI(
     api_key="your-api-key",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 try:
@@ -296,7 +296,7 @@ from openai import OpenAI, RateLimitError
 
 client = OpenAI(
     api_key="your-api-key",
-    base_url="http://localhost:20128/v1"
+    base_url="http://localhost:21298/v1"
 )
 
 def chat_with_retry(prompt, max_retries=3):
@@ -318,18 +318,18 @@ def chat_with_retry(prompt, max_retries=3):
 
 ### Problemas de conexión
 
-**Problema:** No se puede conectar a 9Router
+**Problema:** No se puede conectar a Showdar Router
 ```bash
-# Verifica si 9Router está corriendo
-curl http://localhost:20128/health
+# Verifica si Showdar Router está corriendo
+curl http://localhost:21298/health
 
 # Respuesta esperada:
 {"status": "ok"}
 ```
 
 **Solución:**
-- Verifica que 9Router esté corriendo
-- Verifica que el puerto 20128 no esté bloqueado
+- Verifica que Showdar Router esté corriendo
+- Verifica que el puerto 21298 no esté bloqueado
 - Asegúrate de tener la URL base correcta (incluir `/v1`)
 
 ### Errores de autenticación
@@ -353,7 +353,7 @@ Error: Model 'cc/claude-opus' not found
 
 **Solución:**
 - Usa el nombre exacto del modelo (sensible a mayúsculas)
-- Verifica los modelos disponibles: `curl http://localhost:20128/v1/models`
+- Verifica los modelos disponibles: `curl http://localhost:21298/v1/models`
 - Verifica que el modelo esté habilitado en tu plan
 
 ### Problemas de timeout
@@ -366,7 +366,7 @@ Error: Request timed out after 30s
 **Solución:**
 - Aumenta el timeout en la configuración del cliente
 - Usa modelos más rápidos para tareas sensibles al tiempo
-- Verifica la conexión de red a 9Router
+- Verifica la conexión de red a Showdar Router
 
 ### Rate limiting
 

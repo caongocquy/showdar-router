@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const APP_NAME = "9router";
+const APP_NAME = "showdar-router";
 
 function defaultDir() {
   if (process.platform === "win32") {
@@ -12,7 +12,7 @@ function defaultDir() {
 }
 
 function getDataDir() {
-  const configured = process.env.DATA_DIR;
+  const configured = process.env.SHOWDAR_ROUTER_DATA_DIR || process.env.DATA_DIR;
   if (!configured) return defaultDir();
   try {
     fs.mkdirSync(configured, { recursive: true });

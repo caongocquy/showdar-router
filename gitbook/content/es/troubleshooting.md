@@ -1,6 +1,6 @@
 # Solución de problemas
 
-Problemas comunes y soluciones al usar 9Router.
+Problemas comunes y soluciones al usar Showdar Router.
 
 ---
 
@@ -78,7 +78,7 @@ Problemas comunes y soluciones al usar 9Router.
 **Soluciones:**
 
 1. **Refresh automático (por defecto):**
-   9Router refresca automáticamente los tokens. Espera 30 segundos y reintenta.
+   Showdar Router refresca automáticamente los tokens. Espera 30 segundos y reintenta.
 
 2. **Reconexión manual:**
    ```
@@ -132,34 +132,34 @@ Problemas comunes y soluciones al usar 9Router.
 
 ## Connection Refused
 
-**Problema:** "ECONNREFUSED" o "Cannot connect to localhost:20128".
+**Problema:** "ECONNREFUSED" o "Cannot connect to localhost:21298".
 
 **Causas:**
-- 9Router no está ejecutándose
-- Puerto 20128 bloqueado
+- Showdar Router no está ejecutándose
+- Puerto 21298 bloqueado
 - Firewall bloqueando la conexión
 
 **Soluciones:**
 
-1. **Inicia 9Router:**
+1. **Inicia Showdar Router:**
    ```bash
-   9router
+   showdar-router
    ```
    El dashboard debe abrir en http://localhost:3000
 
-2. **Verifica el puerto 20128:**
+2. **Verifica el puerto 21298:**
    ```bash
    # Verifica si el puerto está escuchando
-   lsof -i :20128
+   lsof -i :21298
    
    # O en Windows
-   netstat -ano | findstr :20128
+   netstat -ano | findstr :21298
    ```
 
 3. **Revisa el firewall:**
    - macOS: System Settings → Network → Firewall
    - Windows: Windows Defender Firewall → Allow app
-   - Linux: `sudo ufw allow 20128`
+   - Linux: `sudo ufw allow 21298`
 
 4. **Usa el endpoint en la nube:**
    Si localhost no funciona (ej. Cursor IDE):
@@ -175,15 +175,15 @@ Problemas comunes y soluciones al usar 9Router.
 
 **Causas:**
 - Puerto 3000 ya en uso
-- 9Router crasheó
+- Showdar Router crasheó
 - Problemas de caché del navegador
 
 **Soluciones:**
 
-1. **Verifica si 9Router está ejecutándose:**
+1. **Verifica si Showdar Router está ejecutándose:**
    ```bash
    # Verifica el proceso
-   ps aux | grep 9router
+   ps aux | grep showdar-router
    
    # Verifica el puerto 3000
    lsof -i :3000
@@ -199,13 +199,13 @@ Problemas comunes y soluciones al usar 9Router.
    taskkill /PID <PID> /F
    ```
 
-3. **Reinicia 9Router:**
+3. **Reinicia Showdar Router:**
    ```bash
    # Detener
-   pkill -f 9router
+   pkill -f showdar-router
    
    # Iniciar
-   9router
+   showdar-router
    ```
 
 4. **Limpia la caché del navegador:**
@@ -243,7 +243,7 @@ Problemas comunes y soluciones al usar 9Router.
 
 3. **Lista los modelos disponibles:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@ Problemas comunes y soluciones al usar 9Router.
 
 4. **Prueba la API key:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 
@@ -347,5 +347,5 @@ Problemas comunes y soluciones al usar 9Router.
 ## ¿Necesitas más ayuda?
 
 - **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentación:** [9router.com/docs](https://9router.com/docs)
+- **Documentación:** [showdar-router.com/docs](https://9router.com/docs)
 - **FAQ:** [faq.md](faq.md)

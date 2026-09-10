@@ -49,10 +49,10 @@ const has9RouterConfig = (config) => {
 
   const providers = config.providers;
 
-  if (providers["9router"]) return true;
+  if (providers["showdar-router"]) return true;
 
   for (const [name, provider] of Object.entries(providers)) {
-    if (provider.base_url && provider.base_url.includes("localhost:20128")) {
+    if (provider.base_url && provider.base_url.includes("localhost:21298")) {
       return true;
     }
   }
@@ -149,7 +149,7 @@ export async function POST(request) {
       config.providers = {};
     }
 
-    config.providers["9router"] = {
+    config.providers["showdar-router"] = {
       type: "openai-compatible",
       base_url: normalizedBaseUrl,
       auth: "bearer",
@@ -174,7 +174,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "jcode configured successfully. Use: jcode --provider-profile 9router",
+      message: "jcode configured successfully. Use: jcode --provider-profile showdar-router",
       configPath: getConfigPath(),
     });
   } catch (error) {
@@ -194,7 +194,7 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: "No configuration to remove" });
     }
 
-    delete config.providers["9router"];
+    delete config.providers["showdar-router"];
 
     await writeConfig(config);
 
@@ -204,7 +204,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9router configuration removed from jcode",
+      message: "showdar-router configuration removed from jcode",
     });
   } catch (error) {
     console.error("Error removing jcode configuration:", error);

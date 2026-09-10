@@ -9,13 +9,13 @@ const { machineIdSync } = require("node-machine-id");
 // Default configuration
 const DEFAULT_CONFIG = {
   host: "localhost",
-  port: 20128,
+  port: 21298,
   protocol: "http:",
 };
 
 const CLI_TOKEN_HEADER = "x-9r-cli-token";
 const CLI_TOKEN_SALT = "9r-cli-auth";
-const APP_NAME = "9router";
+const APP_NAME = "showdar-router";
 
 function getDataDir() {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
@@ -226,7 +226,7 @@ async function getOAuthAuthUrl(provider) {
   // Codex requires fixed port 1455 and path /auth/callback
   const redirectUri = provider === "codex" 
     ? "http://localhost:1455/auth/callback"
-    : "http://localhost:20128/callback";
+    : "http://localhost:21298/callback";
   return makeRequest("GET", `/api/oauth/${provider}/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`);
 }
 

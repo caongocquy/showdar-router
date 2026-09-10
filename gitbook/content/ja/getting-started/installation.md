@@ -1,6 +1,6 @@
 # インストール
 
-トラブルシューティングのヒント付きの9Router詳細インストールガイド。
+トラブルシューティングのヒント付きのShowdar Router詳細インストールガイド。
 
 ---
 
@@ -31,22 +31,22 @@ npm --version
 
 ### 方法1: グローバルインストール (推奨)
 
-どこからでも使用できるように9Routerをグローバルインストール:
+どこからでも使用できるようにShowdar Routerをグローバルインストール:
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
-**9Routerを起動:**
+**Showdar Routerを起動:**
 
 ```bash
-9router
+showdar-router
 ```
 
 **利点:**
 - ✅ どのディレクトリからでも実行
-- ✅ シンプルなコマンド: `9router`
-- ✅ `npm update -g 9router` で自動更新
+- ✅ シンプルなコマンド: `showdar-router`
+- ✅ `npm update -g showdar-router` で自動更新
 
 ### 方法2: ローカルインストール
 
@@ -55,13 +55,13 @@ npm install -g 9router
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install showdar-router
 ```
 
-**9Routerを起動:**
+**Showdar Routerを起動:**
 
 ```bash
-npx 9router
+npx showdar-router
 ```
 
 **利点:**
@@ -93,13 +93,13 @@ npm start
 ### サーバーを起動
 
 ```bash
-9router
+showdar-router
 ```
 
 **何が起こるか:**
-1. サーバーが `http://localhost:20128` で起動
+1. サーバーが `http://localhost:21298` で起動
 2. ダッシュボードが自動的にブラウザで開く
-3. `~/.9router` にデータディレクトリが作成される
+3. `~/.showdar-router` にデータディレクトリが作成される
 4. APIキーが自動生成される
 
 ### ダッシュボードログイン
@@ -132,7 +132,7 @@ Dashboard → Settings → API Keys
 ### サーバーステータスを確認
 
 ```bash
-curl http://localhost:20128/health
+curl http://localhost:21298/health
 ```
 
 **期待されるレスポンス:**
@@ -146,7 +146,7 @@ curl http://localhost:20128/health
 ### 利用可能なモデルを一覧表示
 
 ```bash
-curl http://localhost:20128/v1/models \
+curl http://localhost:21298/v1/models \
   -H "Authorization: Bearer your-api-key"
 ```
 
@@ -168,7 +168,7 @@ curl http://localhost:20128/v1/models \
 ### チャットコンプリーションをテスト
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,10 +193,10 @@ export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 
 # ストレージ
-export DATA_DIR="~/.9router"
+export DATA_DIR="~/.showdar-router"
 
 # サーバー
-export PORT="20128"
+export PORT="21298"
 export NODE_ENV="production"
 
 # ロギング
@@ -205,11 +205,11 @@ export ENABLE_REQUEST_LOGS="false"
 
 ### データディレクトリ
 
-**デフォルトの場所:** `~/.9router`
+**デフォルトの場所:** `~/.showdar-router`
 
 **内容:**
 ```
-~/.9router/
+~/.showdar-router/
   ├── db.json           # データベース (プロバイダー、コンボ、使用量)
   ├── api-keys.json     # APIキー
   └── logs/             # リクエストログ (有効化されている場合)
@@ -219,24 +219,24 @@ export ENABLE_REQUEST_LOGS="false"
 
 ```bash
 export DATA_DIR="/custom/path"
-9router
+showdar-router
 ```
 
 ### ポート設定
 
-**デフォルトポート:** `20128`
+**デフォルトポート:** `21298`
 
 **ポートを変更:**
 
 ```bash
 export PORT="3000"
-9router
+showdar-router
 ```
 
 **またはコマンドラインで:**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ---
@@ -247,14 +247,14 @@ export PORT="3000"
 
 **エラー:**
 ```
-Error: listen EADDRINUSE: address already in use :::20128
+Error: listen EADDRINUSE: address already in use :::21298
 ```
 
 **解決策1: 既存のプロセスを終了**
 
 ```bash
-# ポート20128を使用しているプロセスを検索
-lsof -i :20128
+# ポート21298を使用しているプロセスを検索
+lsof -i :21298
 
 # プロセスを終了
 kill -9 <PID>
@@ -263,7 +263,7 @@ kill -9 <PID>
 **解決策2: 別のポートを使用**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ### Permission Denied
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # 再度インストール
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 ### Node.jsバージョンが古すぎる
@@ -310,7 +310,7 @@ nvm use 20
 **解決策1: 手動で開く**
 
 ```
-http://localhost:20128
+http://localhost:21298
 ```
 
 **解決策2: ファイアウォールを確認**
@@ -345,23 +345,23 @@ Dashboard → Provider → Disconnect → Reconnect
 
 ### 高メモリ使用量
 
-**問題:** 9RouterがRAMを使いすぎている
+**問題:** Showdar RouterがRAMを使いすぎている
 
 **解決策: サーバーを再起動**
 
 ```bash
 # 停止
-pkill -f 9router
+pkill -f showdar-router
 
 # 起動
-9router
+showdar-router
 ```
 
 **または自動再起動にPM2を使用:**
 
 ```bash
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 ```
 
@@ -372,8 +372,8 @@ pm2 save
 ### ローカル開発
 
 ```bash
-npm install -g 9router
-9router
+npm install -g showdar-router
+showdar-router
 ```
 
 **ユースケース:** 個人コーディング、テスト
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # インストール
-npm install -g 9router
+npm install -g showdar-router
 
 # 設定
 export JWT_SECRET="your-secure-secret"
@@ -391,7 +391,7 @@ export NODE_ENV="production"
 
 # PM2で起動
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 pm2 startup
 ```
@@ -404,11 +404,11 @@ pm2 startup
 docker pull 9router/9router:latest
 
 docker run -d \
-  -p 20128:20128 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.9router \
-  --name 9router \
+  -v 9router-data:/root/.showdar-router \
+  --name showdar-router \
   9router/9router:latest
 ```
 
@@ -422,7 +422,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -444,13 +444,13 @@ server {
 ### グローバルインストールを削除
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g showdar-router
 ```
 
 ### データディレクトリを削除
 
 ```bash
-rm -rf ~/.9router
+rm -rf ~/.showdar-router
 ```
 
 ### 設定を削除
@@ -458,7 +458,7 @@ rm -rf ~/.9router
 ```bash
 # シェル設定から環境変数を削除
 nano ~/.bashrc  # または ~/.zshrc
-# 9router関連のエクスポートを削除
+# showdar-router関連のエクスポートを削除
 ```
 
 ---
@@ -473,6 +473,6 @@ nano ~/.bashrc  # または ~/.zshrc
 
 ## ヘルプが必要?
 
-- **ウェブサイト**: [9router.com](https://9router.com)
+- **ウェブサイト**: [showdar-router.com](https://9router.com)
 - **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)

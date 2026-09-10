@@ -1,29 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
-import { GITHUB_CONFIG } from "@/shared/constants/config";
+
+const DONATION = {
+  label: "MoMo",
+  description: "Support Showdar Router via MoMo",
+  icon: "favorite",
+  color: "#d81b60",
+  qr: "/donate/momo.jpeg",
+};
 
 export default function DonateModal({ isOpen, onClose }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const modalRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen || data) return;
-    setLoading(true);
-    setError("");
-    fetch(GITHUB_CONFIG.donateUrl, { cache: "no-store" })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json) => setData(json))
-      .catch((err) => setError(err.message || "Failed to load"))
-      .finally(() => setLoading(false));
-  }, [isOpen, data]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -47,7 +37,7 @@ export default function DonateModal({ isOpen, onClose }) {
         <div className="flex items-center justify-between p-3 border-b border-black/5 dark:border-white/5">
           <h2 className="text-lg font-semibold text-text-main flex items-center gap-2">
             <span className="material-symbols-outlined text-pink-500">volunteer_activism</span>
-            {data?.title || "Support 9Router"}
+            Support Showdar Router
           </h2>
           <button
             onClick={onClose}
@@ -59,27 +49,9 @@ export default function DonateModal({ isOpen, onClose }) {
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-          {loading && (
-            <div className="flex items-center justify-center py-10 text-text-muted">
-              <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
-              Loading...
-            </div>
-          )}
-          {error && (
-            <div className="text-red-500 py-4">Failed to load donate info: {error}</div>
-          )}
-          {!loading && !error && data && (
-            <>
-              {data.message && (
-                <p className="text-text-muted text-sm mb-6 text-center">{data.message}</p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {data.channels?.map((ch) => (
-                  <DonateChannelCard key={ch.id} channel={ch} />
-                ))}
-              </div>
-            </>
-          )}
+          <div className="flex justify-center">
+            <DonateChannelCard channel={DONATION} />
+          </div>
         </div>
       </div>
     </div>,
@@ -102,13 +74,15 @@ function DonateChannelCard({ channel }) {
         <div className="text-xs text-text-muted mb-3 text-center">{description}</div>
       )}
       {qr && (
-        <img
-          src={qr}
-          alt={`${label} QR`}
-          className="w-full max-w-[180px] aspect-square object-contain rounded-lg bg-white p-1"
-        loading="lazy"
-        decoding="async"
-        />
+        <div className="w-[180px] h-[180px] overflow-hidden rounded-lg bg-white">
+          <img
+            src={qr}
+            alt={`${label} QR`}
+            className="w-full aspect-square object-contain scale-[3]"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
       )}
     </>
   );

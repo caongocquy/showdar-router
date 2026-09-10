@@ -1,4 +1,5 @@
 import { ERROR_TYPES, DEFAULT_ERROR_MESSAGES } from "../config/errorConfig.js";
+import { extractRetryDeadline } from "../services/retryMetadata.js";
 
 /**
  * Build OpenAI-compatible error response body
@@ -27,8 +28,10 @@ export function buildErrorBody(statusCode, message) {
  * @param {string} message - Error message
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode, message) {
-  return new Response(JSON.stringify(buildErrorBody(statusCode, message)), {
+export function errorResponse(statusCode, message, metadata = null) {
+  const body = buildErrorBody(statusCode, message);
+  if (metadata) body.error.metadata = metadata;
+  return new Response(JSON.stringify(body), {
     status: statusCode,
     headers: {
       "Content-Type": "application/json",
@@ -63,29 +66,40 @@ export async function parseUpstreamError(response, executor = null) {
     bodyText = "";
   }
 
+  let errorBody = null;
+  try { errorBody = JSON.parse(bodyText); } catch { /* use text fallback */ }
+
+  const recoveryDeadline = (extra = {}) => {
+    const deadline = extractRetryDeadline({
+      retryAfterHeader: response.headers?.get?.("retry-after") || null,
+      errorBody: { ...errorBody, ...extra },
+      errorText: bodyText,
+    });
+    const timestamp = deadline ? Date.parse(deadline) : NaN;
+    return Number.isFinite(timestamp) ? timestamp : undefined;
+  };
+
   // Let executor-specific parser extract provider-specific fields (e.g. codex resetsAtMs)
   if (executor && typeof executor.parseError === "function") {
     try {
       const parsed = executor.parseError(response, bodyText);
       if (parsed && typeof parsed === "object") {
         const msg = parsed.message || DEFAULT_ERROR_MESSAGES[response.status] || `Upstream error: ${response.status}`;
-        return { statusCode: parsed.status || response.status, message: msg, resetsAtMs: parsed.resetsAtMs };
+        return {
+          statusCode: parsed.status || response.status,
+          message: msg,
+          resetsAtMs: parsed.resetsAtMs ?? recoveryDeadline({ retryAfter: parsed.retryAfter }),
+        };
       }
     } catch { /* fall through to default parsing */ }
   }
 
-  let message = "";
-  try {
-    const json = JSON.parse(bodyText);
-    message = json.error?.message || json.message || json.error || bodyText;
-  } catch {
-    message = bodyText;
-  }
+  const message = errorBody?.error?.message || errorBody?.message || errorBody?.error || bodyText;
 
   const messageStr = typeof message === "string" ? message : JSON.stringify(message);
   const finalMessage = messageStr || DEFAULT_ERROR_MESSAGES[response.status] || `Upstream error: ${response.status}`;
 
-  return { statusCode: response.status, message: finalMessage };
+  return { statusCode: response.status, message: finalMessage, resetsAtMs: recoveryDeadline() };
 }
 
 /**
@@ -96,12 +110,15 @@ export async function parseUpstreamError(response, executor = null) {
  * @returns {{ success: false, status: number, error: string, response: Response, resetsAtMs?: number }}
  */
 export function createErrorResult(statusCode, message, resetsAtMs) {
+  const metadata = Number.isFinite(Number(resetsAtMs))
+    ? { headers: { "X-RateLimit-Reset": String(resetsAtMs) } }
+    : null;
   return {
     success: false,
     status: statusCode,
     error: message,
     resetsAtMs,
-    response: errorResponse(statusCode, message)
+    response: errorResponse(statusCode, message, metadata)
   };
 }
 

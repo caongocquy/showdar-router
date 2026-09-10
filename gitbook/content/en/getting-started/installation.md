@@ -1,6 +1,6 @@
 # Installation
 
-Detailed installation guide for 9Router with troubleshooting tips.
+Detailed installation guide for Showdar Router with troubleshooting tips.
 
 ---
 
@@ -31,22 +31,22 @@ npm --version
 
 ### Method 1: Global Installation (Recommended)
 
-Install 9Router globally to use from anywhere:
+Install Showdar Router globally to use from anywhere:
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
-**Start 9Router:**
+**Start Showdar Router:**
 
 ```bash
-9router
+showdar-router
 ```
 
 **Benefits:**
 - ✅ Run from any directory
-- ✅ Simple command: `9router`
-- ✅ Auto-updates with `npm update -g 9router`
+- ✅ Simple command: `showdar-router`
+- ✅ Auto-updates with `npm update -g showdar-router`
 
 ### Method 2: Local Installation
 
@@ -55,13 +55,13 @@ Install in a specific project:
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install showdar-router
 ```
 
-**Start 9Router:**
+**Start Showdar Router:**
 
 ```bash
-npx 9router
+npx showdar-router
 ```
 
 **Benefits:**
@@ -93,13 +93,13 @@ npm start
 ### Start the Server
 
 ```bash
-9router
+showdar-router
 ```
 
 **What happens:**
-1. Server starts on `http://localhost:20128`
+1. Server starts on `http://localhost:21298`
 2. Dashboard opens automatically in browser
-3. Data directory created at `~/.9router`
+3. Data directory created at `~/.showdar-router`
 4. API key generated automatically
 
 ### Dashboard Login
@@ -132,7 +132,7 @@ Dashboard → Settings → API Keys
 ### Check Server Status
 
 ```bash
-curl http://localhost:20128/health
+curl http://localhost:21298/health
 ```
 
 **Expected response:**
@@ -146,7 +146,7 @@ curl http://localhost:20128/health
 ### List Available Models
 
 ```bash
-curl http://localhost:20128/v1/models \
+curl http://localhost:21298/v1/models \
   -H "Authorization: Bearer your-api-key"
 ```
 
@@ -168,7 +168,7 @@ curl http://localhost:20128/v1/models \
 ### Test Chat Completion
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,10 +193,10 @@ export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 
 # Storage
-export DATA_DIR="~/.9router"
+export DATA_DIR="~/.showdar-router"
 
 # Server
-export PORT="20128"
+export PORT="21298"
 export NODE_ENV="production"
 
 # Logging
@@ -205,11 +205,11 @@ export ENABLE_REQUEST_LOGS="false"
 
 ### Data Directory
 
-**Default location:** `~/.9router`
+**Default location:** `~/.showdar-router`
 
 **Contents:**
 ```
-~/.9router/
+~/.showdar-router/
   ├── db.json           # Database (providers, combos, usage)
   ├── api-keys.json     # API keys
   └── logs/             # Request logs (if enabled)
@@ -219,24 +219,24 @@ export ENABLE_REQUEST_LOGS="false"
 
 ```bash
 export DATA_DIR="/custom/path"
-9router
+showdar-router
 ```
 
 ### Port Configuration
 
-**Default port:** `20128`
+**Default port:** `21298`
 
 **Change port:**
 
 ```bash
 export PORT="3000"
-9router
+showdar-router
 ```
 
 **Or use command line:**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ---
@@ -247,14 +247,14 @@ export PORT="3000"
 
 **Error:**
 ```
-Error: listen EADDRINUSE: address already in use :::20128
+Error: listen EADDRINUSE: address already in use :::21298
 ```
 
 **Solution 1: Kill existing process**
 
 ```bash
-# Find process using port 20128
-lsof -i :20128
+# Find process using port 21298
+lsof -i :21298
 
 # Kill process
 kill -9 <PID>
@@ -263,7 +263,7 @@ kill -9 <PID>
 **Solution 2: Use different port**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ### Permission Denied
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # Then install again
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 ### Node.js Version Too Old
@@ -310,7 +310,7 @@ nvm use 20
 **Solution 1: Open manually**
 
 ```
-http://localhost:20128
+http://localhost:21298
 ```
 
 **Solution 2: Check firewall**
@@ -345,23 +345,23 @@ Dashboard → Provider → Disconnect → Reconnect
 
 ### High Memory Usage
 
-**Issue:** 9Router using too much RAM
+**Issue:** Showdar Router using too much RAM
 
 **Solution: Restart server**
 
 ```bash
 # Stop
-pkill -f 9router
+pkill -f showdar-router
 
 # Start
-9router
+showdar-router
 ```
 
 **Or use PM2 for auto-restart:**
 
 ```bash
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 ```
 
@@ -372,8 +372,8 @@ pm2 save
 ### Local Development
 
 ```bash
-npm install -g 9router
-9router
+npm install -g showdar-router
+showdar-router
 ```
 
 **Use case:** Personal coding, testing
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # Install
-npm install -g 9router
+npm install -g showdar-router
 
 # Configure
 export JWT_SECRET="your-secure-secret"
@@ -391,7 +391,7 @@ export NODE_ENV="production"
 
 # Start with PM2
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 pm2 startup
 ```
@@ -404,11 +404,11 @@ pm2 startup
 docker pull 9router/9router:latest
 
 docker run -d \
-  -p 20128:20128 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.9router \
-  --name 9router \
+  -v 9router-data:/root/.showdar-router \
+  --name showdar-router \
   9router/9router:latest
 ```
 
@@ -422,7 +422,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -444,13 +444,13 @@ server {
 ### Remove Global Installation
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g showdar-router
 ```
 
 ### Remove Data Directory
 
 ```bash
-rm -rf ~/.9router
+rm -rf ~/.showdar-router
 ```
 
 ### Remove Configuration
@@ -473,6 +473,6 @@ nano ~/.bashrc  # or ~/.zshrc
 
 ## Need Help?
 
-- **Website**: [9router.com](https://9router.com)
+- **Website**: [showdar-router.com](https://9router.com)
 - **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)

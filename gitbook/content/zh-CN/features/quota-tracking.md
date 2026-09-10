@@ -6,7 +6,7 @@
 
 ## 概览
 
-9Router 为所有提供商提供完善的配额跟踪:
+Showdar Router 为所有提供商提供完善的配额跟踪:
 
 - **实时 token 消耗** - 查看每次请求使用的 tokens
 - **配额上限与剩余** - 跟踪使用 vs 上限
@@ -561,7 +561,7 @@ budget-combo:
 ### 获取配额状态
 
 ```bash
-GET http://localhost:20128/api/quota
+GET http://localhost:21298/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### 获取使用统计
 
 ```bash
-GET http://localhost:20128/api/usage?period=today
+GET http://localhost:21298/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
@@ -669,7 +669,7 @@ Response:
 1. 刷新仪表盘(F5)
 2. 检查系统时间是否正确
 3. 确认时区设置
-4. 若问题持续,重启 9Router
+4. 若问题持续,重启 Showdar Router
 
 **问题:未收到告警**
 

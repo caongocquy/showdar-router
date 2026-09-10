@@ -6,7 +6,7 @@ Rastrea el consumo de tokens en tiempo real, monitorea los límites de cuota, es
 
 ## Resumen
 
-9Router proporciona un seguimiento de cuota integral para todos los proveedores:
+Showdar Router proporciona un seguimiento de cuota integral para todos los proveedores:
 
 - **Consumo de tokens en tiempo real** - Mira los tokens usados por solicitud
 - **Límites de cuota y restantes** - Rastrea el uso vs límites
@@ -561,7 +561,7 @@ Optimización:
 ### Obtener estado de cuota
 
 ```bash
-GET http://localhost:20128/api/quota
+GET http://localhost:21298/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### Obtener estadísticas de uso
 
 ```bash
-GET http://localhost:20128/api/usage?period=today
+GET http://localhost:21298/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
@@ -669,7 +669,7 @@ Response:
 1. Refresca el dashboard (F5)
 2. Verifica que la hora del sistema sea correcta
 3. Verifica la configuración de zona horaria
-4. Reinicia 9Router si el problema persiste
+4. Reinicia Showdar Router si el problema persiste
 
 **Problema: No se reciben alertas**
 

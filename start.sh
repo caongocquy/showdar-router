@@ -1,4 +1,4 @@
-docker stop 9router
-docker rm 9router
-docker build -t 9router .
-docker run -d --name 9router -p 20128:20128 --env-file .env -v 9router-data:/app/data 9router
+docker stop showdar-router
+docker rm showdar-router
+docker build -t showdar-router .
+docker run -d --name showdar-router -p 21298:21298 --env-file .env -v showdar-router-data:/app/data showdar-router

@@ -23,6 +23,7 @@ const EXCLUDE_PATTERNS = [
   "*.log",          // Log files
   "tmp",            // Temp files
   ".DS_Store",      // macOS files
+  ".build-home",    // Build-time HOME directory (contains SQLite, JWT secrets)
 ];
 
 function shouldExclude(name) {
@@ -89,7 +90,7 @@ function resolveStandaloneBuild(appDir, buildDistDir) {
     : legacyStandaloneRoot;
 
   // Next.js 16 nests standalone output under the project name when
-  // NEXT_TRACING_ROOT_MODE=workspace, e.g. standalone/9router/server.js.
+  // NEXT_TRACING_ROOT_MODE=workspace, e.g. standalone/showdar-router/server.js.
   const pkgName = path.basename(appDir);
   const nestedRoot = path.join(standaloneRoot, pkgName);
   if (fs.existsSync(path.join(nestedRoot, "server.js")) && !fs.existsSync(path.join(standaloneRoot, "server.js"))) {
@@ -149,7 +150,7 @@ function assertRequiredApiArtifacts(cliAppDir) {
 }
 
 function buildCliPackage() {
-  console.log("📦 Building 9Router CLI package with Next.js...\n");
+  console.log("📦 Building Showdar Router CLI package with Next.js...\n");
 
   fs.mkdirSync(buildHomeDir, { recursive: true });
   fs.mkdirSync(path.join(buildHomeDir, "AppData", "Roaming"), { recursive: true });
@@ -210,19 +211,18 @@ function buildCliPackage() {
   }
   console.log("✅ Copied standalone build\n");
 
-  // Step 3a: Copy custom server (injects real socket IP, strips spoofable XFF).
+  // Step 3a: Copy the trusted peer wrapper beside the generated server.
   const customServerSrc = path.join(appDir, "custom-server.js");
   if (fs.existsSync(customServerSrc)) {
     fs.copyFileSync(customServerSrc, path.join(cliAppDir, "custom-server.js"));
-    console.log("✅ Copied custom-server.js\n");
+    console.log("✅ Copied trusted peer wrapper\n");
   } else {
-    console.error("❌ custom-server.js not found — without it no request can be proven local,");
-    console.error("   so the packaged CLI would demand an API key for its own dashboard and /v1.");
+    console.error("❌ custom-server.js not found — standalone local-peer proof is unavailable.");
     process.exit(1);
   }
 
   // Step 3b: Ensure sql.js (pure JS fallback) bundled in app/cli/app/node_modules.
-  // Strip better-sqlite3 (native) — it lives in ~/.9router/runtime to avoid
+  // Strip better-sqlite3 (native) — it lives in ~/.showdar-router/runtime to avoid
   // Windows EBUSY during global CLI updates. node:sqlite (Node ≥22.5) is also
   // available as a no-install middle tier.
   console.log("3️⃣ b Configuring SQLite drivers...");
@@ -253,7 +253,7 @@ function buildCliPackage() {
   const betterDir = path.join(cliAppDir, "node_modules", "better-sqlite3");
   if (fs.existsSync(betterDir)) {
     fs.rmSync(betterDir, { recursive: true, force: true });
-    console.log("✅ Stripped better-sqlite3 (lives in ~/.9router/runtime)");
+    console.log("✅ Stripped better-sqlite3 (lives in ~/.showdar-router/runtime)");
   }
   console.log("");
 

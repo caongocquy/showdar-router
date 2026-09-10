@@ -56,55 +56,44 @@ function initTray(options) {
 /**
  * Build menu items array shared between platforms
  */
-function buildMenuItems(port, autostartEnabled) {
+function buildMenuItems(port, running = true) {
   return [
-    { title: `9Router (Port ${port})`, tooltip: "Server is running", enabled: false },
-    { title: "Open Dashboard", tooltip: "Open in browser", enabled: true },
-    {
-      title: autostartEnabled ? "✓ Auto-start Enabled" : "Enable Auto-start",
-      tooltip: "Run on OS startup",
-      enabled: true
-    },
-    { title: "Quit", tooltip: "Stop server and exit", enabled: true }
+    { title: "Showdar Router", tooltip: "Showdar Router", enabled: false },
+    { title: `Server: ${running ? "Running" : "Stopped"}`, tooltip: "Server status", enabled: false },
+    { title: `http://localhost:${port}`, tooltip: "Local server URL", enabled: false },
+    { title: "Open Dashboard", tooltip: "Open dashboard in browser", enabled: true },
+    { title: "Open Logs", tooltip: "Open server logs", enabled: true },
+    { title: "Restart Server", tooltip: "Restart Showdar Router", enabled: true },
+    { title: "Stop Server", tooltip: "Stop Showdar Router", enabled: true },
+    { title: "Quit Tray", tooltip: "Close tray only", enabled: true }
   ];
 }
 
 // Menu item indexes
-const MENU_INDEX = { STATUS: 0, DASHBOARD: 1, AUTOSTART: 2, QUIT: 3 };
-
-/**
- * Get current autostart state
- */
-function getAutostartEnabled() {
-  try {
-    const { isAutoStartEnabled } = require("./autostart");
-    return isAutoStartEnabled();
-  } catch (e) {
-    return false;
-  }
-}
+const MENU_INDEX = { TITLE: 0, STATUS: 1, URL: 2, DASHBOARD: 3, LOGS: 4, RESTART: 5, STOP: 6, QUIT: 7 };
 
 /**
  * Handle menu item click (shared logic)
  */
-function handleClick(index, options, onAutostartToggle) {
-  const { onQuit, onOpenDashboard, port } = options;
+function handleClick(index, options) {
+  if (typeof index === "object" && index !== null) {
+    const title = index.item?.title;
+    const titleIndex = buildMenuItems(options.port, options.running !== false)
+      .findIndex((item) => item.title === title);
+    index = titleIndex >= 0 ? titleIndex : index.seq_id;
+  }
+  const { onQuit, onOpenDashboard, onOpenLogs, onRestart, onStop, port } = options;
   if (index === MENU_INDEX.DASHBOARD) {
     if (onOpenDashboard) onOpenDashboard();
     else openBrowser(`http://localhost:${port}/dashboard`);
-  } else if (index === MENU_INDEX.AUTOSTART) {
-    const enabled = getAutostartEnabled();
-    try {
-      const { enableAutoStart, disableAutoStart } = require("./autostart");
-      if (enabled) disableAutoStart();
-      else enableAutoStart();
-      onAutostartToggle(!enabled);
-    } catch (e) {}
+  } else if (index === MENU_INDEX.LOGS) {
+    if (onOpenLogs) onOpenLogs();
+  } else if (index === MENU_INDEX.RESTART) {
+    if (onRestart) onRestart();
+  } else if (index === MENU_INDEX.STOP) {
+    return Promise.resolve(onStop && onStop()).finally(() => killTray().finally(() => process.exit(0)));
   } else if (index === MENU_INDEX.QUIT) {
-    console.log("\n👋 Shutting down...");
-    if (onQuit) onQuit();
-    killTray();
-    setTimeout(() => process.exit(0), 500);
+    return Promise.resolve(onQuit && onQuit()).finally(() => killTray().finally(() => process.exit(0)));
   }
 }
 
@@ -116,18 +105,14 @@ function initWindowsTray(options) {
   try {
     const { initWinTray } = require("./trayWin");
     const iconPath = path.join(__dirname, "icon.ico");
-    const autostartEnabled = getAutostartEnabled();
-    const items = buildMenuItems(port, autostartEnabled);
+    const items = buildMenuItems(port, options.running !== false);
 
     trayInstance = initWinTray({
       iconPath,
-      tooltip: `9Router - Port ${port}`,
+      tooltip: `Showdar Router - Port ${port}`,
       items,
       onClick: (index) => {
-        handleClick(index, options, (newEnabled) => {
-          const newTitle = newEnabled ? "✓ Auto-start Enabled" : "Enable Auto-start";
-          trayInstance.updateItem(MENU_INDEX.AUTOSTART, newTitle, true);
-        });
+        handleClick(index, options);
       }
     });
 
@@ -194,8 +179,7 @@ function initUnixTray(options) {
 
     chmodTrayBin(isV2 ? "systray2" : "systray");
 
-    const autostartEnabled = getAutostartEnabled();
-    const items = buildMenuItems(port, autostartEnabled);
+    const items = buildMenuItems(port, options.running !== false);
 
     const menu = {
       icon: getIconBase64(),
@@ -204,7 +188,7 @@ function initUnixTray(options) {
       // because template mode only uses the alpha channel.
       isTemplateIcon: false,
       title: "",
-      tooltip: `9Router - Port ${port}`,
+      tooltip: `Showdar Router - Port ${port}`,
       items
     };
 
@@ -212,17 +196,7 @@ function initUnixTray(options) {
     isWinTray = false;
 
     trayInstance.onClick((action) => {
-      handleClick(action.seq_id, options, (newEnabled) => {
-        trayInstance.sendAction({
-          type: "update-item",
-          item: {
-            title: newEnabled ? "✓ Auto-start Enabled" : "Enable Auto-start",
-            tooltip: "Run on OS startup",
-            enabled: true
-          },
-          seq_id: MENU_INDEX.AUTOSTART
-        });
-      });
+      handleClick(action, options);
     });
 
     if (isV2) {
@@ -230,7 +204,7 @@ function initUnixTray(options) {
       // failures (binary crash, EACCES, etc.) so users can see why the icon
       // didn't appear instead of getting a misleading "running in tray" log.
       trayInstance.ready().catch((err) => {
-        process.stderr.write(`[9router] tray failed to start: ${err && err.message ? err.message : err}\n`);
+        process.stderr.write(`[showdar-router] tray failed to start: ${err && err.message ? err.message : err}\n`);
       });
     } else {
       trayInstance.onReady(() => {});
@@ -239,7 +213,7 @@ function initUnixTray(options) {
 
     return trayInstance;
   } catch (err) {
-    process.stderr.write(`[9router] tray init error: ${err.message}\n`);
+    process.stderr.write(`[showdar-router] tray init error: ${err.message}\n`);
     return null;
   }
 }
@@ -318,5 +292,8 @@ function openBrowser(url) {
 
 module.exports = {
   initTray,
-  killTray
+  killTray,
+  buildMenuItems,
+  handleClick,
+  MENU_INDEX
 };

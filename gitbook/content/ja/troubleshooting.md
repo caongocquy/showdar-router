@@ -1,6 +1,6 @@
 # トラブルシューティング
 
-9Router利用時の一般的な問題と解決策。
+Showdar Router利用時の一般的な問題と解決策。
 
 ---
 
@@ -78,7 +78,7 @@
 **解決策:**
 
 1. **自動更新(デフォルト):**
-   9Routerは自動的にトークンを更新します。30秒待ってから再試行。
+   Showdar Routerは自動的にトークンを更新します。30秒待ってから再試行。
 
 2. **手動で再接続:**
    ```
@@ -132,34 +132,34 @@
 
 ## Connection Refused
 
-**問題:** 「ECONNREFUSED」または「Cannot connect to localhost:20128」。
+**問題:** 「ECONNREFUSED」または「Cannot connect to localhost:21298」。
 
 **原因:**
-- 9Routerが起動していない
-- ポート20128がブロックされている
+- Showdar Routerが起動していない
+- ポート21298がブロックされている
 - ファイアウォールが接続をブロック
 
 **解決策:**
 
-1. **9Routerを起動:**
+1. **Showdar Routerを起動:**
    ```bash
-   9router
+   showdar-router
    ```
    ダッシュボードがhttp://localhost:3000で開くはず
 
-2. **ポート20128を確認:**
+2. **ポート21298を確認:**
    ```bash
    # ポートがリッスンしているか確認
-   lsof -i :20128
+   lsof -i :21298
    
    # またはWindowsで
-   netstat -ano | findstr :20128
+   netstat -ano | findstr :21298
    ```
 
 3. **ファイアウォールを確認:**
    - macOS: システム設定 → ネットワーク → ファイアウォール
    - Windows: Windows Defenderファイアウォール → アプリを許可
-   - Linux: `sudo ufw allow 20128`
+   - Linux: `sudo ufw allow 21298`
 
 4. **クラウドエンドポイントを使用:**
    localhostが動作しない場合(例: Cursor IDE):
@@ -175,15 +175,15 @@
 
 **原因:**
 - ポート3000がすでに使用中
-- 9Routerがクラッシュした
+- Showdar Routerがクラッシュした
 - ブラウザキャッシュの問題
 
 **解決策:**
 
-1. **9Routerが実行中か確認:**
+1. **Showdar Routerが実行中か確認:**
    ```bash
    # プロセスを確認
-   ps aux | grep 9router
+   ps aux | grep showdar-router
    
    # ポート3000を確認
    lsof -i :3000
@@ -199,13 +199,13 @@
    taskkill /PID <PID> /F
    ```
 
-3. **9Routerを再起動:**
+3. **Showdar Routerを再起動:**
    ```bash
    # 停止
-   pkill -f 9router
+   pkill -f showdar-router
    
    # 起動
-   9router
+   showdar-router
    ```
 
 4. **ブラウザキャッシュをクリア:**
@@ -243,7 +243,7 @@
 
 3. **利用可能なモデルを一覧表示:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@
 
 4. **APIキーをテスト:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 
@@ -347,5 +347,5 @@
 ## さらにヘルプが必要?
 
 - **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **ドキュメント:** [9router.com/docs](https://9router.com/docs)
+- **ドキュメント:** [showdar-router.com/docs](https://9router.com/docs)
 - **FAQ:** [faq.md](faq.md)

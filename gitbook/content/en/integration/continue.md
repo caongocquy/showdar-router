@@ -1,13 +1,13 @@
 # Continue VSCode Extension Integration
 
-Integrate 9Router with Continue extension to bring AI assistance directly into Visual Studio Code.
+Integrate Showdar Router with Continue extension to bring AI assistance directly into Visual Studio Code.
 
 ## Prerequisites
 
 - Visual Studio Code installed
 - Continue extension installed from VSCode marketplace
-- 9Router API key from [dashboard](https://9router.com/dashboard)
-- 9Router running (local or cloud)
+- Showdar Router API key from [dashboard](https://9router.com/dashboard)
+- Showdar Router running (local or cloud)
 
 ## Configuration Steps
 
@@ -18,7 +18,7 @@ Integrate 9Router with Continue extension to bring AI assistance directly into V
 3. Type "Continue: Open Config" and select it
 4. This opens `~/.continue/config.json`
 
-### 2. Add 9Router Model Configuration
+### 2. Add Showdar Router Model Configuration
 
 Add the following configuration to your `config.json`:
 
@@ -27,11 +27,11 @@ Add the following configuration to your `config.json`:
 {
   "models": [
     {
-      "title": "9Router - Claude Opus",
+      "title": "Showdar Router - Claude Opus",
       "provider": "openai",
       "model": "cc/claude-opus-4-5-20251101",
       "apiKey": "your-api-key-from-dashboard",
-      "apiBase": "http://localhost:20128/v1"
+      "apiBase": "http://localhost:21298/v1"
     }
   ]
 }
@@ -42,38 +42,38 @@ Add the following configuration to your `config.json`:
 {
   "models": [
     {
-      "title": "9Router - Claude Opus (Best)",
+      "title": "Showdar Router - Claude Opus (Best)",
       "provider": "openai",
       "model": "cc/claude-opus-4-5-20251101",
       "apiKey": "your-api-key-from-dashboard",
-      "apiBase": "http://localhost:20128/v1"
+      "apiBase": "http://localhost:21298/v1"
     },
     {
-      "title": "9Router - Claude Sonnet (Balanced)",
+      "title": "Showdar Router - Claude Sonnet (Balanced)",
       "provider": "openai",
       "model": "cc/claude-sonnet-4-20250514",
       "apiKey": "your-api-key-from-dashboard",
-      "apiBase": "http://localhost:20128/v1"
+      "apiBase": "http://localhost:21298/v1"
     },
     {
-      "title": "9Router - DeepSeek Chat (Code)",
+      "title": "Showdar Router - DeepSeek Chat (Code)",
       "provider": "openai",
       "model": "cx/deepseek-chat",
       "apiKey": "your-api-key-from-dashboard",
-      "apiBase": "http://localhost:20128/v1"
+      "apiBase": "http://localhost:21298/v1"
     },
     {
-      "title": "9Router - Claude Haiku (Fast)",
+      "title": "Showdar Router - Claude Haiku (Fast)",
       "provider": "openai",
       "model": "cc/claude-haiku-4-20250514",
       "apiKey": "your-api-key-from-dashboard",
-      "apiBase": "http://localhost:20128/v1"
+      "apiBase": "http://localhost:21298/v1"
     }
   ]
 }
 ```
 
-**For Cloud 9Router:**
+**For Cloud Showdar Router:**
 Replace `apiBase` with:
 ```json
 "apiBase": "https://9router.com/v1"
@@ -89,7 +89,7 @@ Replace `apiBase` with:
 
 1. Open Continue sidebar (click Continue icon in left panel)
 2. Click model selector dropdown at the top
-3. Choose your preferred 9Router model
+3. Choose your preferred Showdar Router model
 
 ## Available Models
 
@@ -139,11 +139,11 @@ Add custom system prompts for specific behaviors:
 {
   "models": [
     {
-      "title": "9Router - Code Expert",
+      "title": "Showdar Router - Code Expert",
       "provider": "openai",
       "model": "cx/deepseek-chat",
       "apiKey": "your-api-key",
-      "apiBase": "http://localhost:20128/v1",
+      "apiBase": "http://localhost:21298/v1",
       "systemMessage": "You are an expert programmer. Always provide clean, well-documented code with best practices."
     }
   ]
@@ -158,11 +158,11 @@ Adjust model behavior with parameters:
 {
   "models": [
     {
-      "title": "9Router - Creative Writer",
+      "title": "Showdar Router - Creative Writer",
       "provider": "openai",
       "model": "cc/claude-opus-4-5-20251101",
       "apiKey": "your-api-key",
-      "apiBase": "http://localhost:20128/v1",
+      "apiBase": "http://localhost:21298/v1",
       "temperature": 0.9,
       "topP": 0.95
     }
@@ -204,13 +204,13 @@ Configure what context Continue sends to the model:
 ## Troubleshooting
 
 ### Model Not Responding
-- Check 9Router is running: `curl http://localhost:20128/health`
+- Check Showdar Router is running: `curl http://localhost:21298/health`
 - Verify API key in config.json
 - Check VSCode Developer Console for errors: `Help` → `Toggle Developer Tools`
 
 ### Wrong Model Selected
 - Click model dropdown in Continue sidebar
-- Select correct 9Router model
+- Select correct Showdar Router model
 - Model name must match exactly (case-sensitive)
 
 ### Configuration Not Loading
@@ -221,7 +221,7 @@ Configure what context Continue sends to the model:
 ### Slow Performance
 - Switch to faster models (haiku, flash)
 - Reduce context size in contextProviders
-- Check network latency to 9Router
+- Check network latency to Showdar Router
 
 ## Best Practices
 

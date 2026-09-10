@@ -1,6 +1,6 @@
 # はじめに
 
-9Routerを5分で起動し、AIリクエストをインテリジェントにルーティングし始めましょう。
+Showdar Routerを5分で起動し、AIリクエストをインテリジェントにルーティングし始めましょう。
 
 ---
 
@@ -9,7 +9,7 @@
 ### 1. インストール
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 **要件:** Node.js 20+ ([インストール詳細](getting-started/installation.md))
@@ -17,10 +17,10 @@ npm install -g 9router
 ### 2. 起動
 
 ```bash
-9router
+showdar-router
 ```
 
-🎉 **ダッシュボードが自動的に開きます** (`http://localhost:20128`)
+🎉 **ダッシュボードが自動的に開きます** (`http://localhost:21298`)
 
 - デフォルトパスワード: `123456` (ダッシュボードで変更)
 - APIキーは自動生成
@@ -43,7 +43,7 @@ Dashboard → Providers → Connect [Provider]
 **例: Claude Code**
 1. 「Connect Claude Code」をクリック
 2. Claudeアカウントでログイン
-3. 9Routerを認可
+3. Showdar Routerを認可
 4. ✅ 完了! モデルを使用: `cc/claude-opus-4-5-20251101`
 
 #### オプションB: APIキー(低価格プロバイダー)
@@ -83,14 +83,14 @@ Dashboard → Providers → Connect [Free Provider]
 
 ## 4. CLIツールで使用
 
-コーディングツールを9Routerに向けます:
+コーディングツールをShowdar Routerに向けます:
 
 ### Cursor IDE
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [9routerダッシュボードから取得]
+  OpenAI API Base URL: http://localhost:21298/v1
+  OpenAI API Key: [showdar-routerダッシュボードから取得]
   Model: cc/claude-opus-4-5-20251101
 ```
 
@@ -100,7 +100,7 @@ Settings → Models → Advanced:
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "your-9router-api-key"
 }
 ```
@@ -109,7 +109,7 @@ Settings → Models → Advanced:
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:21298/v1
 API Key: [ダッシュボードから取得]
 Model: cc/claude-opus-4-5-20251101
 ```
@@ -117,7 +117,7 @@ Model: cc/claude-opus-4-5-20251101
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex "your prompt"
@@ -242,6 +242,6 @@ CLIで使用: premium-coding
 
 ## ヘルプが必要?
 
-- **ウェブサイト**: [9router.com](https://9router.com)
+- **ウェブサイト**: [showdar-router.com](https://9router.com)
 - **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)

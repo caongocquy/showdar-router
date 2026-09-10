@@ -1,11 +1,7 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="url(#gradient)"/>
-  <text x="16" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="white" text-anchor="middle">9</text>
-  <defs>
-    <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#f97815"/>
-      <stop offset="1" stop-color="#c2590a"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Showdar Router">
+  <defs><linearGradient id="g" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#35BDF8"/><stop offset="1" stop-color="#7C4DFF"/></linearGradient></defs>
+  <rect x="1" y="1" width="30" height="30" rx="8" fill="#0B1220" stroke="url(#g)" stroke-width="2"/>
+  <path d="M6 23 L12 19 L18 22 L26 17" fill="none" stroke="url(#g)" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="6" cy="23" r="2" fill="#35BDF8"/><circle cx="26" cy="17" r="2" fill="#7C4DFF"/>
+  <text x="16" y="17" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#F8FAFC" text-anchor="middle">SR</text>
 </svg>
-

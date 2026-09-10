@@ -1,6 +1,6 @@
 # ☁️ クラウドデプロイメント
 
-リモートアクセスと本番利用のため、VPSまたはDockerに9Routerをデプロイ。
+リモートアクセスと本番利用のため、VPSまたはDockerにShowdar Routerをデプロイ。
 
 ---
 
@@ -49,7 +49,7 @@ export NODE_ENV="production"
 |----------|---------|-------------|
 | `JWT_SECRET` | 自動生成 | **本番環境では必ず変更!** JWTトークンの署名に使用 |
 | `INITIAL_PASSWORD` | `123456` | ダッシュボードログインパスワード |
-| `DATA_DIR` | `~/.9router` | データベースとデータの保存パス |
+| `DATA_DIR` | `~/.showdar-router` | データベースとデータの保存パス |
 | `NODE_ENV` | `development` | デプロイ時は `production` に設定 |
 | `ENABLE_REQUEST_LOGS` | `false` | デバッグリクエスト/レスポンスログを有効化 |
 
@@ -74,8 +74,8 @@ PM2はアプリケーションを稼働させ続け、クラッシュ時に再�
 # PM2をグローバルにインストール
 npm install -g pm2
 
-# PM2で9Routerを起動
-pm2 start npm --name 9router -- start
+# PM2でShowdar Routerを起動
+pm2 start npm --name showdar-router -- start
 
 # PM2設定を保存
 pm2 save
@@ -89,13 +89,13 @@ pm2 startup
 
 ```bash
 # ログを表示
-pm2 logs 9router
+pm2 logs showdar-router
 
 # アプリケーションを再起動
-pm2 restart 9router
+pm2 restart showdar-router
 
 # アプリケーションを停止
-pm2 stop 9router
+pm2 stop showdar-router
 
 # ステータスを表示
 pm2 status
@@ -130,7 +130,7 @@ COPY . .
 RUN npm run build
 
 # Expose ports
-EXPOSE 3000 20128
+EXPOSE 3000 21298
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -147,17 +147,17 @@ CMD ["npm", "run", "start"]
 
 ```bash
 # イメージをビルド
-docker build -t 9router .
+docker build -t showdar-router .
 
 # コンテナを実行
 docker run -d \
-  --name 9router \
+  --name showdar-router \
   -p 3000:3000 \
-  -p 20128:20128 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
   -v 9router-data:/app/data \
-  9router
+  showdar-router
 ```
 
 ### オプション2: Docker Compose
@@ -168,12 +168,12 @@ docker run -d \
 version: '3.8'
 
 services:
-  9router:
+  showdar-router:
     build: .
-    container_name: 9router
+    container_name: showdar-router
     ports:
       - "3000:3000"
-      - "20128:20128"
+      - "21298:21298"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secure-secret-change-this
@@ -247,7 +247,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    # Proxy to 9Router
+    # Proxy to Showdar Router
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -266,7 +266,7 @@ server {
 
     # API endpoint
     location /v1 {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -333,9 +333,9 @@ sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# リバースプロキシを使用しない場合、9Routerポートを許可
+# リバースプロキシを使用しない場合、Showdar Routerポートを許可
 sudo ufw allow 3000/tcp
-sudo ufw allow 20128/tcp
+sudo ufw allow 21298/tcp
 
 # ファイアウォールを有効化
 sudo ufw enable
@@ -363,12 +363,12 @@ ssh -L 3000:localhost:3000 user@your-server.com
 # システムパッケージを更新
 sudo apt update && sudo apt upgrade -y
 
-# 9Routerを更新
+# Showdar Routerを更新
 cd /path/to/9router/app
 git pull
 npm install
 npm run build
-pm2 restart 9router
+pm2 restart showdar-router
 ```
 
 ### 5. バックアップ戦略
@@ -392,7 +392,7 @@ tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
 pm2 status
 
 # ログを表示
-pm2 logs 9router --lines 100
+pm2 logs showdar-router --lines 100
 
 # リソースをモニタリング
 pm2 monit
@@ -418,7 +418,7 @@ htop
 df -h
 
 # ネットワーク接続
-netstat -tulpn | grep -E '3000|20128'
+netstat -tulpn | grep -E '3000|21298'
 ```
 
 ---
@@ -429,20 +429,20 @@ netstat -tulpn | grep -E '3000|20128'
 
 ```bash
 # ログを確認
-pm2 logs 9router
+pm2 logs showdar-router
 
 # ポートが使用中か確認
 sudo lsof -i :3000
-sudo lsof -i :20128
+sudo lsof -i :21298
 
 # 環境変数を確認
-pm2 env 9router
+pm2 env showdar-router
 ```
 
 ### Nginx 502 Bad Gateway
 
 ```bash
-# 9Routerが実行中か確認
+# Showdar Routerが実行中か確認
 pm2 status
 
 # Nginxエラーログを確認

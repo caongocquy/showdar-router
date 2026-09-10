@@ -1,6 +1,6 @@
 # 安装
 
-9Router 的详细安装指南,附故障排除技巧。
+Showdar Router 的详细安装指南,附故障排除技巧。
 
 ---
 
@@ -34,19 +34,19 @@ npm --version
 全局安装,任何位置都能使用:
 
 ```bash
-npm install -g 9router
+npm install -g showdar-router
 ```
 
-**启动 9Router:**
+**启动 Showdar Router:**
 
 ```bash
-9router
+showdar-router
 ```
 
 **优势:**
 - ✅ 任意目录均可运行
-- ✅ 命令简单:`9router`
-- ✅ 通过 `npm update -g 9router` 自动更新
+- ✅ 命令简单:`showdar-router`
+- ✅ 通过 `npm update -g showdar-router` 自动更新
 
 ### 方式 2:本地安装
 
@@ -55,13 +55,13 @@ npm install -g 9router
 ```bash
 mkdir my-9router
 cd my-9router
-npm install 9router
+npm install showdar-router
 ```
 
-**启动 9Router:**
+**启动 Showdar Router:**
 
 ```bash
-npx 9router
+npx showdar-router
 ```
 
 **优势:**
@@ -93,13 +93,13 @@ npm start
 ### 启动服务器
 
 ```bash
-9router
+showdar-router
 ```
 
 **发生了什么:**
-1. 服务器启动在 `http://localhost:20128`
+1. 服务器启动在 `http://localhost:21298`
 2. 仪表盘在浏览器中自动打开
-3. 数据目录创建在 `~/.9router`
+3. 数据目录创建在 `~/.showdar-router`
 4. API key 自动生成
 
 ### 仪表盘登录
@@ -132,7 +132,7 @@ npm start
 ### 检查服务器状态
 
 ```bash
-curl http://localhost:20128/health
+curl http://localhost:21298/health
 ```
 
 **预期响应:**
@@ -146,7 +146,7 @@ curl http://localhost:20128/health
 ### 列出可用模型
 
 ```bash
-curl http://localhost:20128/v1/models \
+curl http://localhost:21298/v1/models \
   -H "Authorization: Bearer your-api-key"
 ```
 
@@ -168,7 +168,7 @@ curl http://localhost:20128/v1/models \
 ### 测试 Chat Completion
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,10 +193,10 @@ export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 
 # Storage
-export DATA_DIR="~/.9router"
+export DATA_DIR="~/.showdar-router"
 
 # Server
-export PORT="20128"
+export PORT="21298"
 export NODE_ENV="production"
 
 # Logging
@@ -205,11 +205,11 @@ export ENABLE_REQUEST_LOGS="false"
 
 ### 数据目录
 
-**默认位置:** `~/.9router`
+**默认位置:** `~/.showdar-router`
 
 **内容:**
 ```
-~/.9router/
+~/.showdar-router/
   ├── db.json           # 数据库(提供商、组合、使用)
   ├── api-keys.json     # API keys
   └── logs/             # 请求日志(若启用)
@@ -219,24 +219,24 @@ export ENABLE_REQUEST_LOGS="false"
 
 ```bash
 export DATA_DIR="/custom/path"
-9router
+showdar-router
 ```
 
 ### 端口配置
 
-**默认端口:** `20128`
+**默认端口:** `21298`
 
 **修改端口:**
 
 ```bash
 export PORT="3000"
-9router
+showdar-router
 ```
 
 **或用命令行:**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ---
@@ -247,14 +247,14 @@ export PORT="3000"
 
 **错误:**
 ```
-Error: listen EADDRINUSE: address already in use :::20128
+Error: listen EADDRINUSE: address already in use :::21298
 ```
 
 **方案 1:杀掉占用进程**
 
 ```bash
-# 找到使用 20128 端口的进程
-lsof -i :20128
+# 找到使用 21298 端口的进程
+lsof -i :21298
 
 # 杀掉进程
 kill -9 <PID>
@@ -263,7 +263,7 @@ kill -9 <PID>
 **方案 2:使用其他端口**
 
 ```bash
-9router --port 3000
+showdar-router --port 3000
 ```
 
 ### 权限被拒绝
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # 然后重新安装
-npm install -g 9router
+npm install -g showdar-router
 ```
 
 ### Node.js 版本过低
@@ -310,7 +310,7 @@ nvm use 20
 **方案 1:手动打开**
 
 ```
-http://localhost:20128
+http://localhost:21298
 ```
 
 **方案 2:检查防火墙**
@@ -345,23 +345,23 @@ ping google.com
 
 ### 内存占用过高
 
-**问题:** 9Router 占用过多 RAM
+**问题:** Showdar Router 占用过多 RAM
 
 **方案:重启服务器**
 
 ```bash
 # 停止
-pkill -f 9router
+pkill -f showdar-router
 
 # 启动
-9router
+showdar-router
 ```
 
 **或用 PM2 自动重启:**
 
 ```bash
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 ```
 
@@ -372,8 +372,8 @@ pm2 save
 ### 本地开发
 
 ```bash
-npm install -g 9router
-9router
+npm install -g showdar-router
+showdar-router
 ```
 
 **适用场景:** 个人编码、测试
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # 安装
-npm install -g 9router
+npm install -g showdar-router
 
 # 配置
 export JWT_SECRET="your-secure-secret"
@@ -391,7 +391,7 @@ export NODE_ENV="production"
 
 # 用 PM2 启动
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start showdar-router --name showdar-router
 pm2 save
 pm2 startup
 ```
@@ -404,11 +404,11 @@ pm2 startup
 docker pull 9router/9router:latest
 
 docker run -d \
-  -p 20128:20128 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.9router \
-  --name 9router \
+  -v 9router-data:/root/.showdar-router \
+  --name showdar-router \
   9router/9router:latest
 ```
 
@@ -422,7 +422,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:20128;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -444,13 +444,13 @@ server {
 ### 移除全局安装
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g showdar-router
 ```
 
 ### 移除数据目录
 
 ```bash
-rm -rf ~/.9router
+rm -rf ~/.showdar-router
 ```
 
 ### 移除配置
@@ -458,7 +458,7 @@ rm -rf ~/.9router
 ```bash
 # 从 shell 配置中移除环境变量
 nano ~/.bashrc  # 或 ~/.zshrc
-# 删除 9router 相关的 export
+# 删除 showdar-router 相关的 export
 ```
 
 ---
@@ -473,6 +473,6 @@ nano ~/.bashrc  # 或 ~/.zshrc
 
 ## 需要帮助?
 
-- **网站**: [9router.com](https://9router.com)
+- **网站**: [showdar-router.com](https://9router.com)
 - **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
 - **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)

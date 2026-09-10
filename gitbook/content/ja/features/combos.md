@@ -6,7 +6,7 @@
 
 ## コンボとは?
 
-コンボはダッシュボードで作成する**カスタムフォールバックチェーン**です。単一モデルを使う代わりに、9Routerが順番に試すモデルのシーケンスを定義します。
+コンボはダッシュボードで作成する**カスタムフォールバックチェーン**です。単一モデルを使う代わりに、Showdar Routerが順番に試すモデルのシーケンスを定義します。
 
 **例:**
 ```
@@ -22,7 +22,7 @@
 Model: premium-coding
 ```
 
-9Routerは成功するまで各モデルを順番に自動的に試します。
+Showdar Routerは成功するまで各モデルを順番に自動的に試します。
 
 ---
 
@@ -71,7 +71,7 @@ cc/claude-opus-4-5 → cx/gpt-5.2-codex → gc/gemini-3-pro
 ### ステップ1: ダッシュボードを開く
 
 ```
-http://localhost:20128
+http://localhost:21298
 → パスワードでログイン
 ```
 
@@ -182,7 +182,7 @@ Models:
 ```
 Cline:
   Provider: OpenAI Compatible
-  Base URL: http://localhost:20128/v1
+  Base URL: http://localhost:21298/v1
   Model: budget-combo
 ```
 
@@ -261,7 +261,7 @@ Models:
 **使用法:**
 ```
 Codex CLI:
-  export OPENAI_BASE_URL="http://localhost:20128"
+  export OPENAI_BASE_URL="http://localhost:21298"
   Model: quality-first
 ```
 
@@ -343,7 +343,7 @@ Models:
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [ダッシュボードから取得]
   Model: premium-coding
 ```
@@ -353,7 +353,7 @@ Settings → Models → Advanced:
 `~/.claude/config.json`を編集:
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "your-9router-api-key",
   "model": "budget-combo"
 }
@@ -362,7 +362,7 @@ Settings → Models → Advanced:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex --model quality-first "your prompt"
@@ -372,7 +372,7 @@ codex --model quality-first "your prompt"
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:21298/v1
 API Key: [ダッシュボードから取得]
 Model: free-combo
 ```
@@ -380,7 +380,7 @@ Model: free-combo
 ### APIリクエスト
 
 ```bash
-curl http://localhost:20128/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -480,7 +480,7 @@ Dashboard → Combos → Edit → Budget:
   Monthly limit: $50
 ```
 
-上限に達すると、9Routerは有料モデルをスキップして無料階層のみを使用。
+上限に達すると、Showdar Routerは有料モデルをスキップして無料階層のみを使用。
 
 ### コンボ内のモデルを有効/無効
 

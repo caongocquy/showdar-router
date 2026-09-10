@@ -6,7 +6,7 @@ Theo dõi tiêu thụ token thời gian thực, giám sát giới hạn quota, �
 
 ## Tổng quan
 
-9Router cung cấp quota tracking toàn diện cho mọi provider:
+Showdar Router cung cấp quota tracking toàn diện cho mọi provider:
 
 - **Tiêu thụ token thời gian thực** - Xem tokens dùng mỗi request
 - **Giới hạn quota & còn lại** - Theo dõi usage so với giới hạn
@@ -561,7 +561,7 @@ Optimization:
 ### Lấy trạng thái Quota
 
 ```bash
-GET http://localhost:20128/api/quota
+GET http://localhost:21298/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### Lấy Usage Stats
 
 ```bash
-GET http://localhost:20128/api/usage?period=today
+GET http://localhost:21298/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
@@ -669,7 +669,7 @@ Response:
 1. Refresh dashboard (F5)
 2. Kiểm tra thời gian hệ thống đúng
 3. Xác minh cài đặt timezone
-4. Khởi động lại 9Router nếu vẫn lỗi
+4. Khởi động lại Showdar Router nếu vẫn lỗi
 
 **Issue: Không nhận được cảnh báo**
 

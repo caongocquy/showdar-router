@@ -2,7 +2,7 @@ import pkg from "../../../package.json" with { type: "json" };
 
 // App configuration
 export const APP_CONFIG = {
-  name: "9Router Proxy",
+  name: "Showdar Router",
   description: "AI Infrastructure Management",
   version: pkg.version,
 };
@@ -10,17 +10,16 @@ export const APP_CONFIG = {
 // GitHub configuration
 export const GITHUB_CONFIG = {
   changelogUrl: "https://raw.githubusercontent.com/decolua/9router/refs/heads/master/CHANGELOG.md",
-  donateUrl: "https://9router.com/api/donate",
 };
 
 // Updater configuration
 export const UPDATER_CONFIG = {
-  npmPackageName: "9router",
-  installCmd: "npm i -g 9router",
-  installCmdLatest: "npm i -g 9router@latest --prefer-online",
+  npmPackageName: "showdar-router",
+  installCmd: "npm i -g showdar-router",
+  installCmdLatest: "npm i -g showdar-router@latest --prefer-online",
   shutdownCountdownSec: 3,
   exitDelayMs: 500,
-  statusPort: 20129,
+  statusPort: 21298,
   statusPollIntervalMs: 1000,
   statusLogTailLines: 8,
   installRetries: 3,
@@ -29,7 +28,7 @@ export const UPDATER_CONFIG = {
   waitForExitMinMs: 5000,
   waitForExitMaxMs: 20000,
   waitForExitCheckMs: 500,
-  appPort: 20128,
+  appPort: 21298,
 };
 
 // Theme configuration

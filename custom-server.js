@@ -7,8 +7,8 @@ const { pathToFileURL } = require("url");
 const origCreate = http.createServer.bind(http);
 
 // Per-process secret proving x-9r-real-ip was stamped below rather than sent by the client.
-// A bare `next start` / `next dev` never loads this file, so it cannot produce a matching
-// header even though the env var is inherited by child processes. Named like x-9r-cli-token
+// The standalone wrapper must load this file so it can produce a matching header even
+// though the env var is inherited by child processes. Named like x-9r-cli-token
 // so the request-detail header sanitizer redacts it too.
 const PEER_TOKEN = crypto.randomBytes(24).toString("hex");
 process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
@@ -126,14 +126,12 @@ http.createServer = (...args) => {
 };
 
 if (require.main === module) {
-  const standalone = path.join(__dirname, "server.js");
+  const standalone = fs.existsSync(path.join(__dirname, "server.js"))
+    ? path.join(__dirname, "server.js")
+    : path.join(__dirname, ".next", "standalone", "server.js");
   if (fs.existsSync(standalone)) {
     require(standalone);
   } else {
-    // Repo checkout has no standalone build next to us. `next start` builds its HTTP
-    // server in-process, so the wrapper above still sanitizes every request.
-    const nextBin = require.resolve("next/dist/bin/next");
-    process.argv = [process.argv[0], nextBin, "start", ...process.argv.slice(2)];
-    require(nextBin);
+    throw new Error("Standalone production server not found. Run npm run build first.");
   }
 }

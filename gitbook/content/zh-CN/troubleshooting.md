@@ -1,6 +1,6 @@
 # 故障排除
 
-使用 9Router 时常见的问题与解决方案。
+使用 Showdar Router 时常见的问题与解决方案。
 
 ---
 
@@ -78,7 +78,7 @@
 **解决方案:**
 
 1. **自动刷新(默认):**
-   9Router 会自动刷新 token。等待 30 秒后重试。
+   Showdar Router 会自动刷新 token。等待 30 秒后重试。
 
 2. **手动重连:**
    ```
@@ -132,34 +132,34 @@
 
 ## 连接被拒绝
 
-**问题:** 出现 "ECONNREFUSED" 或 "Cannot connect to localhost:20128"。
+**问题:** 出现 "ECONNREFUSED" 或 "Cannot connect to localhost:21298"。
 
 **原因:**
-- 9Router 未运行
-- 端口 20128 被阻止
+- Showdar Router 未运行
+- 端口 21298 被阻止
 - 防火墙拦截连接
 
 **解决方案:**
 
-1. **启动 9Router:**
+1. **启动 Showdar Router:**
    ```bash
-   9router
+   showdar-router
    ```
    仪表盘应该在 http://localhost:3000 打开。
 
-2. **检查端口 20128:**
+2. **检查端口 21298:**
    ```bash
    # 检查端口是否监听
-   lsof -i :20128
+   lsof -i :21298
    
    # Windows
-   netstat -ano | findstr :20128
+   netstat -ano | findstr :21298
    ```
 
 3. **检查防火墙:**
    - macOS: 系统设置 → 网络 → 防火墙
    - Windows: Windows Defender 防火墙 → 允许应用
-   - Linux: `sudo ufw allow 20128`
+   - Linux: `sudo ufw allow 21298`
 
 4. **使用云端 endpoint:**
    如果 localhost 不行(例如 Cursor IDE):
@@ -175,15 +175,15 @@
 
 **原因:**
 - 端口 3000 被占用
-- 9Router 崩溃
+- Showdar Router 崩溃
 - 浏览器缓存问题
 
 **解决方案:**
 
-1. **确认 9Router 是否运行:**
+1. **确认 Showdar Router 是否运行:**
    ```bash
    # 检查进程
-   ps aux | grep 9router
+   ps aux | grep showdar-router
    
    # 检查端口 3000
    lsof -i :3000
@@ -199,13 +199,13 @@
    taskkill /PID <PID> /F
    ```
 
-3. **重启 9Router:**
+3. **重启 Showdar Router:**
    ```bash
    # 停止
-   pkill -f 9router
+   pkill -f showdar-router
    
    # 启动
-   9router
+   showdar-router
    ```
 
 4. **清除浏览器缓存:**
@@ -243,7 +243,7 @@
 
 3. **列出可用模型:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@
 
 4. **测试 API key:**
    ```bash
-   curl http://localhost:20128/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 
@@ -347,5 +347,5 @@
 ## 需要更多帮助?
 
 - **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **文档:** [9router.com/docs](https://9router.com/docs)
+- **文档:** [showdar-router.com/docs](https://9router.com/docs)
 - **常见问题:** [faq.md](faq.md)
