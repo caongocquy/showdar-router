@@ -201,7 +201,7 @@ See [Cursor integration guide](integration/cursor.md) for details.
 npm install -g showdar-router
 showdar-router
 → Dashboard: http://localhost:3000
-→ API: http://localhost:20129/v1
+→ API: http://localhost:21298/v1
 ```
 
 ### VPS/Cloud

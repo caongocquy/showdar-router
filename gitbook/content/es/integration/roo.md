@@ -22,7 +22,7 @@ Inicia Roo AI Assistant y abre el panel de configuración.
 
 **Para Showdar Router local:**
 ```
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: your-api-key-from-dashboard
 ```
 
@@ -87,7 +87,7 @@ Modelo: cx/deepseek-reasoner
 ## Solución de problemas
 
 ### Connection Failed
-- Verifica que Showdar Router esté corriendo: `curl http://localhost:20129/health`
+- Verifica que Showdar Router esté corriendo: `curl http://localhost:21298/health`
 - Verifica que la API key sea correcta
 - Asegúrate de que la Base URL incluya el sufijo `/v1`
 

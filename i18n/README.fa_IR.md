@@ -50,7 +50,7 @@
 │  ابزار خط   │  (Claude Code, Codex, OpenClaw, Cursor, Cline...)
 │  فرمان شما  │
 └──────┬──────┘
-       │ http://localhost:20129/v1
+       │ http://localhost:21298/v1
        ↓
 ┌─────────────────────────────────────────────┐
 │           Showdar Router (مسیریاب هوشمند)          │
@@ -80,7 +80,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 داشبورد در آدرس `http://localhost:20129` باز می‌شود
+🎉 داشبورد در آدرس `http://localhost:21298` باز می‌شود
 
 **۲. اتصال یک ارائه‌دهنده رایگان (بدون نیاز به ثبت‌نام):**
 
@@ -90,7 +90,7 @@ showdar-router
 
 ```
 تنظیمات Claude Code/Codex/OpenClaw/Cursor/Cline:
-  آدرس端点: http://localhost:20129/v1
+  آدرس端点: http://localhost:21298/v1
   کلید API: [کپی از داشبورد]
   مدل: kr/claude-sonnet-4.5
 ```
@@ -104,20 +104,20 @@ showdar-router
 ```bash
 cp .env.example .env
 npm install
-PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
+PORT=21298 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run dev
 ```
 
 حالت تولید:
 
 ```bash
 npm run build
-PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
+PORT=21298 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run start
 ```
 
 آدرس‌های پیش‌فرض:
 
-- داشبورد: `http://localhost:20129/dashboard`
-- API سازگار با OpenAI: `http://localhost:20129/v1`
+- داشبورد: `http://localhost:21298/dashboard`
+- API سازگار با OpenAI: `http://localhost:21298/v1`
 
 ---
 
@@ -1041,7 +1041,7 @@ Vertex Partner (Anthropic / DeepSeek / GLM / Qwen از طریق Vertex):
 
 ```
 تنظیمات → مدل‌ها → پیشرفته:
-  آدرس پایه API OpenAI: http://localhost:20129/v1
+  آدرس پایه API OpenAI: http://localhost:21298/v1
   کلید API OpenAI: [از داشبورد showdar-router]
   مدل: cc/claude-opus-4-7
 ```
@@ -1054,7 +1054,7 @@ Vertex Partner (Anthropic / DeepSeek / GLM / Qwen از طریق Vertex):
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20129/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "your-9router-api-key"
 }
 ```
@@ -1062,7 +1062,7 @@ Vertex Partner (Anthropic / DeepSeek / GLM / Qwen از طریق Vertex):
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20129"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex "your prompt"
@@ -1090,7 +1090,7 @@ codex "your prompt"
   "models": {
     "providers": {
       "showdar-router": {
-        "baseUrl": "http://127.0.0.1:20129/v1",
+        "baseUrl": "http://127.0.0.1:21298/v1",
         "apiKey": "sk_9router",
         "api": "openai-completions",
         "models": [
@@ -1111,7 +1111,7 @@ codex "your prompt"
 
 ```
 ارائه‌دهنده: سازگار با OpenAI
-آدرس پایه: http://localhost:20129/v1
+آدرس پایه: http://localhost:21298/v1
 کلید API: [از داشبورد]
 مدل: cc/claude-opus-4-7
 ```
@@ -1134,10 +1134,10 @@ npm run build
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 export DATA_DIR="/var/lib/9router"
-export PORT="20129"
+export PORT="21298"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20129"
+export NEXT_PUBLIC_BASE_URL="http://localhost:21298"
 export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
@@ -1164,13 +1164,13 @@ pm2 startup
 ```bash
 docker run -d \
   --name showdar-router \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
   decolua/9router:latest
 ```
 
-→ باز کردن http://localhost:20129
+→ باز کردن http://localhost:21298
 
 **ساخت از سورس (توسعه):**
 
@@ -1178,13 +1178,13 @@ docker run -d \
 git clone https://github.com/decolua/9router.git
 cd 9router/app
 docker build -t showdar-router .
-docker run -d --name showdar-router -p 20129:20129 \
+docker run -d --name showdar-router -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" -e DATA_DIR=/app/data showdar-router
 ```
 
 **پیش‌فرض‌های کانتینر:**
 
-- `PORT=20129`
+- `PORT=21298`
 - `HOSTNAME=0.0.0.0`
 
 **دستورات مفید:**
@@ -1208,7 +1208,7 @@ docker pull decolua/9router:latest   # به‌روزرسانی به آخرین �
 | `PORT`                                               | پیش‌فرض فریم‌ورک                        | پورت سرویس (`۲۰۱۲۸` در مثال‌ها)                                                  |
 | `HOSTNAME`                                           | پیش‌فرض فریم‌ورک                        | هاست بایند (داکر پیش‌فرض `۰.۰.۰.۰` است)                                            |
 | `NODE_ENV`                                           | پیش‌فرض زمان اجرا                          | برای استقرار `production` را تنظیم کنید                                                         |
-| `BASE_URL`                                           | `http://localhost:20129`                 | آدرس پایه داخلی سمت سرور که توسط کارهای همگام‌سازی ابری استفاده می‌شود                               |
+| `BASE_URL`                                           | `http://localhost:21298`                 | آدرس پایه داخلی سمت سرور که توسط کارهای همگام‌سازی ابری استفاده می‌شود                               |
 | `CLOUD_URL`                                          | `https://9router.com`                    | آدرس پایه نقطه پایانی همگام‌سازی ابری سمت سرور                                            |
 | `NEXT_PUBLIC_BASE_URL`                               | `http://localhost:3000`                  | آدرس پایه عمومی/سازگار با گذشته (برای زمان اجرای سرور `BASE_URL` را ترجیح دهید)          |
 | `NEXT_PUBLIC_CLOUD_URL`                              | `https://9router.com`                    | آدرس ابری عمومی/سازگار با گذشته (برای زمان اجرای سرور `CLOUD_URL` را ترجیح دهید)        |
@@ -1341,7 +1341,7 @@ docker pull decolua/9router:latest   # به‌روزرسانی به آخرین �
 
 **داشبورد در پورت اشتباه باز می‌شود**
 
-- `PORT=20129` و `NEXT_PUBLIC_BASE_URL=http://localhost:20129` را تنظیم کنید
+- `PORT=21298` و `NEXT_PUBLIC_BASE_URL=http://localhost:21298` را تنظیم کنید
 
 **اولین ورود کار نمی‌کند**
 
@@ -1370,7 +1370,7 @@ docker pull decolua/9router:latest   # به‌روزرسانی به آخرین �
 ### تکمیل‌های چت
 
 ```bash
-POST http://localhost:20129/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 Authorization: Bearer your-api-key
 Content-Type: application/json
 
@@ -1386,7 +1386,7 @@ Content-Type: application/json
 ### لیست مدل‌ها
 
 ```bash
-GET http://localhost:20129/v1/models
+GET http://localhost:21298/v1/models
 Authorization: Bearer your-api-key
 
 → همه مدل‌ها + ترکیب‌ها را در قالب OpenAI برمی‌گرداند

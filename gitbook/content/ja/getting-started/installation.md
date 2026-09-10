@@ -97,7 +97,7 @@ showdar-router
 ```
 
 **何が起こるか:**
-1. サーバーが `http://localhost:20129` で起動
+1. サーバーが `http://localhost:21298` で起動
 2. ダッシュボードが自動的にブラウザで開く
 3. `~/.showdar-router` にデータディレクトリが作成される
 4. APIキーが自動生成される
@@ -132,7 +132,7 @@ Dashboard → Settings → API Keys
 ### サーバーステータスを確認
 
 ```bash
-curl http://localhost:20129/health
+curl http://localhost:21298/health
 ```
 
 **期待されるレスポンス:**
@@ -146,7 +146,7 @@ curl http://localhost:20129/health
 ### 利用可能なモデルを一覧表示
 
 ```bash
-curl http://localhost:20129/v1/models \
+curl http://localhost:21298/v1/models \
   -H "Authorization: Bearer your-api-key"
 ```
 
@@ -168,7 +168,7 @@ curl http://localhost:20129/v1/models \
 ### チャットコンプリーションをテスト
 
 ```bash
-curl http://localhost:20129/v1/chat/completions \
+curl http://localhost:21298/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -196,7 +196,7 @@ export INITIAL_PASSWORD="your-password"
 export DATA_DIR="~/.showdar-router"
 
 # サーバー
-export PORT="20129"
+export PORT="21298"
 export NODE_ENV="production"
 
 # ロギング
@@ -224,7 +224,7 @@ showdar-router
 
 ### ポート設定
 
-**デフォルトポート:** `20129`
+**デフォルトポート:** `21298`
 
 **ポートを変更:**
 
@@ -247,14 +247,14 @@ showdar-router --port 3000
 
 **エラー:**
 ```
-Error: listen EADDRINUSE: address already in use :::20129
+Error: listen EADDRINUSE: address already in use :::21298
 ```
 
 **解決策1: 既存のプロセスを終了**
 
 ```bash
-# ポート20129を使用しているプロセスを検索
-lsof -i :20129
+# ポート21298を使用しているプロセスを検索
+lsof -i :21298
 
 # プロセスを終了
 kill -9 <PID>
@@ -310,7 +310,7 @@ nvm use 20
 **解決策1: 手動で開く**
 
 ```
-http://localhost:20129
+http://localhost:21298
 ```
 
 **解決策2: ファイアウォールを確認**
@@ -404,7 +404,7 @@ pm2 startup
 docker pull 9router/9router:latest
 
 docker run -d \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
   -v 9router-data:/root/.showdar-router \
@@ -422,7 +422,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:20129;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

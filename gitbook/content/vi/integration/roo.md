@@ -22,7 +22,7 @@ Khởi chạy Roo AI Assistant và mở panel settings.
 
 **Cho Showdar Router cục bộ:**
 ```
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: your-api-key-from-dashboard
 ```
 
@@ -87,7 +87,7 @@ Model: cx/deepseek-reasoner
 ## Troubleshooting
 
 ### Connection Failed
-- Xác minh Showdar Router đang chạy: `curl http://localhost:20129/health`
+- Xác minh Showdar Router đang chạy: `curl http://localhost:21298/health`
 - Kiểm tra API key đúng
 - Đảm bảo Base URL bao gồm hậu tố `/v1`
 

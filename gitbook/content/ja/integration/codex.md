@@ -16,7 +16,7 @@ Showdar RouterをOpenAI Codex CLIと統合し、OpenAI APIリクエストをShow
 
 ```bash
 # Showdar Router用Base URL
-export OPENAI_BASE_URL="http://localhost:20129/v1"
+export OPENAI_BASE_URL="http://localhost:21298/v1"
 
 # Showdar RouterダッシュボードからのAPIキー
 export OPENAI_API_KEY="your-9router-api-key"
@@ -76,7 +76,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 
 ```json
 {
-  "baseUrl": "http://localhost:20129/v1",
+  "baseUrl": "http://localhost:21298/v1",
   "apiKey": "your-9router-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
@@ -96,9 +96,9 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 
 接続エラーが発生した場合:
 
-1. Showdar Routerが動作中か確認: `curl http://localhost:20129/health`
+1. Showdar Routerが動作中か確認: `curl http://localhost:21298/health`
 2. 環境変数が正しく設定されているか確認
-3. ファイアウォールがポート20129をブロックしていないか確認
+3. ファイアウォールがポート21298をブロックしていないか確認
 
 ### モデルが利用不可
 

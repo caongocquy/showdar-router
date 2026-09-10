@@ -561,7 +561,7 @@ Optimization:
 ### Get Quota Status
 
 ```bash
-GET http://localhost:20129/api/quota
+GET http://localhost:21298/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### Get Usage Stats
 
 ```bash
-GET http://localhost:20129/api/usage?period=today
+GET http://localhost:21298/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:

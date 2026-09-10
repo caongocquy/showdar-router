@@ -50,14 +50,14 @@ npx showdar-router
 **Option 2 — Docker (server/VPS):**
 
 ```bash
-docker run -d --name showdar-router -p 20129:20129 \
+docker run -d --name showdar-router -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" -e DATA_DIR=/app/data \
   decolua/showdar-router:latest
 ```
 
 Published images: [Docker Hub](https://hub.docker.com/r/decolua/showdar-router) • [GHCR](https://github.com/decolua/showdar-router/pkgs/container/showdar-router) (multi-platform amd64/arm64).
 
-🎉 Dashboard opens at `http://localhost:20129`
+🎉 Dashboard opens at `http://localhost:21298`
 
 **2. Connect a FREE provider (no signup needed):**
 
@@ -67,7 +67,7 @@ Dashboard → Providers → Connect **Kiro AI** (free Claude unlimited) or **Ope
 
 ```
 Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
-  Endpoint: http://localhost:20129/v1
+  Endpoint: http://localhost:21298/v1
   API Key:  [copy from dashboard]
   Model:    kr/claude-sonnet-4.5
 ```
@@ -86,7 +86,7 @@ showdar-router --skip-update      # Skip auto-update check
 showdar-router --help             # Show all options
 ```
 
-**Dashboard**: `http://localhost:20129/dashboard`
+**Dashboard**: `http://localhost:21298/dashboard`
 
 ---
 

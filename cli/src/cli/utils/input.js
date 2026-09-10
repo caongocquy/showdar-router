@@ -125,6 +125,14 @@ async function selectMenu(title, items, defaultIndex = 0, subtitle = "", headerC
       if (!isActive) return;
       isActive = false;
       process.stdin.removeListener("keypress", onKeypress);
+      // readline.emitKeypressEvents removes its data listener lazily when it
+      // observes that no keypress listeners remain.
+      process.stdin.emit("data", "");
+      if (rawPrimed && process.stdin.isTTY) {
+        try { process.stdin.setRawMode(false); } catch {}
+        process.stdin.pause();
+        rawPrimed = false;
+      }
     };
 
     const move = (delta) => {

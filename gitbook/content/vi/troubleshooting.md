@@ -132,11 +132,11 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 
 ## Connection Refused
 
-**Vấn đề:** Lỗi "ECONNREFUSED" hoặc "Cannot connect to localhost:20129".
+**Vấn đề:** Lỗi "ECONNREFUSED" hoặc "Cannot connect to localhost:21298".
 
 **Nguyên nhân:**
 - Showdar Router không chạy
-- Port 20129 bị chặn
+- Port 21298 bị chặn
 - Firewall chặn kết nối
 
 **Giải pháp:**
@@ -147,19 +147,19 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
    ```
    Dashboard sẽ mở tại http://localhost:3000
 
-2. **Xác minh port 20129:**
+2. **Xác minh port 21298:**
    ```bash
    # Check if port is listening
-   lsof -i :20129
+   lsof -i :21298
    
    # Or on Windows
-   netstat -ano | findstr :20129
+   netstat -ano | findstr :21298
    ```
 
 3. **Kiểm tra firewall:**
    - macOS: System Settings → Network → Firewall
    - Windows: Windows Defender Firewall → Allow app
-   - Linux: `sudo ufw allow 20129`
+   - Linux: `sudo ufw allow 21298`
 
 4. **Dùng cloud endpoint:**
    Nếu localhost không hoạt động (ví dụ: Cursor IDE):
@@ -243,7 +243,7 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 
 3. **Liệt kê model khả dụng:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 
 4. **Test API key:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 

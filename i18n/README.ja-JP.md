@@ -43,7 +43,7 @@
 │  あなたの    │  （Claude Code、Codex、Gemini CLI、OpenClaw、Cursor、Cline...）
 │   CLIツール  │
 └──────┬──────┘
-       │ http://localhost:20129/v1
+       │ http://localhost:21298/v1
        ↓
 ┌─────────────────────────────────────────┐
 │        Showdar Router（スマートルーター）        │
@@ -72,7 +72,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 ダッシュボードが `http://localhost:20129` で開きます
+🎉 ダッシュボードが `http://localhost:21298` で開きます
 
 **2. 無料プロバイダーを接続（サインアップ不要）：**
 
@@ -82,7 +82,7 @@ showdar-router
 
 ```
 Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Clineの設定:
-  エンドポイント: http://localhost:20129/v1
+  エンドポイント: http://localhost:21298/v1
   APIキー: [ダッシュボードからコピー]
   モデル: if/kimi-k2-thinking
 ```
@@ -96,19 +96,19 @@ Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Clineの設定:
 ```bash
 cp .env.example .env
 npm install
-PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
+PORT=21298 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run dev
 ```
 
 本番モード：
 
 ```bash
 npm run build
-PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
+PORT=21298 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run start
 ```
 
 デフォルトURL：
-- ダッシュボード: `http://localhost:20129/dashboard`
-- OpenAI互換API: `http://localhost:20129/v1`
+- ダッシュボード: `http://localhost:21298/dashboard`
+- OpenAI互換API: `http://localhost:21298/v1`
 
 ---
 
@@ -861,7 +861,7 @@ CLIでの使用: premium-coding
 
 ```
 設定 → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [showdar-routerダッシュボードから]
   Model: cc/claude-opus-4-6
 ```
@@ -874,7 +874,7 @@ CLIでの使用: premium-coding
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20129/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "your-9router-api-key"
 }
 ```
@@ -882,7 +882,7 @@ CLIでの使用: premium-coding
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20129"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex "your prompt"
@@ -910,7 +910,7 @@ codex "your prompt"
   "models": {
     "providers": {
       "showdar-router": {
-        "baseUrl": "http://127.0.0.1:20129/v1",
+        "baseUrl": "http://127.0.0.1:21298/v1",
         "apiKey": "sk_9router",
         "api": "openai-completions",
         "models": [
@@ -931,7 +931,7 @@ codex "your prompt"
 
 ```
 プロバイダー: OpenAI Compatible
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: [ダッシュボードから]
 Model: cc/claude-opus-4-6
 ```
@@ -954,10 +954,10 @@ npm run build
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 export DATA_DIR="/var/lib/9router"
-export PORT="20129"
+export PORT="21298"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20129"
+export NEXT_PUBLIC_BASE_URL="http://localhost:21298"
 export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
@@ -981,7 +981,7 @@ docker build -t showdar-router .
 # コンテナを実行（現在のセットアップで使用しているコマンド）
 docker run -d \
   --name showdar-router \
-  -p 20129:20129 \
+  -p 21298:21298 \
   --env-file /root/dev/9router/.env \
   -v 9router-data:/app/data \
   -v 9router-usage:/root/.showdar-router \
@@ -993,7 +993,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name showdar-router \
-  -p 20129:20129 \
+  -p 21298:21298 \
   --env-file ./.env \
   -v 9router-data:/app/data \
   -v 9router-usage:/root/.showdar-router \
@@ -1001,7 +1001,7 @@ docker run -d \
 ```
 
 コンテナのデフォルト：
-- `PORT=20129`
+- `PORT=21298`
 - `HOSTNAME=0.0.0.0`
 
 便利なコマンド：
@@ -1019,10 +1019,10 @@ docker stop showdar-router && docker rm showdar-router
 | `JWT_SECRET` | 自動生成（`~/.showdar-router/jwt-secret`） | ダッシュボード認証クッキーのJWT署名シークレット（複数インスタンス間で共有する場合に設定） |
 | `INITIAL_PASSWORD` | `123456` | 保存されたハッシュがない場合の初回ログインパスワード |
 | `DATA_DIR` | `~/.showdar-router` | メインアプリのデータベース格納場所（`db.json`） |
-| `PORT` | フレームワークデフォルト | サービスポート（例では`20129`） |
+| `PORT` | フレームワークデフォルト | サービスポート（例では`21298`） |
 | `HOSTNAME` | フレームワークデフォルト | バインドホスト（Dockerデフォルトは`0.0.0.0`） |
 | `NODE_ENV` | ランタイムデフォルト | デプロイ時は`production`に設定 |
-| `BASE_URL` | `http://localhost:20129` | クラウド同期ジョブで使用されるサーバーサイド内部ベースURL |
+| `BASE_URL` | `http://localhost:21298` | クラウド同期ジョブで使用されるサーバーサイド内部ベースURL |
 | `CLOUD_URL` | `https://9router.com` | サーバーサイドのクラウド同期エンドポイントベースURL |
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | 後方互換/公開ベースURL（サーバーランタイムには`BASE_URL`を推奨） |
 | `NEXT_PUBLIC_CLOUD_URL` | `https://9router.com` | 後方互換/公開クラウドURL（サーバーランタイムには`CLOUD_URL`を推奨） |
@@ -1115,7 +1115,7 @@ docker stop showdar-router && docker rm showdar-router
 - 重要でないタスクには無料ティア（Gemini CLI、iFlow）を使用
 
 **ダッシュボードが違うポートで開く**
-- `PORT=20129` と `NEXT_PUBLIC_BASE_URL=http://localhost:20129` を設定
+- `PORT=21298` と `NEXT_PUBLIC_BASE_URL=http://localhost:21298` を設定
 
 **初回ログインできない**
 - `.env` の `INITIAL_PASSWORD` を確認
@@ -1142,7 +1142,7 @@ docker stop showdar-router && docker rm showdar-router
 ### チャット補完
 
 ```bash
-POST http://localhost:20129/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 Authorization: Bearer your-api-key
 Content-Type: application/json
 
@@ -1158,7 +1158,7 @@ Content-Type: application/json
 ### モデル一覧
 
 ```bash
-GET http://localhost:20129/v1/models
+GET http://localhost:21298/v1/models
 Authorization: Bearer your-api-key
 
 → すべてのモデル + コンボをOpenAI形式で返却

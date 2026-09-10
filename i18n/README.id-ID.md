@@ -43,7 +43,7 @@
 │   Tool CLI  │  (Claude Code, Codex, Gemini CLI, OpenClaw, Cursor, Cline...)
 │    kamu     │
 └──────┬──────┘
-       │ http://localhost:20129/v1
+       │ http://localhost:21298/v1
        ↓
 ┌─────────────────────────────────────────┐
 │         Showdar Router (Smart Router)          │
@@ -72,7 +72,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 Dashboard terbuka di `http://localhost:20129`
+🎉 Dashboard terbuka di `http://localhost:21298`
 
 **2. Hubungkan provider gratis (tanpa perlu daftar):**
 
@@ -82,7 +82,7 @@ Dashboard → Providers → hubungkan **Claude Code** atau **Antigravity** → l
 
 ```
 Konfigurasi Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Cline:
-  Endpoint: http://localhost:20129/v1
+  Endpoint: http://localhost:21298/v1
   API Key: [salin dari dashboard]
   Model: if/kimi-k2-thinking
 ```
@@ -96,19 +96,19 @@ Paket repo ini bersifat privat (`9router-app`), jadi menjalankan dari source/Doc
 ```bash
 cp .env.example .env
 npm install
-PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
+PORT=21298 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run dev
 ```
 
 Mode produksi:
 
 ```bash
 npm run build
-PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
+PORT=21298 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run start
 ```
 
 URL default:
-- Dashboard: `http://localhost:20129/dashboard`
-- API kompatibel OpenAI: `http://localhost:20129/v1`
+- Dashboard: `http://localhost:21298/dashboard`
+- API kompatibel OpenAI: `http://localhost:21298/v1`
 
 ---
 
@@ -872,14 +872,14 @@ Biaya bulanan: $0
 ```bash
 docker run -d \
   --name showdar-router \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -v 9router-data:/app/data \
-  -e PORT=20129 \
-  -e BASE_URL=http://localhost:20129 \
+  -e PORT=21298 \
+  -e BASE_URL=http://localhost:21298 \
   ghcr.io/decolua/9router:latest
 ```
 
-Dashboard: `http://localhost:20129/dashboard`
+Dashboard: `http://localhost:21298/dashboard`
 
 </details>
 
@@ -888,7 +888,7 @@ Dashboard: `http://localhost:20129/dashboard`
 
 ```bash
 npm install -g showdar-router
-PORT=20129 HOSTNAME=0.0.0.0 BASE_URL=https://your-domain.com showdar-router
+PORT=21298 HOSTNAME=0.0.0.0 BASE_URL=https://your-domain.com showdar-router
 ```
 
 Disarankan menaruhnya di belakang reverse proxy (Nginx/Caddy) dengan HTTPS, dan membatasi akses hanya untuk dirimu sendiri.
@@ -913,7 +913,7 @@ Atur `BASE_URL` dan `CLOUD_URL` sebagai environment variable di dashboard Cloudf
 
 | Masalah | Kemungkinan Penyebab | Solusi |
 |---------|----------------------|--------|
-| Tool CLI tidak bisa konek | Endpoint salah | Pastikan `http://localhost:20129/v1` |
+| Tool CLI tidak bisa konek | Endpoint salah | Pastikan `http://localhost:21298/v1` |
 | 401 / Unauthorized | API key salah | Salin ulang key dari dashboard |
 | Model tidak ditemukan | Prefix provider salah | Pakai format `provider/model`, mis. `if/kimi-k2-thinking` |
 | Selalu fallback ke gratis | Kuota langganan habis | Cek hitung mundur reset di dashboard |

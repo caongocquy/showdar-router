@@ -10,14 +10,14 @@ Run Showdar Router in a container. Published image: [`decolua/9router`](https://
 
 ```bash
 docker run -d \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
   --name showdar-router \
   decolua/9router:latest
 ```
 
-App listens on port `20129`. Open: http://localhost:20129
+App listens on port `21298`. Open: http://localhost:21298
 
 ## Manage container
 
@@ -54,10 +54,10 @@ Container path: `/app/data/db/data.sqlite`
 
 ```bash
 docker run -d \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
-  -e PORT=20129 \
+  -e PORT=21298 \
   -e HOSTNAME=0.0.0.0 \
   -e DEBUG=true \
   --name showdar-router \
@@ -73,7 +73,7 @@ services:
   showdar-router:
     image: decolua/9router:latest
     ports:
-      - "20129:20129"
+      - "21298:21298"
     volumes:
       - "$HOME/.showdar-router:/app/data"
     environment:
@@ -109,7 +109,7 @@ docker rm -f showdar-router
 ```bash
 cd app && docker build -t showdar-router .
 
-docker run --rm -p 20129:20129 \
+docker run --rm -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
   showdar-router

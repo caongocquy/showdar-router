@@ -8,6 +8,7 @@ describe("Showdar Router launcher", () => {
     expect(getLaunchMode([], false)).toBe("start");
     expect(getLaunchMode(["start"], true)).toBe("start");
     expect(getLaunchMode(["tray"], true)).toBe("tray");
+    expect(getLaunchMode(["--port", "30000"], true)).toBe("start");
   });
 
   it("keeps the interface selector branded and ordered", () => {
@@ -21,19 +22,19 @@ describe("Showdar Router launcher", () => {
 
   it("starts the daemon once before attaching the tray", () => {
     const daemon = {
-      DEFAULT_PORT: 20129,
+      DEFAULT_PORT: 21298,
       status: vi.fn(() => ({ running: false })),
-      start: vi.fn(() => ({ pid: 42, port: 20129 })),
+      start: vi.fn(() => ({ pid: 42, port: 21299 })),
     };
     const tray = { initTray: vi.fn(() => ({ tray: true })) };
     const result = runTray({ daemon, tray, env: {}, appRoot: "/repo" });
     expect(result.tray).toEqual({ tray: true });
     expect(daemon.start).toHaveBeenCalledOnce();
-    expect(tray.initTray).toHaveBeenCalledWith(expect.objectContaining({ port: 20129, running: true }));
+    expect(tray.initTray).toHaveBeenCalledWith(expect.objectContaining({ port: 21299, running: true }));
   });
 
   it("does not start a duplicate daemon when attaching to a running server", () => {
-    const daemon = { DEFAULT_PORT: 20129, status: vi.fn(() => ({ running: true, pid: 7 })), start: vi.fn() };
+    const daemon = { DEFAULT_PORT: 21298, status: vi.fn(() => ({ running: true, pid: 7, port: 21299 })), start: vi.fn() };
     const tray = { initTray: vi.fn(() => ({ tray: true })) };
     runTray({ daemon, tray, env: {}, appRoot: "/repo" });
     expect(daemon.start).not.toHaveBeenCalled();
@@ -42,12 +43,12 @@ describe("Showdar Router launcher", () => {
   it("keeps tray quit separate from daemon stop and restart", () => {
     let options;
     const daemon = {
-      DEFAULT_PORT: 20129,
+      DEFAULT_PORT: 21298,
       paths: vi.fn(() => ({ logFile: "/tmp/showdar-router.log" })),
       status: vi.fn()
         .mockReturnValueOnce({ running: true, pid: 7 })
         .mockReturnValueOnce({ running: false }),
-      start: vi.fn(() => ({ pid: 8, port: 20129 })),
+      start: vi.fn(() => ({ pid: 8, port: 21299 })),
       stop: vi.fn(),
     };
     const tray = { initTray: vi.fn((value) => { options = value; return { tray: true }; }) };
@@ -72,11 +73,11 @@ describe("Showdar Router launcher", () => {
 
 describe("Showdar Router tray", () => {
   it("exposes the required control-plane menu without legacy branding", () => {
-    const labels = buildMenuItems(20129, true).map((item) => item.title);
+    const labels = buildMenuItems(21298, true).map((item) => item.title);
     expect(labels).toEqual([
       "Showdar Router",
       "Server: Running",
-      "http://localhost:20129",
+      "http://localhost:21298",
       "Open Dashboard",
       "Open Logs",
       "Restart Server",

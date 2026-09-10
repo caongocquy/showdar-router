@@ -50,7 +50,7 @@
 │  Your CLI   │  (Claude Code, Codex, OpenClaw, Cursor, Cline...)
 │   Tool      │
 └──────┬──────┘
-       │ http://localhost:20129/v1
+       │ http://localhost:21298/v1
        ↓
 ┌─────────────────────────────────────────────┐
 │           Showdar Router (Smart Router)            │
@@ -80,7 +80,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 El panel de control se abre en `http://localhost:20129`
+🎉 El panel de control se abre en `http://localhost:21298`
 
 **2. Conecta un proveedor GRATUITO (no requiere registro):**
 
@@ -90,7 +90,7 @@ Panel de control → Providers → Conecta **Kiro AI** (Claude gratuito e ilimit
 
 ```
 Ajustes de Claude Code/Codex/OpenClaw/Cursor/Cline:
-  Endpoint: http://localhost:20129/v1
+  Endpoint: http://localhost:21298/v1
   API Key: [copia desde el panel de control]
   Model: kr/claude-sonnet-4.5
 ```
@@ -104,20 +104,20 @@ El paquete de este repositorio es privado (`9router-app`), por lo que ejecutar d
 ```bash
 cp .env.example .env
 npm install
-PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
+PORT=21298 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run dev
 ```
 
 Modo de producción:
 
 ```bash
 npm run build
-PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
+PORT=21298 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run start
 ```
 
 URLs por defecto:
 
-- Panel de control: `http://localhost:20129/dashboard`
-- API compatible con OpenAI: `http://localhost:20129/v1`
+- Panel de control: `http://localhost:21298/dashboard`
+- API compatible con OpenAI: `http://localhost:21298/v1`
 
 ---
 
@@ -1043,7 +1043,7 @@ Coste: $0 para siempre (+ 20-40% de ahorro de tokens vía RTK)!
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [desde el panel de showdar-router]
   Model: cc/claude-opus-4-7
 ```
@@ -1056,7 +1056,7 @@ Edita `~/.claude/config.json`:
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20129/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "tu-clave-api-de-9router"
 }
 ```
@@ -1064,7 +1064,7 @@ Edita `~/.claude/config.json`:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20129"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="tu-clave-api-de-9router"
 
 codex "tu prompt"
@@ -1092,7 +1092,7 @@ Panel de control → CLI Tools → OpenClaw → Selecciona el modelo → Aplicar
   "models": {
     "providers": {
       "showdar-router": {
-        "baseUrl": "http://127.0.0.1:20129/v1",
+        "baseUrl": "http://127.0.0.1:21298/v1",
         "apiKey": "sk_9router",
         "api": "openai-completions",
         "models": [
@@ -1113,7 +1113,7 @@ Panel de control → CLI Tools → OpenClaw → Selecciona el modelo → Aplicar
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: [desde el panel]
 Model: cc/claude-opus-4-7
 ```
@@ -1136,10 +1136,10 @@ npm run build
 export JWT_SECRET="tu-secreto-seguro-cámbialo"
 export INITIAL_PASSWORD="tu-contraseña"
 export DATA_DIR="/var/lib/9router"
-export PORT="20129"
+export PORT="21298"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20129"
+export NEXT_PUBLIC_BASE_URL="http://localhost:21298"
 export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
@@ -1166,13 +1166,13 @@ Imágenes publicadas (multi-plataforma `linux/amd64` + `linux/arm64`):
 ```bash
 docker run -d \
   --name showdar-router \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" \
   -e DATA_DIR=/app/data \
   decolua/9router:latest
 ```
 
-→ Abre http://localhost:20129
+→ Abre http://localhost:21298
 
 **Compilar desde el código fuente (dev):**
 
@@ -1180,13 +1180,13 @@ docker run -d \
 git clone https://github.com/decolua/9router.git
 cd 9router/app
 docker build -t showdar-router .
-docker run -d --name showdar-router -p 20129:20129 \
+docker run -d --name showdar-router -p 21298:21298 \
   -v "$HOME/.showdar-router:/app/data" -e DATA_DIR=/app/data showdar-router
 ```
 
 **Valores por defecto del contenedor:**
 
-- `PORT=20129`
+- `PORT=21298`
 - `HOSTNAME=0.0.0.0`
 
 **Comandos útiles:**
@@ -1207,10 +1207,10 @@ docker pull decolua/9router:latest   # actualiza a la última versión
 | `JWT_SECRET`                                         | Generado automáticamente (`~/.showdar-router/jwt-secret`) | Secreto de firma JWT para la cookie de autenticación del panel (sobreescríbelo para compartir entre instancias) |
 | `INITIAL_PASSWORD`                                   | `123456`                                   | Contraseña del primer inicio de sesión cuando no existe un hash guardado             |
 | `DATA_DIR`                                           | `~/.showdar-router`                               | Ubicación principal de datos de la app (SQLite en `$DATA_DIR/db/data.sqlite`)        |
-| `PORT`                                               | por defecto del framework                  | Puerto del servicio (`20129` en los ejemplos)                                        |
+| `PORT`                                               | por defecto del framework                  | Puerto del servicio (`21298` en los ejemplos)                                        |
 | `HOSTNAME`                                           | por defecto del framework                  | Host de enlace (Docker usa `0.0.0.0` por defecto)                                    |
 | `NODE_ENV`                                           | por defecto del runtime                    | Establece `production` para el despliegue                                            |
-| `BASE_URL`                                           | `http://localhost:20129`                   | URL base interna del lado del servidor usada por los trabajos de sincronización en la nube |
+| `BASE_URL`                                           | `http://localhost:21298`                   | URL base interna del lado del servidor usada por los trabajos de sincronización en la nube |
 | `CLOUD_URL`                                          | `https://9router.com`                      | URL base del endpoint de sincronización en la nube del lado del servidor             |
 | `NEXT_PUBLIC_BASE_URL`                               | `http://localhost:3000`                    | URL base pública/compatible con versiones anteriores (prefiere `BASE_URL` para el runtime del servidor) |
 | `NEXT_PUBLIC_CLOUD_URL`                              | `https://9router.com`                      | URL de nube pública/compatible (prefiere `CLOUD_URL` para el runtime del servidor)   |
@@ -1343,7 +1343,7 @@ Notas:
 
 **El panel se abre en el puerto equivocado**
 
-- Establece `PORT=20129` y `NEXT_PUBLIC_BASE_URL=http://localhost:20129`
+- Establece `PORT=21298` y `NEXT_PUBLIC_BASE_URL=http://localhost:21298`
 
 **El primer inicio de sesión no funciona**
 
@@ -1372,7 +1372,7 @@ Notas:
 ### Chat Completions
 
 ```bash
-POST http://localhost:20129/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 Authorization: Bearer tu-clave-api
 Content-Type: application/json
 
@@ -1388,7 +1388,7 @@ Content-Type: application/json
 ### Listar modelos
 
 ```bash
-GET http://localhost:20129/v1/models
+GET http://localhost:21298/v1/models
 Authorization: Bearer tu-clave-api
 
 → Devuelve todos los modelos y combos en formato OpenAI

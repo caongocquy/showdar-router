@@ -392,7 +392,7 @@ flowchart LR
     end
 
     subgraph ContainerOrProcess[Showdar Router Runtime]
-        Next[Next.js Server\nPORT=20129]
+        Next[Next.js Server\nPORT=21298]
         Core[SSE Core + Executors]
         MainDB[(db.json)]
         UsageDB[(usage.json/log.txt)]
@@ -554,4 +554,4 @@ Environment variables actively used by code:
 - Start service and verify:
 - `GET /api/settings`
 - `GET /api/v1/models`
-- CLI target base URL should be `http://<host>:20129/v1` when `PORT=20129`
+- CLI target base URL should be `http://<host>:21298/v1` when `PORT=21298`

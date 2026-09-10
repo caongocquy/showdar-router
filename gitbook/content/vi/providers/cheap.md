@@ -254,7 +254,7 @@ Total: 10M tokens = $9 flat
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [from showdar-router dashboard]
   Model: glm/glm-4.7
 ```

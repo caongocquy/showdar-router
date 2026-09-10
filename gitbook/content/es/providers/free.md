@@ -199,7 +199,7 @@ Model: kr/claude-sonnet-4.5
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [desde el dashboard de showdar-router]
   Model: if/kimi-k2-thinking
 ```

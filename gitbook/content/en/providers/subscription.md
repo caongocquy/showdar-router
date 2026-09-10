@@ -120,7 +120,7 @@ in the dashboard, or discover them with `GET /v1/models/image` after connecting
 a Codex account.
 
 ```bash
-curl http://localhost:20129/v1/images/generations \
+curl http://localhost:21298/v1/images/generations \
   -H "Authorization: Bearer $NINE_ROUTER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"cx/gpt-5.6-sol-image","prompt":"A blue square","size":"1024x1024"}'
@@ -312,7 +312,7 @@ Model: ag/gemini-3-pro-high
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [from showdar-router dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```

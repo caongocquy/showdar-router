@@ -130,7 +130,7 @@ COPY . .
 RUN npm run build
 
 # Expose ports
-EXPOSE 3000 20129
+EXPOSE 3000 21298
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -153,7 +153,7 @@ docker build -t showdar-router .
 docker run -d \
   --name showdar-router \
   -p 3000:3000 \
-  -p 20129:20129 \
+  -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
   -v 9router-data:/app/data \
@@ -173,7 +173,7 @@ services:
     container_name: showdar-router
     ports:
       - "3000:3000"
-      - "20129:20129"
+      - "21298:21298"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secure-secret-change-this
@@ -266,7 +266,7 @@ server {
 
     # API endpoint
     location /v1 {
-        proxy_pass http://localhost:20129;
+        proxy_pass http://localhost:21298;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -335,7 +335,7 @@ sudo ufw allow 443/tcp
 
 # リバースプロキシを使用しない場合、Showdar Routerポートを許可
 sudo ufw allow 3000/tcp
-sudo ufw allow 20129/tcp
+sudo ufw allow 21298/tcp
 
 # ファイアウォールを有効化
 sudo ufw enable
@@ -418,7 +418,7 @@ htop
 df -h
 
 # ネットワーク接続
-netstat -tulpn | grep -E '3000|20129'
+netstat -tulpn | grep -E '3000|21298'
 ```
 
 ---
@@ -433,7 +433,7 @@ pm2 logs showdar-router
 
 # ポートが使用中か確認
 sudo lsof -i :3000
-sudo lsof -i :20129
+sudo lsof -i :21298
 
 # 環境変数を確認
 pm2 env showdar-router

@@ -16,7 +16,7 @@ Tích hợp Showdar Router với Claude Code CLI để định tuyến request A
 
 ```bash
 # Base URL for Showdar Router
-export ANTHROPIC_BASE_URL="http://localhost:20129/v1"
+export ANTHROPIC_BASE_URL="http://localhost:21298/v1"
 
 # Optional: Set default models for aliases
 export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-4-5-20251101"
@@ -75,7 +75,7 @@ Claude Code lưu cấu hình trong `~/.claude/settings.json`. Bạn có thể s�
 
 ```json
 {
-  "baseUrl": "http://localhost:20129/v1",
+  "baseUrl": "http://localhost:21298/v1",
   "defaultModel": "sonnet"
 }
 ```
@@ -86,9 +86,9 @@ Claude Code lưu cấu hình trong `~/.claude/settings.json`. Bạn có thể s�
 
 Nếu gặp lỗi kết nối:
 
-1. Xác minh Showdar Router đang chạy: `curl http://localhost:20129/health`
+1. Xác minh Showdar Router đang chạy: `curl http://localhost:21298/health`
 2. Kiểm tra biến môi trường đã set đúng
-3. Đảm bảo không firewall nào chặn port 20129
+3. Đảm bảo không firewall nào chặn port 21298
 
 ### Model Not Found
 

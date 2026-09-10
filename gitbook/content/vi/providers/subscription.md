@@ -291,7 +291,7 @@ Model: ag/gemini-3-pro-high
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [from showdar-router dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```

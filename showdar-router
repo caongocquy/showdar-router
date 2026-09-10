@@ -24,7 +24,7 @@ Usage:
   showdar-router --version    Show fork version
 
 Environment:
-  SHOWDAR_ROUTER_PORT       Default: 20129
+  SHOWDAR_ROUTER_PORT       Default: 21298
   SHOWDAR_ROUTER_DATA_DIR   Default: ~/.showdar-router
 HELP
     exit 0

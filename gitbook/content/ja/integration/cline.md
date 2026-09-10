@@ -29,7 +29,7 @@ Base URLをShowdar Routerエンドポイントに設定:
 
 **ローカルShowdar Router用:**
 ```
-http://localhost:20129/v1
+http://localhost:21298/v1
 ```
 
 **クラウドShowdar Router用:**
@@ -70,7 +70,7 @@ Cline設定は次のようになります:
 
 ```
 API Provider: Ollama
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: sk-9router-xxxxxxxxxxxxx
 Model: gpt-4
 ```
@@ -118,9 +118,9 @@ Showdar Routerダッシュボードで設定されたモデルを使用できま
 
 ### 「Connection Failed」エラー
 
-1. Showdar Routerが動作中か確認: `curl http://localhost:20129/health`
+1. Showdar Routerが動作中か確認: `curl http://localhost:21298/health`
 2. Base URLが正しく、`/v1` を含むことを確認
-3. ファイアウォールがポート20129をブロックしていないか確認
+3. ファイアウォールがポート21298をブロックしていないか確認
 4. VSCodeを再起動してみる
 
 ### 「Invalid API Key」エラー

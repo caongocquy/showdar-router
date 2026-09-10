@@ -16,7 +16,7 @@ import { getSettings, updateSettings } from "@/lib/localDb";
 
 initDbHooks(getSettings, updateSettings);
 
-const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20129";
+const DEFAULT_MITM_ROUTER_BASE = "http://localhost:21298";
 
 function normalizeMitmRouterBaseUrlInput(input) {
   if (input == null || String(input).trim() === "") {

@@ -132,11 +132,11 @@
 
 ## 连接被拒绝
 
-**问题:** 出现 "ECONNREFUSED" 或 "Cannot connect to localhost:20129"。
+**问题:** 出现 "ECONNREFUSED" 或 "Cannot connect to localhost:21298"。
 
 **原因:**
 - Showdar Router 未运行
-- 端口 20129 被阻止
+- 端口 21298 被阻止
 - 防火墙拦截连接
 
 **解决方案:**
@@ -147,19 +147,19 @@
    ```
    仪表盘应该在 http://localhost:3000 打开。
 
-2. **检查端口 20129:**
+2. **检查端口 21298:**
    ```bash
    # 检查端口是否监听
-   lsof -i :20129
+   lsof -i :21298
    
    # Windows
-   netstat -ano | findstr :20129
+   netstat -ano | findstr :21298
    ```
 
 3. **检查防火墙:**
    - macOS: 系统设置 → 网络 → 防火墙
    - Windows: Windows Defender 防火墙 → 允许应用
-   - Linux: `sudo ufw allow 20129`
+   - Linux: `sudo ufw allow 21298`
 
 4. **使用云端 endpoint:**
    如果 localhost 不行(例如 Cursor IDE):
@@ -243,7 +243,7 @@
 
 3. **列出可用模型:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@
 
 4. **测试 API key:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 

@@ -254,7 +254,7 @@ Model: kimi/kimi-latest
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [showdar-routerダッシュボードから取得]
   Model: glm/glm-4.7
 ```

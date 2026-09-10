@@ -30,7 +30,7 @@ The dashboard will automatically open in your browser at `http://localhost:3000`
 
 **Default Configuration:**
 - **Dashboard**: `http://localhost:3000`
-- **API Endpoint**: `http://localhost:20129/v1`
+- **API Endpoint**: `http://localhost:21298/v1`
 - **Data Directory**: `~/.showdar-router`
 
 ---
@@ -47,7 +47,7 @@ DATA_DIR=/path/to/data showdar-router
 
 ### Custom Port
 
-The API port (20129) and dashboard port (3000) are configured in the application. To change them, you'll need to modify the source code or use environment variables if supported.
+The API port (21298) and dashboard port (3000) are configured in the application. To change them, you'll need to modify the source code or use environment variables if supported.
 
 ---
 
@@ -96,11 +96,11 @@ npm list -g showdar-router
 
 ### Port Already in Use
 
-If port 20129 or 3000 is already in use:
+If port 21298 or 3000 is already in use:
 
 ```bash
 # Find process using the port (macOS/Linux)
-lsof -i :20129
+lsof -i :21298
 lsof -i :3000
 
 # Kill the process

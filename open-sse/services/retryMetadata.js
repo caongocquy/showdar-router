@@ -44,6 +44,39 @@ function toIso(timestamp) {
   return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
+function findKey(value, candidates) {
+  const keys = new Set(candidates);
+  return Object.keys(value).find((key) => keys.has(key.toLowerCase())) || null;
+}
+
+const ABSOLUTE_RESET_KEYS = [
+  "resetat", "reset_at", "resetsat", "resets_at", "resettime", "reset_time",
+  "x-ratelimit-reset", "x-rate-limit-reset",
+];
+
+function findAbsoluteReset(value, now, depth = 0) {
+  if (depth > 8 || value == null) return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findAbsoluteReset(item, now, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+
+  const key = findKey(value, ABSOLUTE_RESET_KEYS);
+  if (key) {
+    const parsed = parseAbsolute(value[key], now);
+    if (parsed) return parsed;
+  }
+  for (const child of Object.values(value)) {
+    const found = findAbsoluteReset(child, now, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 function findStructuredRetry(value, now, depth = 0) {
   if (depth > 8 || value == null) return null;
   if (Array.isArray(value)) {
@@ -55,18 +88,9 @@ function findStructuredRetry(value, now, depth = 0) {
   }
   if (typeof value !== "object") return null;
 
-  // Absolute reset timestamps are stronger than relative hints at the same structure level.
-  const absoluteKeys = ["resetAt", "reset_at", "resetsAt", "resets_at", "resetTime", "reset_time"];
-  for (const key of absoluteKeys) {
-    if (Object.prototype.hasOwnProperty.call(value, key)) {
-      const parsed = parseAbsolute(value[key], now);
-      if (parsed) return parsed;
-    }
-  }
-
-  const retryKeys = ["retryAfter", "retry_after", "retryDelay", "retry_delay"];
-  for (const key of retryKeys) {
-    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+  const retryKeys = ["retryafter", "retry_after", "retrydelay", "retry_delay"];
+  for (const key of Object.keys(value)) {
+    if (!retryKeys.includes(key.toLowerCase())) continue;
     const raw = value[key];
     const absolute = parseAbsolute(raw, now);
     if (absolute) return absolute;
@@ -125,6 +149,9 @@ export function extractRetryDeadline({
 
   const headerDeadline = parseRetryAfterHeader(retryAfterHeader, now);
   if (headerDeadline) return toIso(headerDeadline);
+
+  const bodyReset = findAbsoluteReset(errorBody, now);
+  if (bodyReset) return toIso(bodyReset);
 
   const bodyDeadline = findStructuredRetry(errorBody, now);
   if (bodyDeadline) return toIso(bodyDeadline);

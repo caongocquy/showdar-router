@@ -4,14 +4,14 @@ services:
     container_name: showdar-router
     restart: always
     ports:
-      - "20129:20129"
+      - "21298:21298"
     volumes:
       - showdar-router-data:/app/data
     env_file:
       - .env
     environment:
       DATA_DIR: /app/data
-      PORT: "20129"
+      PORT: "21298"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
       HEADROOM_URL: http://headroom:8787

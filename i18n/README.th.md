@@ -48,7 +48,7 @@
 │  Your CLI   │  (Claude Code, Codex, OpenClaw, Cursor, Cline...)
 │   Tool      │
 └──────┬──────┘
-       │ http://localhost:20129/v1
+       │ http://localhost:21298/v1
        ↓
 ┌─────────────────────────────────────────────┐
 │           Showdar Router (Smart Router)            │
@@ -78,7 +78,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 เปิดแดชบอร์ดที่ `http://localhost:20129`
+🎉 เปิดแดชบอร์ดที่ `http://localhost:21298`
 
 **2. เชื่อมต่อผู้ให้บริการฟรี (ไม่ต้องสมัคร):**
 
@@ -88,7 +88,7 @@ showdar-router
 
 ```
 ตั้งค่า Claude Code/Codex/OpenClaw/Cursor/Cline:
-  Endpoint: http://localhost:20129/v1
+  Endpoint: http://localhost:21298/v1
   API Key: [คัดลอกจากแดชบอร์ด]
   Model: kr/claude-sonnet-4.5
 ```
@@ -102,19 +102,19 @@ Repo นี้เป็น private package (`9router-app`) ดังนั้น
 ```bash
 cp .env.example .env
 npm install
-PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run dev
+PORT=21298 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run dev
 ```
 
 โหมด Production:
 
 ```bash
 npm run build
-PORT=20129 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm run start
+PORT=21298 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:21298 npm run start
 ```
 
 URL ค่าเริ่มต้น:
-- แดชบอร์ด: `http://localhost:20129/dashboard`
-- OpenAI-compatible API: `http://localhost:20129/v1`
+- แดชบอร์ด: `http://localhost:21298/dashboard`
+- OpenAI-compatible API: `http://localhost:21298/v1`
 
 ---
 
@@ -645,7 +645,7 @@ Showdar Router แค่เลือกเส้นทางคำขอขอ�
 - ใช้ชั้นฟรี (Kiro, OpenCode Free, Vertex) สำหรับงานที่ไม่สำคัญ
 
 **แดชบอร์ดเปิดผิดพอร์ต**
-- ตั้ง `PORT=20129` และ `NEXT_PUBLIC_BASE_URL=http://localhost:20129`
+- ตั้ง `PORT=21298` และ `NEXT_PUBLIC_BASE_URL=http://localhost:21298`
 
 **ล็อกอินครั้งแรกไม่ทำงาน**
 - ตรวจสอบ `INITIAL_PASSWORD` ใน `.env`
@@ -672,7 +672,7 @@ Showdar Router แค่เลือกเส้นทางคำขอขอ�
 ### Chat Completions
 
 ```bash
-POST http://localhost:20129/v1/chat/completions
+POST http://localhost:21298/v1/chat/completions
 Authorization: Bearer your-api-key
 Content-Type: application/json
 
@@ -688,7 +688,7 @@ Content-Type: application/json
 ### List Models
 
 ```bash
-GET http://localhost:20129/v1/models
+GET http://localhost:21298/v1/models
 Authorization: Bearer your-api-key
 
 → คืนค่าโมเดลทั้งหมด + combo ในรูปแบบ OpenAI

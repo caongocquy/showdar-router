@@ -132,11 +132,11 @@ Common issues and solutions when using Showdar Router.
 
 ## Connection Refused
 
-**Problem:** "ECONNREFUSED" or "Cannot connect to localhost:20129".
+**Problem:** "ECONNREFUSED" or "Cannot connect to localhost:21298".
 
 **Causes:**
 - Showdar Router not running
-- Port 20129 blocked
+- Port 21298 blocked
 - Firewall blocking connection
 
 **Solutions:**
@@ -147,19 +147,19 @@ Common issues and solutions when using Showdar Router.
    ```
    Dashboard should open at http://localhost:3000
 
-2. **Verify port 20129:**
+2. **Verify port 21298:**
    ```bash
    # Check if port is listening
-   lsof -i :20129
+   lsof -i :21298
    
    # Or on Windows
-   netstat -ano | findstr :20129
+   netstat -ano | findstr :21298
    ```
 
 3. **Check firewall:**
    - macOS: System Settings → Network → Firewall
    - Windows: Windows Defender Firewall → Allow app
-   - Linux: `sudo ufw allow 20129`
+   - Linux: `sudo ufw allow 21298`
 
 4. **Use cloud endpoint:**
    If localhost doesn't work (e.g., Cursor IDE):
@@ -243,7 +243,7 @@ Common issues and solutions when using Showdar Router.
 
 3. **List available models:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@ Common issues and solutions when using Showdar Router.
 
 4. **Test API key:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 

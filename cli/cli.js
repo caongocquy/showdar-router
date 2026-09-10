@@ -67,6 +67,14 @@ const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRunt
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
 
+function getPortOption(argv) {
+  const index = argv.findIndex((arg) => arg === "--port" || arg === "-p");
+  if (index < 0) return null;
+  const value = Number(argv[index + 1]);
+  if (!Number.isInteger(value) || value < 1 || value > 65535) throw new Error("Invalid port. Use a number from 1 to 65535.");
+  return value;
+}
+
 const daemonCommands = new Set(["start", "stop", "restart", "status", "logs", "version", "help"]);
 const explicitCommand = args[0];
 const launcher = require("./src/launcher");
@@ -75,6 +83,12 @@ const cliRoot = __dirname;
 const daemon = require("./src/daemon");
 const appRoot = daemon.resolveAppRoot(cliRoot);
 const env = { ...process.env };
+let portOption;
+try { portOption = getPortOption(args); } catch (error) {
+  console.error(`Showdar Router: ${error.message}`);
+  process.exitCode = 1;
+  return;
+}
 
 if (requestedCommand === "interactive") {
   runInteractiveLauncher();
@@ -84,7 +98,7 @@ if (requestedCommand === "interactive") {
 if (requestedCommand === "tray" || explicitCommand === "--tray" || explicitCommand === "-t") {
   try {
     try { ensureTrayRuntime({ silent: false }); } catch { /* tray remains optional */ }
-    launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, cliPath: __filename });
+    launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, port: portOption, explicitPort: portOption !== null, cliPath: __filename });
   } catch (error) {
     console.error(`Showdar Router: ${error.message}`);
     process.exitCode = 1;
@@ -116,8 +130,10 @@ if (daemonCommands.has(requestedCommand)) {
       console.log(`Showdar Router: running\nPID: ${current.pid}\nURL: http://localhost:${current.port}`);
       return;
     }
-    if (requestedCommand === "restart") daemon.stop({ appRoot, env });
-    const running = daemon.start({ appRoot, serverPath: appServer, env });
+    const running = requestedCommand === "restart"
+      ? daemon.restart({ appRoot, serverPath: appServer, env, port: portOption, explicitPort: portOption !== null ? true : null })
+      : daemon.start({ appRoot, serverPath: appServer, env, port: portOption, explicitPort: portOption !== null ? true : null });
+    if (running.autoFallback) console.log(`Port ${running.requestedPort} is busy, using ${running.port}`);
     console.log(`Showdar Router started\nPID: ${running.pid}\nURL: http://localhost:${running.port}\nLogs: ${running.logFile}`);
     return;
   } catch (error) {
@@ -168,7 +184,7 @@ try { ensureTrayRuntime({ silent: true }); } catch {}
 const APP_NAME = pkg.name; // Use from package.json
 const INSTALL_CMD_LATEST = `npm i -g ${APP_NAME}@latest --prefer-online`;
 
-const DEFAULT_PORT = 20129;
+const DEFAULT_PORT = 21298;
 const DEFAULT_HOST = "0.0.0.0";
 
 // First non-internal IPv4 — the address remote peers actually reach when bound to 0.0.0.0.

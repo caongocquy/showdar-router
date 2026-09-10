@@ -132,11 +132,11 @@ Showdar Router利用時の一般的な問題と解決策。
 
 ## Connection Refused
 
-**問題:** 「ECONNREFUSED」または「Cannot connect to localhost:20129」。
+**問題:** 「ECONNREFUSED」または「Cannot connect to localhost:21298」。
 
 **原因:**
 - Showdar Routerが起動していない
-- ポート20129がブロックされている
+- ポート21298がブロックされている
 - ファイアウォールが接続をブロック
 
 **解決策:**
@@ -147,19 +147,19 @@ Showdar Router利用時の一般的な問題と解決策。
    ```
    ダッシュボードがhttp://localhost:3000で開くはず
 
-2. **ポート20129を確認:**
+2. **ポート21298を確認:**
    ```bash
    # ポートがリッスンしているか確認
-   lsof -i :20129
+   lsof -i :21298
    
    # またはWindowsで
-   netstat -ano | findstr :20129
+   netstat -ano | findstr :21298
    ```
 
 3. **ファイアウォールを確認:**
    - macOS: システム設定 → ネットワーク → ファイアウォール
    - Windows: Windows Defenderファイアウォール → アプリを許可
-   - Linux: `sudo ufw allow 20129`
+   - Linux: `sudo ufw allow 21298`
 
 4. **クラウドエンドポイントを使用:**
    localhostが動作しない場合(例: Cursor IDE):
@@ -243,7 +243,7 @@ Showdar Router利用時の一般的な問題と解決策。
 
 3. **利用可能なモデルを一覧表示:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer your-api-key"
    ```
 
@@ -338,7 +338,7 @@ Showdar Router利用時の一般的な問題と解決策。
 
 4. **APIキーをテスト:**
    ```bash
-   curl http://localhost:20129/v1/models \
+   curl http://localhost:21298/v1/models \
      -H "Authorization: Bearer 9r_your_key"
    ```
 

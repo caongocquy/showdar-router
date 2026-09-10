@@ -20,7 +20,7 @@ npm install -g showdar-router
 showdar-router
 ```
 
-🎉 **El dashboard se abre automáticamente** en `http://localhost:20129`
+🎉 **El dashboard se abre automáticamente** en `http://localhost:21298`
 
 - Contraseña por defecto: `123456` (cámbiala en el dashboard)
 - API key generada automáticamente
@@ -89,7 +89,7 @@ Apunta tu herramienta de codificación a Showdar Router:
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20129/v1
+  OpenAI API Base URL: http://localhost:21298/v1
   OpenAI API Key: [desde el dashboard de showdar-router]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -100,7 +100,7 @@ Edita `~/.claude/config.json`:
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20129/v1",
+  "anthropic_api_base": "http://localhost:21298/v1",
   "anthropic_api_key": "your-9router-api-key"
 }
 ```
@@ -109,7 +109,7 @@ Edita `~/.claude/config.json`:
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: [desde el dashboard]
 Model: cc/claude-opus-4-5-20251101
 ```
@@ -117,7 +117,7 @@ Model: cc/claude-opus-4-5-20251101
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20129"
+export OPENAI_BASE_URL="http://localhost:21298"
 export OPENAI_API_KEY="your-9router-api-key"
 
 codex "your prompt"

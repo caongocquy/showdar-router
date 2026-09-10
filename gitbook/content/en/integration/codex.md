@@ -16,7 +16,7 @@ Set the following environment variables in your shell configuration file (`~/.ba
 
 ```bash
 # Base URL for Showdar Router
-export OPENAI_BASE_URL="http://localhost:20129/v1"
+export OPENAI_BASE_URL="http://localhost:21298/v1"
 
 # API Key from Showdar Router dashboard
 export OPENAI_API_KEY="your-9router-api-key"
@@ -76,7 +76,7 @@ You can also configure Codex CLI using a configuration file. Create or edit `~/.
 
 ```json
 {
-  "baseUrl": "http://localhost:20129/v1",
+  "baseUrl": "http://localhost:21298/v1",
   "apiKey": "your-9router-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
@@ -96,9 +96,9 @@ If you encounter authentication errors:
 
 If you encounter connection errors:
 
-1. Verify Showdar Router is running: `curl http://localhost:20129/health`
+1. Verify Showdar Router is running: `curl http://localhost:21298/health`
 2. Check environment variables are set correctly
-3. Ensure no firewall is blocking port 20129
+3. Ensure no firewall is blocking port 21298
 
 ### Model Not Available
 

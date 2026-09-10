@@ -29,7 +29,7 @@ Set the base URL to your Showdar Router endpoint:
 
 **For Local Showdar Router:**
 ```
-http://localhost:20129/v1
+http://localhost:21298/v1
 ```
 
 **For Cloud Showdar Router:**
@@ -70,7 +70,7 @@ Your Cline settings should look like this:
 
 ```
 API Provider: Ollama
-Base URL: http://localhost:20129/v1
+Base URL: http://localhost:21298/v1
 API Key: sk-9router-xxxxxxxxxxxxx
 Model: gpt-4
 ```
@@ -118,9 +118,9 @@ You can use any model configured in your Showdar Router dashboard. Common exampl
 
 ### "Connection Failed" Error
 
-1. Verify Showdar Router is running: `curl http://localhost:20129/health`
+1. Verify Showdar Router is running: `curl http://localhost:21298/health`
 2. Check that the base URL is correct and includes `/v1`
-3. Ensure no firewall is blocking port 20129
+3. Ensure no firewall is blocking port 21298
 4. Try restarting VSCode
 
 ### "Invalid API Key" Error

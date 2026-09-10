@@ -561,7 +561,7 @@ Dashboard → Analytics → Monthly Report:
 ### クォータステータスを取得
 
 ```bash
-GET http://localhost:20129/api/quota
+GET http://localhost:21298/api/quota
 Authorization: Bearer your-api-key
 
 Response:
@@ -614,7 +614,7 @@ Response:
 ### 使用統計を取得
 
 ```bash
-GET http://localhost:20129/api/usage?period=today
+GET http://localhost:21298/api/usage?period=today
 Authorization: Bearer your-api-key
 
 Response:
