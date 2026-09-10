@@ -81,10 +81,11 @@ function buildIfRequired({ appRoot, serverPath, runBuild = true }) {
   const packagedBuild = fs.existsSync(path.join(appRoot, "server.js"));
   if (fs.existsSync(serverPath) && (fs.existsSync(buildMarker) || packagedBuild)) return;
   if (!runBuild) throw new Error("Production build is missing. Run npm run build first.");
-  if (!fs.existsSync(serverPath)) throw new Error("Production server entrypoint is missing.");
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
   execFileSync(npm, ["run", "build"], { cwd: appRoot, stdio: "inherit" });
-  if (!fs.existsSync(buildMarker)) throw new Error("Production build completed without .next/BUILD_ID.");
+  if (!fs.existsSync(serverPath) || (!fs.existsSync(buildMarker) && !packagedBuild)) {
+    throw new Error("Production build completed without a standalone server entrypoint.");
+  }
 }
 
 function start({ appRoot, serverPath, env = process.env, runBuild = true, spawnImpl = spawn }) {
@@ -109,6 +110,7 @@ function start({ appRoot, serverPath, env = process.env, runBuild = true, spawnI
       NODE_ENV: "production",
       PORT: String(port),
       SHOWDAR_ROUTER_PORT: String(port),
+      HOSTNAME: env.HOSTNAME || "0.0.0.0",
       DATA_DIR: state.dataDir,
       SHOWDAR_ROUTER_DATA_DIR: state.dataDir,
     },
@@ -150,8 +152,7 @@ function resolveServerPath(appRoot) {
   const standaloneRoot = fs.existsSync(path.join(appRoot, ".next", "standalone", "server.js"))
     ? path.join(appRoot, ".next", "standalone")
     : appRoot;
-  const customServer = path.join(standaloneRoot, "custom-server.js");
-  return fs.existsSync(customServer) ? customServer : path.join(standaloneRoot, "server.js");
+  return path.join(standaloneRoot, "server.js");
 }
 
 module.exports = { DEFAULT_PORT, getDataDir, paths, ownsProcess, start, stop, status, resolveAppRoot, resolveServerPath };

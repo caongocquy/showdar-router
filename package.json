@@ -9,13 +9,14 @@
     "build": "next build --webpack",
     "postbuild": "node scripts/copy-standalone-assets.mjs",
     "postbuild:bun": "node scripts/copy-standalone-assets.mjs",
-    "start": "node custom-server.js --port 20129",
+    "start": "node ./.next/standalone/server.js --port 20129",
     "dev:bun": "bun --bun next dev --webpack --port 20129",
     "build:bun": "bun --bun next build --webpack",
-    "start:bun": "bun ./.next/standalone/custom-server.js",
+    "start:bun": "bun ./.next/standalone/server.js",
     "cli:pack": "npm --prefix cli run pack:cli",
     "cli:publish": "npm --prefix cli run publish:cli",
     "test": "vitest run",
+    "test:runtime": "node scripts/standalone-runtime-smoke.mjs",
     "test:routing": "vitest run tests/unit/antigravity-quota-routing.test.js tests/unit/antigravity-retry-hook.test.js tests/unit/base-executor-retry.test.js tests/unit/combo-routing.test.js tests/unit/combo-fusion.test.js tests/unit/qoder-billing.test.js tests/unit/retry-metadata.test.js tests/unit/route-health-state.test.js"
   },
   "dependencies": {
