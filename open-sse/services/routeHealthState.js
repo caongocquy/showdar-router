@@ -33,6 +33,17 @@ export class RouteHealthState {
 
   async beforeAttempt(model, now = Date.now()) {
     await this.hydrate();
+    const decision = this.inspect(model, now);
+    if (decision.skip) return decision;
+    const record = this.records.get(model);
+    if (!record) return decision;
+    if (this.probes.has(model)) return { ...decision, skip: true, probe: false };
+    this.probes.add(model);
+    this.records.set(model, { ...record, state: "half_open" });
+    return { ...decision, probe: true };
+  }
+
+  inspect(model, now = Date.now()) {
     const record = this.records.get(model);
     if (!record) return { skip: false, probe: false, reason: null, nextProbeAt: null };
 
@@ -46,20 +57,9 @@ export class RouteHealthState {
       };
     }
 
-    if (this.probes.has(model)) {
-      return {
-        skip: true,
-        probe: false,
-        reason: record.reason,
-        nextProbeAt: record.nextProbeAt,
-      };
-    }
-
-    this.probes.add(model);
-    this.records.set(model, { ...record, state: "half_open" });
     return {
       skip: false,
-      probe: true,
+      probe: false,
       reason: record.reason,
       nextProbeAt: record.nextProbeAt,
     };

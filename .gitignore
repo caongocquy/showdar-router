@@ -72,6 +72,7 @@ ecosystem.config.*
 scripts/agSniffer/*
 gitbooks/*
 gitbook/README.md
+.showdar-router-backup/
 
 # Refactor backup reference (do not bundle/lint)
 open-sse.old/

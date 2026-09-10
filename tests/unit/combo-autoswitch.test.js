@@ -56,19 +56,19 @@ describe("reorderByCapabilities", () => {
     expect(reorderByCapabilities(models, new Set())).toBe(models);
   });
 
-  it("floats vision-capable model to front, keeps fallback", () => {
+  it("keeps only models capable of receiving required vision data", () => {
     // deepseek-chat = no vision; claude-sonnet = vision
     const models = ["deepseek/deepseek-chat", "anthropic/claude-sonnet-4.6"];
     const out = reorderByCapabilities(models, new Set(["vision"]));
     expect(out[0]).toBe("anthropic/claude-sonnet-4.6");
-    expect(out).toContain("deepseek/deepseek-chat"); // not dropped
-    expect(out).toHaveLength(2);
+    expect(out).not.toContain("deepseek/deepseek-chat");
+    expect(out).toHaveLength(1);
   });
 
-  it("keeps order when no model matches", () => {
+  it("returns no candidate when no model matches a hard capability", () => {
     const models = ["deepseek/deepseek-chat", "deepseek/deepseek-reasoner"];
     const out = reorderByCapabilities(models, new Set(["vision"]));
-    expect(out).toBe(models);
+    expect(out).toEqual([]);
   });
 
   it("single model -> unchanged", () => {

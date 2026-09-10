@@ -1,5 +1,6 @@
 import {
   beforeRouteAttempt,
+  inspectRouteHealth,
   recordRouteFailure,
   recordRouteSuccess,
   getRouteHealthSnapshot,
@@ -18,11 +19,16 @@ function formatWait(nextProbeAt) {
 
 export function createChatComboHealthHooks(log) {
   return {
-    async beforeModelAttempt(model) {
-      const decision = await beforeRouteAttempt(model);
+    inspectModel(model) {
+      return inspectRouteHealth(model);
+    },
+    async beforeModelAttempt(model, options = {}) {
+      const decision = options.inspectOnly
+        ? await inspectRouteHealth(model)
+        : await beforeRouteAttempt(model);
       if (decision.skip) {
         log.info("COMBO", `skip ${model} — ${decision.reason || "unhealthy"}, probe in ${formatWait(decision.nextProbeAt)}`);
-      } else if (decision.probe) {
+      } else if (decision.probe && !options.inspectOnly) {
         log.info("COMBO", `probe ${model} — half-open`);
       }
       return decision;
