@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { request } from "node:http";
@@ -41,7 +41,10 @@ try {
     stdio: "inherit",
   });
   const serverPath = daemon.resolveServerPath(repo);
-  assert.equal(serverPath, join(repo, ".next", "standalone", "server.js"));
+  assert.equal(serverPath, join(repo, ".next", "standalone", "custom-server.js"));
+  assert.ok(existsSync(join(repo, ".next", "standalone", "server.js")));
+  assert.ok(existsSync(join(repo, ".next", "standalone", ".next", "static")));
+  assert.ok(existsSync(join(repo, ".next", "standalone", "public")));
   child = spawn(process.execPath, [serverPath, "--port", String(port)], {
     cwd: repo,
     env: {
@@ -63,6 +66,7 @@ try {
   assert.equal(await get("/api/version"), 200);
   assert.doesNotMatch(logs, /client reference manifest for route/i);
   assert.doesNotMatch(logs, /Cannot find module ['"]?\.\/chunks\//i);
+  assert.doesNotMatch(logs, /Failed to load static file for page: \/500/i);
   assert.doesNotMatch(logs, /next start does not work with output: standalone/i);
   console.log("standalone runtime smoke: PASS");
 } finally {

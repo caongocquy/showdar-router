@@ -27,9 +27,10 @@ describe("Showdar Router daemon", () => {
     const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "showdar-router-app-"));
     tempDirs.push(appRoot);
     const standaloneRoot = path.join(appRoot, ".next", "standalone");
-    const serverPath = path.join(standaloneRoot, "server.js");
+    const serverPath = path.join(standaloneRoot, "custom-server.js");
     fs.mkdirSync(standaloneRoot, { recursive: true });
     fs.writeFileSync(path.join(standaloneRoot, "server.js"), "");
+    fs.writeFileSync(serverPath, "");
     fs.mkdirSync(path.join(appRoot, "node_modules"));
     fs.writeFileSync(path.join(appRoot, ".next", "BUILD_ID"), "test");
     expect(daemon.resolveServerPath(appRoot)).toBe(serverPath);
@@ -39,14 +40,15 @@ describe("Showdar Router daemon", () => {
     expect(fs.existsSync(result.logFile)).toBe(true);
   });
 
-  it("starts the generated standalone server instead of custom-server, next start, or next dev", () => {
+  it("starts the trusted standalone wrapper instead of next start or next dev", () => {
     const env = tempEnv();
     const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "showdar-router-app-"));
     tempDirs.push(appRoot);
     const standaloneRoot = path.join(appRoot, ".next", "standalone");
-    const serverPath = path.join(standaloneRoot, "server.js");
+    const serverPath = path.join(standaloneRoot, "custom-server.js");
     fs.mkdirSync(standaloneRoot, { recursive: true });
     fs.writeFileSync(path.join(standaloneRoot, "server.js"), "");
+    fs.writeFileSync(serverPath, "");
     fs.mkdirSync(path.join(appRoot, "node_modules"));
     fs.writeFileSync(path.join(appRoot, ".next", "BUILD_ID"), "test");
 
@@ -64,7 +66,7 @@ describe("Showdar Router daemon", () => {
 
     expect(spawnArgs[0]).toBe(process.execPath);
     expect(spawnArgs[1][0]).toBe(serverPath);
-    expect(spawnArgs[1][0]).not.toContain("custom-server.js");
+    expect(spawnArgs[1][0]).toContain("custom-server.js");
     expect(spawnArgs[1]).not.toContain("start");
     expect(spawnArgs[1]).not.toContain("dev");
     expect(spawnArgs[2].env.PORT).toBe("20129");

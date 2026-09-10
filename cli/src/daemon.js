@@ -152,7 +152,8 @@ function resolveServerPath(appRoot) {
   const standaloneRoot = fs.existsSync(path.join(appRoot, ".next", "standalone", "server.js"))
     ? path.join(appRoot, ".next", "standalone")
     : appRoot;
-  return path.join(standaloneRoot, "server.js");
+  const wrapper = path.join(standaloneRoot, "custom-server.js");
+  return fs.existsSync(wrapper) ? wrapper : path.join(standaloneRoot, "server.js");
 }
 
 module.exports = { DEFAULT_PORT, getDataDir, paths, ownsProcess, start, stop, status, resolveAppRoot, resolveServerPath };

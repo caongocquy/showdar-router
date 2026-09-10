@@ -68,15 +68,34 @@ const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
 
 const daemonCommands = new Set(["start", "stop", "restart", "status", "logs", "version", "help"]);
-const requestedCommand = args[0] || "start";
+const explicitCommand = args[0];
+const launcher = require("./src/launcher");
+const requestedCommand = launcher.getLaunchMode(args, Boolean(process.stdin.isTTY && process.stdout.isTTY));
+const cliRoot = __dirname;
+const daemon = require("./src/daemon");
+const appRoot = daemon.resolveAppRoot(cliRoot);
+const env = { ...process.env };
+
+if (requestedCommand === "interactive") {
+  runInteractiveLauncher();
+  return;
+}
+
+if (requestedCommand === "tray" || explicitCommand === "--tray" || explicitCommand === "-t") {
+  try {
+    try { ensureTrayRuntime({ silent: false }); } catch { /* tray remains optional */ }
+    launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, cliPath: __filename });
+  } catch (error) {
+    console.error(`Showdar Router: ${error.message}`);
+    process.exitCode = 1;
+  }
+  return;
+}
+
 if (daemonCommands.has(requestedCommand)) {
-  const daemon = require("./src/daemon");
-  const cliRoot = __dirname;
-  const appRoot = daemon.resolveAppRoot(cliRoot);
   const appServer = daemon.resolveServerPath(appRoot);
-  const env = { ...process.env };
   const state = daemon.paths(env);
-  const printHelp = () => console.log(`Showdar Router\n\nUsage: showdar-router [start|stop|restart|status|logs [-f]|version|help]\n\nDefault port: ${daemon.DEFAULT_PORT}\nData directory: ~/.showdar-router`);
+  const printHelp = () => console.log(`Showdar Router\n\nUsage: showdar-router [start|stop|restart|status|logs [-f]|tray|version|help]\n\nDefault port: ${daemon.DEFAULT_PORT}\nData directory: ~/.showdar-router`);
   try {
     if (requestedCommand === "help") return printHelp();
     if (requestedCommand === "version") return console.log(`Showdar Router ${pkg.version}`);
@@ -105,6 +124,22 @@ if (daemonCommands.has(requestedCommand)) {
     console.error(`Showdar Router: ${error.message}`);
     process.exitCode = 1;
     return;
+  }
+}
+
+async function runInteractiveLauncher() {
+  try {
+    try { ensureTrayRuntime({ silent: true }); } catch { /* tray is optional */ }
+    await launcher.runInteractive({
+      daemon,
+      tray: require("./src/cli/tray/tray"),
+      appRoot,
+      env,
+      cliPath: __filename,
+    });
+  } catch (error) {
+    console.error(`Showdar Router: ${error.message}`);
+    process.exitCode = 1;
   }
 }
 
@@ -567,7 +602,8 @@ function openBrowser(url) {
 
 // Find standalone server (bundled in bin/app for published package).
 const standaloneDir = path.join(__dirname, "app");
-const serverPath = path.join(standaloneDir, "server.js");
+const customServerPath = path.join(standaloneDir, "custom-server.js");
+const serverPath = fs.existsSync(customServerPath) ? customServerPath : path.join(standaloneDir, "server.js");
 
 if (!fs.existsSync(serverPath)) {
   console.error("Error: Standalone build not found.");
