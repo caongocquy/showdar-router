@@ -60,6 +60,10 @@ export function recordRouteSuccess(model) {
   return routeHealth.recordSuccess(model);
 }
 
+export function cancelRouteAttempt(model) {
+  return routeHealth.cancelProbe(model);
+}
+
 export function getRouteHealthSnapshot() {
   return routeHealth.snapshot();
 }

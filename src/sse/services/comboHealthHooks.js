@@ -3,6 +3,7 @@ import {
   inspectRouteHealth,
   recordRouteFailure,
   recordRouteSuccess,
+  cancelRouteAttempt,
   getRouteHealthSnapshot,
 } from "./routeHealth.js";
 import { validateChatComboResponse } from "open-sse/services/chatComboResponseValidator.js";
@@ -48,6 +49,10 @@ export function createChatComboHealthHooks(log) {
         "COMBO",
         `${record.state === "open" ? "open" : "cooldown"} ${model} — ${classification.reason}, probe in ${formatWait(record.nextProbeAt)}`,
       );
+    },
+
+    async onModelCancelled(model) {
+      await cancelRouteAttempt(model);
     },
 
     validateSuccess: validateChatComboResponse,

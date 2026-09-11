@@ -64,4 +64,15 @@ describe("combo round-robin routing", () => {
     await run(["p/a", "p/b", "p/c"]);
     expect(seen).toEqual(["p/a", "p/b", "p/c"]);
   });
+
+  it("allocates concurrent round-robin primaries fairly before provider execution", async () => {
+    const seen = [];
+    const run = () => handleComboChat({
+      body: {}, models: ["p/a", "p/b", "p/c"], comboName: "concurrent", comboStrategy: "round-robin",
+      handleSingleModel: async (_body, model) => { seen.push(model); return new Response("ok"); },
+      log: { info() {}, warn() {} },
+    });
+    await Promise.all(Array.from({ length: 6 }, run));
+    expect(seen).toEqual(["p/a", "p/b", "p/c", "p/a", "p/b", "p/c"]);
+  });
 });

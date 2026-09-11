@@ -38,4 +38,31 @@ describe("fusion cancellation and reuse", () => {
     });
     expect(started.filter((model) => model !== "p/judge")).toEqual(["p/a", "p/b", "p/c", "p/d"]);
   });
+
+  it("stops the panel queue immediately when the parent request aborts", async () => {
+    const started = [];
+    const cancelled = vi.fn();
+    const requestController = new AbortController();
+    const call = vi.fn(async (_body, model, isPanel, { signal } = {}) => {
+      started.push(model);
+      if (started.length === 4) setTimeout(() => requestController.abort(), 0);
+      return new Promise((resolve) => signal.addEventListener("abort", () => {
+        cancelled(model);
+        resolve({ ok: false, status: 499 });
+      }, { once: true }));
+    });
+    const t0 = Date.now();
+    const result = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "q" }] },
+      models: ["p/a", "p/b", "p/c", "p/d", "p/e", "p/f", "p/g", "p/h"],
+      handleSingleModel: call,
+      requestSignal: requestController.signal,
+      onModelCancelled: cancelled,
+      log,
+      tuning: { maxConcurrent: 4, panelHardTimeoutMs: 5000 },
+    });
+    expect(result.status).toBe(503);
+    expect(Date.now() - t0).toBeLessThan(1000);
+    expect(started).toEqual(["p/a", "p/b", "p/c", "p/d"]);
+  });
 });

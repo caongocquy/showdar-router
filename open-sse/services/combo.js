@@ -8,7 +8,7 @@ import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
 import { planComboCandidates } from "./comboPlanner.js";
-import { scheduleComboModels, selectComboModels, commitComboPrimary, resetComboRoundRobin } from "./comboRoundRobin.js";
+import { scheduleComboModels, selectComboModels, commitComboPrimary, resetComboRoundRobin, withComboSchedulingLock } from "./comboRoundRobin.js";
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
 // stripped). Must be prioritized. Soft (e.g. search) only degrades a feature.
@@ -269,26 +269,44 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, validateSuccess = null }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, onModelCancelled = null, validateSuccess = null, requestSignal = null }) {
   const required = autoSwitch ? detectRequiredCapabilities(body) : new Set();
   const healthInspect = async (model) => beforeModelAttempt ? beforeModelAttempt(model, { inspectOnly: true }) : { skip: false };
   const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: healthInspect });
   if (plan.models.length === 0 && plan.missingCapabilities.length > 0) {
     return new Response(JSON.stringify({ error: { message: `No combo model supports required capabilities: ${plan.missingCapabilities.join(", ")}` } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
-  let rotatedModels = comboStrategy === "round-robin"
-    ? selectComboModels(plan.models, models, comboName)
-    : plan.models;
+  let rotatedModels = plan.models;
   
   let lastError = null;
   let earliestRetryAfter = plan.skipped.reduce((earliest, item) => item.nextProbeAt && (!earliest || new Date(item.nextProbeAt) < new Date(earliest)) ? item.nextProbeAt : earliest, null);
   let lastStatus = null;
-  let primaryCommitted = false;
+  if (comboStrategy === "round-robin") {
+    const prepared = await withComboSchedulingLock(comboName, async () => {
+      const candidates = selectComboModels(plan.models, models, comboName);
+      const skipped = [];
+      let selected = null;
+      for (const candidate of candidates) {
+        if (beforeModelAttempt) {
+          const decision = await beforeModelAttempt(candidate);
+          if (decision?.skip) { if (decision.nextProbeAt) skipped.push(decision.nextProbeAt); continue; }
+        }
+        selected = candidate;
+        commitComboPrimary(candidate, models, comboName, comboStickyLimit);
+        break;
+      }
+      return { candidates: selected ? [selected, ...candidates.filter((m) => m !== selected)] : [], skipped };
+    });
+    rotatedModels = prepared.candidates;
+    for (const retryAt of prepared.skipped) {
+      if (!earliestRetryAfter || new Date(retryAt) < new Date(earliestRetryAfter)) earliestRetryAfter = retryAt;
+    }
+  }
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
 
-    if (beforeModelAttempt) {
+    if (comboStrategy !== "round-robin" && beforeModelAttempt) {
       try {
         const healthDecision = await beforeModelAttempt(modelStr);
         if (healthDecision?.skip) {
@@ -303,14 +321,18 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       }
     }
 
-    if (comboStrategy === "round-robin" && !primaryCommitted) {
-      commitComboPrimary(modelStr, models, comboName, comboStickyLimit);
-      primaryCommitted = true;
+    if (requestSignal?.aborted) {
+      await onModelCancelled?.(modelStr);
+      return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
     }
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
-      const result = await handleSingleModel(body, modelStr);
+      const result = await handleSingleModel(body, modelStr, undefined, { signal: requestSignal });
+      if (requestSignal?.aborted || result?.status === 499) {
+        await onModelCancelled?.(modelStr);
+        return result;
+      }
       
       // Success (2xx) - validate chat streams before accepting the route.
       if (result.ok) {
@@ -381,6 +403,10 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       if (!lastStatus) lastStatus = result.status;
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
+      if (requestSignal?.aborted || error?.name === "AbortError") {
+        await onModelCancelled?.(modelStr);
+        return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
+      }
       // Catch unexpected exceptions to ensure fallback continues
       const thrownError = error?.message || String(error);
       if (onModelFailure) {
@@ -519,11 +545,6 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
     const controller = new AbortController();
     const concurrency = Math.min(models.length, Math.max(1, Math.floor(Number(maxConcurrent)) || 4));
     let onParentAbort = null;
-    if (parentSignal) {
-      onParentAbort = () => controller.abort(parentSignal.reason);
-      if (parentSignal.aborted) onParentAbort();
-      else parentSignal.addEventListener("abort", onParentAbort, { once: true });
-    }
     let next = 0, active = 0, settled = 0, ok = 0, done = false, graceTimer;
     const finish = () => {
       if (done) return;
@@ -535,7 +556,7 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
       resolve(out);
     };
     const pump = () => {
-      if (done || graceTimer) return;
+      if (done || graceTimer || controller.signal.aborted) return;
       while (active < concurrency && next < models.length) {
         const i = next++;
         active++;
@@ -556,6 +577,11 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
       }
     };
     const hardTimer = setTimeout(finish, panelHardTimeoutMs);
+    if (parentSignal) {
+      onParentAbort = () => { controller.abort(parentSignal.reason); finish(); };
+      if (parentSignal.aborted) onParentAbort();
+      else parentSignal.addEventListener("abort", onParentAbort, { once: true });
+    }
     pump();
   });
 }
@@ -599,7 +625,7 @@ async function replayPanelResponse(response, body) {
  * @param {Object} [options.tuning] - Override FUSION_DEFAULTS (minPanel, grace, timeout)
  * @returns {Promise<Response>}
  */
-export async function handleFusionChat({ body, models, handleSingleModel, log, comboName, judgeModel, tuning, inspectModel = null, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, validateSuccess = null, requestSignal = null }) {
+export async function handleFusionChat({ body, models, handleSingleModel, log, comboName, judgeModel, tuning, inspectModel = null, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, onModelCancelled = null, validateSuccess = null, requestSignal = null }) {
   const required = detectRequiredCapabilities(body);
   const inspect = inspectModel || (async () => ({ skip: false }));
   const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: inspect });
@@ -632,13 +658,16 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       beforeModelAttempt,
       onModelSuccess,
       onModelFailure,
+      onModelCancelled,
       validateSuccess,
+      requestSignal,
     });
   }
 
   const cfg = { ...FUSION_DEFAULTS, ...(tuning || {}) };
   const minPanel = Math.min(Math.max(2, cfg.minPanel), panel.length);
   const judge = judgeModel && judgeModel.trim() ? judgeModel.trim() : panel[0];
+  let fusionRetryAfter = plan.skipped.reduce((earliest, item) => item.nextProbeAt && (!earliest || new Date(item.nextProbeAt) < new Date(earliest)) ? item.nextProbeAt : earliest, null);
   log.info("FUSION", `Combo "${comboName}" | panel=${panel.length} [${panel.join(", ")}] | judge=${judge} | quorum=${minPanel}`);
 
   // 1. Fan out to the panel in parallel: non-streaming, tools stripped (we want prose).
@@ -658,11 +687,14 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   const t0 = Date.now();
   const settled = await collectPanel(panel, async (model, signal) => {
     if (beforeModelAttempt) {
-      const decision = await beforeModelAttempt(model);
+      const decision = await beforeModelAttempt(model, { signal });
       if (decision?.skip) return { __skipped: true, nextProbeAt: decision.nextProbeAt };
     }
     const result = await handleSingleModel(panelBody, model, true, { signal });
-    if (signal.aborted) return result;
+    if (signal.aborted || result?.status === 499) {
+      await onModelCancelled?.(model);
+      return { kind: "cancelled", model, response: result };
+    }
     if (!result?.ok) {
       const failure = await normalizeProviderFailure(result);
       if (!signal.aborted) {
@@ -670,7 +702,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
           log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
         }
       }
-      return { kind: "failure", model, response: result };
+      return { kind: "failure", model, response: result, retryAfter: failure.retryAfter };
     }
     let text;
     try {
@@ -682,7 +714,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       try { await onModelFailure?.(model, { status: 502, errorText: "Empty or invalid successful chat response", retryAfter: null }); } catch (healthError) {
         log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
       }
-      return { kind: "failure", model, response: result, errorText: "Empty or invalid successful chat response" };
+      return { kind: "failure", model, response: result, errorText: "Empty or invalid successful chat response", retryAfter: null };
     }
     try {
       await onModelSuccess?.(model);
@@ -701,6 +733,8 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     if (!res) { log.warn("FUSION", `Panel ${model} dropped (straggler/timeout)`); continue; }
     if (res.__timeout) { log.warn("FUSION", `Panel ${model} timed out`); continue; }
     if (res.__error) { log.warn("FUSION", `Panel ${model} threw`, { error: res.__error?.message || String(res.__error) }); continue; }
+    if (res.nextProbeAt && (!fusionRetryAfter || new Date(res.nextProbeAt) < new Date(fusionRetryAfter))) fusionRetryAfter = res.nextProbeAt;
+    if (res.retryAfter && (!fusionRetryAfter || new Date(res.retryAfter) < new Date(fusionRetryAfter))) fusionRetryAfter = res.retryAfter;
     if (res.kind !== "success") { log.warn("FUSION", `Panel ${model} failed`); continue; }
     answers.push({ model, text: res.text, response: res.response });
     log.info("FUSION", `Panel ${model} ok (${res.text.length} chars)`);
@@ -709,6 +743,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   // 3. Degrade gracefully when the panel is too thin to fuse.
   if (answers.length === 0) {
     log.warn("FUSION", "All panel models failed");
+    if (fusionRetryAfter) return unavailableResponse(503, "All fusion panel models failed", fusionRetryAfter, formatRetryAfter(fusionRetryAfter));
     return new Response(
       JSON.stringify({ error: { message: "All fusion panel models failed" } }),
       { status: 503, headers: { "Content-Type": "application/json" } }
@@ -722,13 +757,19 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   // 4. Judge analyzes + writes one final answer (streams to client if requested).
   const judgeBody = appendUserTurn(body, buildJudgePrompt(answers));
   const judges = [judge, ...panel.filter((model) => model !== judge)];
-  let judgeRetryAfter = null;
+  let judgeRetryAfter = fusionRetryAfter;
   log.info("FUSION", `Judging ${answers.length} answers with ${judge}`);
   for (const candidate of judges) {
-    const decision = beforeModelAttempt ? await beforeModelAttempt(candidate) : { skip: false };
-    if (decision?.skip) continue;
+    const decision = beforeModelAttempt ? await beforeModelAttempt(candidate, { signal: requestSignal }) : { skip: false };
+    if (decision?.skip) {
+      if (decision.nextProbeAt && (!judgeRetryAfter || new Date(decision.nextProbeAt) < new Date(judgeRetryAfter))) judgeRetryAfter = decision.nextProbeAt;
+      continue;
+    }
     const result = await handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal });
-    if (requestSignal?.aborted || result?.status === 499) return result;
+    if (requestSignal?.aborted || result?.status === 499) {
+      await onModelCancelled?.(candidate);
+      return result;
+    }
     if (result?.ok) {
       let validation;
       if (validateSuccess) {

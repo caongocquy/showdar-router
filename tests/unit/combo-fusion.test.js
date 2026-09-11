@@ -89,6 +89,28 @@ describe("fusion combo", () => {
     expect(providerCalls).toBe(1);
   });
 
+  it("releases a cancelled single-model Fusion attempt without failure health", async () => {
+    const requestController = new AbortController();
+    const cancelled = vi.fn();
+    const failed = vi.fn();
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "hi" }] },
+      models: ["p/only"],
+      requestSignal: requestController.signal,
+      beforeModelAttempt: async (_model, options) => options?.inspectOnly ? { skip: false } : { skip: false, probe: true },
+      handleSingleModel: async () => {
+        requestController.abort();
+        return new Response(JSON.stringify({ error: { message: "cancelled" } }), { status: 499 });
+      },
+      onModelCancelled: cancelled,
+      onModelFailure: failed,
+      log,
+    });
+    expect(res.status).toBe(499);
+    expect(cancelled).toHaveBeenCalledWith("p/only");
+    expect(failed).not.toHaveBeenCalled();
+  });
+
   it("accepts a streaming judge without consuming its SSE response", async () => {
     const calls = [];
     const res = await handleFusionChat({
@@ -164,6 +186,27 @@ describe("fusion combo", () => {
     });
     expect(res.status).toBe(503);
     expect(failures).not.toHaveBeenCalled();
+  });
+
+  it("returns the earliest retry deadline when every panel fails", async () => {
+    const reset = new Date(Date.now() + 60_000).getTime();
+    const handleSingleModel = async (_body, model) => model === "p/a"
+      ? new Response(JSON.stringify({ error: { message: "rate limit", metadata: { headers: { "X-RateLimit-Reset": String(reset) } } } }), { status: 429 })
+      : new Response(JSON.stringify({ error: { message: "Please retry in 9s" } }), { status: 429 });
+    const res = await handleFusionChat({ body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"], handleSingleModel, log });
+    expect(res.status).toBe(503);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("preserves the earliest cooldown when all judge candidates are skipped", async () => {
+    const retryAt = new Date(Date.now() + 90_000).toISOString();
+    const before = async () => ({ skip: true, nextProbeAt: retryAt });
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      handleSingleModel: async () => realResponse("never"), beforeModelAttempt: before, log,
+    });
+    expect(res.status).toBe(503);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
   it("fans out to the panel then routes a synthesis turn to the judge", async () => {
