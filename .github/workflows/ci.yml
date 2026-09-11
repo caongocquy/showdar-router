@@ -1,0 +1,93 @@
+name: Pull request verification
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Use npm 11.5.1
+        run: |
+          npm install --global npm@11.5.1
+          node --version
+          npm --version
+
+      - name: Install repository dependencies
+        run: |
+          npm install --no-package-lock
+          npm --prefix cli install --no-package-lock --ignore-scripts
+
+      - name: Run routing tests
+        run: npm run test:routing
+
+      - name: Run regression and focused release tests
+        run: |
+          npx vitest run \
+            tests/unit/provider-model-discovery.test.js \
+            tests/unit/finish-reason-logging.test.js \
+            tests/unit/launcher-tray.test.mjs \
+            tests/unit/showdar-router-daemon.test.mjs \
+            tests/unit/donate-modal.test.js \
+            tests/unit/combo-autoswitch.test.js \
+            tests/unit/combo-cancellation.test.js \
+            tests/unit/combo-planner.test.js \
+            tests/unit/fusion-strip-stream-options-3024.test.js
+
+      - name: Build and validate npm package
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          npm --prefix cli run build
+          npm --prefix cli pack --dry-run --json > /tmp/showdar-router-pack.json
+          PACK_FILE=/tmp/showdar-router-pack.json node - <<'NODE'
+          const fs = require("node:fs");
+          const pack = JSON.parse(fs.readFileSync(process.env.PACK_FILE, "utf8"))[0];
+          const root = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const cli = JSON.parse(fs.readFileSync("cli/package.json", "utf8"));
+          if (root.version !== cli.version) throw new Error(`Version mismatch: root ${root.version}, cli ${cli.version}`);
+          const files = new Set(pack.files.map((file) => file.path));
+          for (const file of [
+            "cli.js",
+            "app/custom-server.js",
+            "app/server.js",
+            "assets/showdar-router-banner.png",
+            "assets/showdar-router-terminal.png",
+            "README.md",
+            "LICENSE",
+          ]) {
+            if (!files.has(file)) throw new Error(`Missing package file: ${file}`);
+          }
+          console.log(JSON.stringify({ name: pack.name, version: pack.version, files: pack.entryCount }));
+          NODE
+
+      - name: Reject unexpected generated source-root artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(git status --porcelain --untracked-files=all)"
+          unexpected="$(printf '%s\n' "$status" | awk '$2 == "Users/" || $2 ~ /^Users\//')"
+          if [[ -n "$unexpected" ]]; then
+            echo "Unexpected generated source-root artifacts:" >&2
+            printf '%s\n' "$unexpected" >&2
+            exit 1
+          fi
