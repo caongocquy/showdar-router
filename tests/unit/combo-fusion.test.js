@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 
 import { handleFusionChat } from "../../open-sse/services/combo.js";
+import { validateChatComboResponse } from "../../open-sse/services/chatComboResponseValidator.js";
+import { RouteHealthState } from "../../open-sse/services/routeHealthState.js";
 
 const log = { info: () => {}, warn: () => {}, debug: () => {} };
 
@@ -17,6 +19,20 @@ function errResponse(status = 500) {
   return make();
 }
 
+function realResponse(content) {
+  return new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content } }] }), { headers: { "content-type": "application/json" } });
+}
+
+function sseResponse(content = "answer") {
+  const chunk = { choices: [{ delta: { content }, finish_reason: null }] };
+  return new Response(`data: ${JSON.stringify(chunk)}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } });
+}
+
+function memoryStorage() {
+  const values = {};
+  return { async getAll() { return { ...values }; }, async set(k, v) { values[k] = v; }, async remove(k) { delete values[k]; }, async clear() { for (const k of Object.keys(values)) delete values[k]; } };
+}
+
 describe("fusion combo", () => {
   it("answers directly with a single-model panel (nothing to fuse)", async () => {
     const handleSingleModel = vi.fn(async () => okResponse("solo"));
@@ -28,6 +44,225 @@ describe("fusion combo", () => {
     });
     expect(handleSingleModel).toHaveBeenCalledTimes(1);
     expect(handleSingleModel.mock.calls[0][1]).toBe("p/only");
+  });
+
+  it("runs a single eligible model through health and success hooks", async () => {
+    const before = vi.fn(async (_model, options) => ({ skip: false, probe: !options?.inspectOnly }));
+    const onSuccess = vi.fn();
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "hi" }] },
+      models: ["p/only"],
+      handleSingleModel: async () => realResponse("solo"),
+      beforeModelAttempt: before,
+      onModelSuccess: onSuccess,
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect(before).toHaveBeenCalledTimes(2);
+    expect(onSuccess).toHaveBeenCalledWith("p/only");
+  });
+
+  it("keeps a single eligible streaming response readable", async () => {
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "hi" }], stream: true },
+      models: ["p/only"],
+      handleSingleModel: async () => sseResponse("solo"),
+      validateSuccess: validateChatComboResponse,
+      log,
+    });
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    expect(await res.text()).toContain("solo");
+  });
+
+  it("does not let a second single-model half-open request acquire the probe", async () => {
+    let owner = false;
+    let providerCalls = 0;
+    const before = async (_model, options) => {
+      if (options?.inspectOnly) return { skip: false };
+      if (owner) return { skip: true, nextProbeAt: new Date(Date.now() + 60_000).toISOString() };
+      owner = true;
+      return { skip: false, probe: true };
+    };
+    const handleSingleModel = async () => {
+      providerCalls++;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return realResponse("solo");
+    };
+    const options = { body: { messages: [{ role: "user", content: "hi" }] }, models: ["p/only"], handleSingleModel, beforeModelAttempt: before, log };
+    const [first, second] = await Promise.all([handleFusionChat(options), handleFusionChat(options)]);
+    expect(first.ok).toBe(true);
+    expect(second.status).toBe(503);
+    expect(providerCalls).toBe(1);
+  });
+
+  it("releases a cancelled single-model Fusion attempt without failure health", async () => {
+    const requestController = new AbortController();
+    const cancelled = vi.fn();
+    const failed = vi.fn();
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "hi" }] },
+      models: ["p/only"],
+      requestSignal: requestController.signal,
+      beforeModelAttempt: async (_model, options) => options?.inspectOnly ? { skip: false } : { skip: false, probe: true },
+      handleSingleModel: async () => {
+        requestController.abort();
+        return new Response(JSON.stringify({ error: { message: "cancelled" } }), { status: 499 });
+      },
+      onModelCancelled: cancelled,
+      onModelFailure: failed,
+      log,
+    });
+    expect(res.status).toBe(499);
+    expect(cancelled).toHaveBeenCalledWith("p/only");
+    expect(failed).not.toHaveBeenCalled();
+  });
+
+  it("accepts a streaming judge without consuming its SSE response", async () => {
+    const calls = [];
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }], stream: true },
+      models: ["p/a", "p/b"],
+      judgeModel: "p/judge",
+      handleSingleModel: async (_body, model) => {
+        calls.push(model);
+        return model === "p/judge" ? sseResponse("FINAL") : realResponse(`ans-${model}`);
+      },
+      validateSuccess: validateChatComboResponse,
+      log,
+    });
+    expect(calls).toEqual(["p/a", "p/b", "p/judge"]);
+    expect((await res.text())).toContain("data:");
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+  });
+
+  it("falls back when a streaming judge completes without meaningful content", async () => {
+    const calls = [];
+    const empty = new Response("data: [DONE]\n\n", { headers: { "content-type": "text/event-stream" } });
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }], stream: true },
+      models: ["p/a", "p/b"],
+      judgeModel: "p/judge",
+      handleSingleModel: async (_body, model) => {
+        calls.push(model);
+        if (model === "p/judge") return empty;
+        if (model === "p/a" && calls.filter((m) => m === "p/a").length > 1) return sseResponse("FALLBACK");
+        return realResponse(`ans-${model}`);
+      },
+      validateSuccess: validateChatComboResponse,
+      log,
+    });
+    expect(calls).toEqual(["p/a", "p/b", "p/judge", "p/a"]);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+  });
+
+  it.each([
+    ["OpenRouter reset", 429, { error: { message: "rate limit", metadata: { headers: { "X-RateLimit-Reset": String(Date.now() + 60_000) } } } }, true],
+    ["Gemini retry delay", 429, { error: { message: "busy", details: [{ retryDelay: "7s" }] } }, true],
+    ["provider capacity", 503, { error: { message: "capacity" } }, false],
+  ])("preserves %s panel failure metadata", async (_name, status, payload, hasRetry) => {
+    const failures = [];
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] },
+      models: ["p/fail", "p/ok"],
+      handleSingleModel: async (_body, model) => model === "p/fail"
+        ? new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } })
+        : realResponse("survivor"),
+      onModelFailure: async (_model, failure) => failures.push(failure),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect(failures[0]).toMatchObject({ status, errorText: payload.error.message });
+    if (hasRetry) expect(failures[0].retryAfter).toEqual(expect.any(String));
+    else expect(failures[0].retryAfter).toBeNull();
+  });
+
+  it("does not record a panel response cancelled by the router", async () => {
+    const failures = vi.fn();
+    const requestController = new AbortController();
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] },
+      models: ["p/a", "p/b"],
+      requestSignal: requestController.signal,
+      handleSingleModel: async (_body, _model, _isPanel, { signal }) => {
+        requestController.abort();
+        return new Response(JSON.stringify({ error: { message: "aborted" } }), { status: 499, headers: { "content-type": "application/json" } });
+      },
+      onModelFailure: failures,
+      log,
+    });
+    expect(res.status).toBe(503);
+    expect(failures).not.toHaveBeenCalled();
+  });
+
+  it("returns the earliest retry deadline when every panel fails", async () => {
+    const reset = new Date(Date.now() + 60_000).getTime();
+    const handleSingleModel = async (_body, model) => model === "p/a"
+      ? new Response(JSON.stringify({ error: { message: "rate limit", metadata: { headers: { "X-RateLimit-Reset": String(reset) } } } }), { status: 429 })
+      : new Response(JSON.stringify({ error: { message: "Please retry in 9s" } }), { status: 429 });
+    const res = await handleFusionChat({ body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"], handleSingleModel, log });
+    expect(res.status).toBe(503);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("preserves the earliest cooldown when all judge candidates are skipped", async () => {
+    const retryAt = new Date(Date.now() + 90_000).toISOString();
+    const before = async () => ({ skip: true, nextProbeAt: retryAt });
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      handleSingleModel: async () => realResponse("never"), beforeModelAttempt: before, log,
+    });
+    expect(res.status).toBe(503);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("releases a half-open panel probe after AbortError without recording failure", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/a", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const before = (model) => health.beforeAttempt(model);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: before,
+      onModelCancelled: (model) => health.cancelProbe(model),
+      onModelFailure: async () => { throw new Error("must not fail health"); },
+      handleSingleModel: async (_body, model) => model === "p/a" ? Promise.reject(Object.assign(new Error("aborted"), { name: "AbortError" })) : realResponse("survivor"),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/a"]).toMatchObject({ failureCount: 1, state: "cooldown" });
+    expect((await health.beforeAttempt("p/a")).probe).toBe(true);
+  });
+
+  it("records a genuine thrown panel attempt and releases its probe", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/a", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: (model) => health.beforeAttempt(model),
+      onModelFailure: (model, failure) => health.recordFailure(model, { routeState: "open", reason: "thrown", routeCooldownMs: 1000, effectiveStatus: failure.status }, failure.retryAfter, Date.now(), failure.errorText),
+      handleSingleModel: async (_body, model) => model === "p/a" ? Promise.reject(new Error("provider exploded")) : realResponse("survivor"),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/a"]).toMatchObject({ failureCount: 2, state: "open" });
+    expect((await health.beforeAttempt("p/a")).probe).toBe(false);
+  });
+
+  it("releases a judge probe after a genuine thrown execution", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/judge", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"], judgeModel: "p/judge",
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: (model) => health.beforeAttempt(model),
+      onModelFailure: (model, failure) => health.recordFailure(model, { routeState: "open", reason: "judge_throw", routeCooldownMs: 1000, effectiveStatus: failure.status }, failure.retryAfter, Date.now(), failure.errorText),
+      handleSingleModel: async (_body, model) => model === "p/judge" ? Promise.reject(new Error("judge exploded")) : realResponse(`answer-${model}`),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/judge"]).toMatchObject({ failureCount: 2, state: "open" });
+    expect((await health.beforeAttempt("p/judge")).probe).toBe(false);
   });
 
   it("fans out to the panel then routes a synthesis turn to the judge", async () => {
@@ -212,5 +447,19 @@ describe("fusion combo", () => {
     
     // Flattened tool_result
     expect(panelBody.messages[2].content).toBe("[Tool result: done]");
+  });
+
+  it("does not count an empty HTTP 200 toward quorum and replays a lone answer as SSE", async () => {
+    const calls = vi.fn(async (_body, model) => model === "p/empty" ? realResponse("") : realResponse("answer"));
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }], stream: true },
+      models: ["p/empty", "p/answer"], handleSingleModel: calls, log,
+      tuning: { stragglerGraceMs: 1, panelHardTimeoutMs: 1000 }
+    });
+    expect(calls).toHaveBeenCalledTimes(2);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    const text = await res.text();
+    expect(text).toContain('"content":"answer"');
+    expect(text.endsWith("data: [DONE]\n\n")).toBe(true);
   });
 });

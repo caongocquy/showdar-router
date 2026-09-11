@@ -1,6 +1,6 @@
 {
   "name": "showdar-router",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Showdar Router web dashboard and AI routing gateway",
   "private": true,
   "scripts": {

@@ -108,14 +108,16 @@ export async function handleChat(request, clientRawRequest = null) {
       return handleFusionChat({
         body,
         models: comboModels,
-        handleSingleModel: (b, m, isPanel) => {
+        handleSingleModel: (b, m, isPanel, options = {}) => {
           let cleanRawReq = clientRawRequest;
           if (isPanel && clientRawRequest) {
             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
             cleanRawReq = { ...clientRawRequest, body: cleanBody };
           }
-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal);
         },
+        ...createChatComboHealthHooks(log),
+        requestSignal: request.signal,
         log,
         comboName: modelStr,
         judgeModel: comboStrategies[modelStr]?.judgeModel,
@@ -130,7 +132,7 @@ export async function handleChat(request, clientRawRequest = null) {
       ...createChatComboHealthHooks(log),
       models: augmentedModels,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
         adapterAdded
       ),
       log,
@@ -151,7 +153,7 @@ export async function handleChat(request, clientRawRequest = null) {
       ...createChatComboHealthHooks(log),
       models: soloAugmented,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
         adapterAdded
       ),
       log,
@@ -166,7 +168,7 @@ export async function handleChat(request, clientRawRequest = null) {
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, signal = null) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -187,14 +189,16 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         return handleFusionChat({
           body,
           models: comboModels,
-          handleSingleModel: (b, m, isPanel) => {
+          handleSingleModel: (b, m, isPanel, options = {}) => {
             let cleanRawReq = clientRawRequest;
             if (isPanel && clientRawRequest) {
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal);
           },
+          ...createChatComboHealthHooks(log),
+          requestSignal: request.signal,
           log,
           comboName: modelStr,
           judgeModel: comboStrategies[modelStr]?.judgeModel,
@@ -209,7 +213,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         ...createChatComboHealthHooks(log),
         models: augmentedModels,
         handleSingleModel: withCapacityAdapterStripping(
-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+          (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
           adapterAdded
         ),
         log,
@@ -288,6 +292,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       cavemanLevel: chatSettings.cavemanLevel || "full",
       ponytailEnabled: !!chatSettings.ponytailEnabled,
       ponytailLevel: chatSettings.ponytailLevel || "full",
+      signal,
       pxpipeEnabled: !!chatSettings.pxpipeEnabled,
       pxpipeMinChars: chatSettings.pxpipeMinChars,
       pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,

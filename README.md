@@ -91,7 +91,16 @@ It provides:
 
 ## Routing
 
-Combo candidates always preserve their configured order.
+Combo candidates preserve their configured order after routing eligibility is
+known. Requests with hard input requirements (vision, PDF, audio, or video)
+never fall back to a model that cannot receive that data; unavailable routes
+are then skipped using read-only health inspection followed by a single
+half-open acquisition at attempt time.
+
+Round-robin combos rotate only among eligible candidates and keep the cursor
+stable when a route fails. Fusion uses a bounded panel (four concurrent calls
+by default), cancels stragglers after quorum, and reuses a lone successful
+panel response instead of making a duplicate provider call.
 
 For example:
 

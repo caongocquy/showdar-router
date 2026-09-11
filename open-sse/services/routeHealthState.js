@@ -3,7 +3,7 @@ export class RouteHealthState {
     if (!storage) throw new Error("RouteHealthState requires storage");
     this.storage = storage;
     this.records = new Map();
-    this.probes = new Set();
+    this.probes = new Map();
     this.hydrated = false;
     this.hydrationPromise = null;
     this.persistenceTail = Promise.resolve();
@@ -33,6 +33,17 @@ export class RouteHealthState {
 
   async beforeAttempt(model, now = Date.now()) {
     await this.hydrate();
+    const decision = this.inspect(model, now);
+    if (decision.skip) return decision;
+    const record = this.records.get(model);
+    if (!record) return decision;
+    if (this.probes.has(model)) return { ...decision, skip: true, probe: false };
+    this.probes.set(model, record.state);
+    this.records.set(model, { ...record, state: "half_open" });
+    return { ...decision, probe: true };
+  }
+
+  inspect(model, now = Date.now()) {
     const record = this.records.get(model);
     if (!record) return { skip: false, probe: false, reason: null, nextProbeAt: null };
 
@@ -46,20 +57,9 @@ export class RouteHealthState {
       };
     }
 
-    if (this.probes.has(model)) {
-      return {
-        skip: true,
-        probe: false,
-        reason: record.reason,
-        nextProbeAt: record.nextProbeAt,
-      };
-    }
-
-    this.probes.add(model);
-    this.records.set(model, { ...record, state: "half_open" });
     return {
       skip: false,
-      probe: true,
+      probe: false,
       reason: record.reason,
       nextProbeAt: record.nextProbeAt,
     };
@@ -100,6 +100,16 @@ export class RouteHealthState {
     if (!this.records.has(model)) return;
     this.records.delete(model);
     this.enqueue(() => this.storage.remove(model));
+  }
+
+  async cancelProbe(model) {
+    await this.hydrate();
+    const previousState = this.probes.get(model);
+    this.probes.delete(model);
+    const record = this.records.get(model);
+    if (record?.state === "half_open") {
+      this.records.set(model, { ...record, state: previousState || "cooldown" });
+    }
   }
 
   async snapshot() {

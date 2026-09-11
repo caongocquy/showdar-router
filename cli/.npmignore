@@ -7,3 +7,9 @@
 !package.json
 !README.md
 !LICENSE
+
+# Build staging and local runtime state must never enter the npm tarball.
+app/.next-cli-build/
+app/.next-cli-build
+app/.next-cli-build/**
+app/.build-home/

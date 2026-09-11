@@ -76,7 +76,14 @@ jobs:
             tests/unit/launcher-tray.test.mjs \
             tests/unit/showdar-router-daemon.test.mjs \
             tests/unit/retry-metadata.test.js \
-            tests/unit/donate-modal.test.js
+            tests/unit/donate-modal.test.js \
+            tests/unit/combo-autoswitch.test.js \
+            tests/unit/combo-cancellation.test.js \
+            tests/unit/combo-fusion.test.js \
+            tests/unit/combo-planner.test.js \
+            tests/unit/combo-routing.test.js \
+            tests/unit/fusion-strip-stream-options-3024.test.js \
+            tests/unit/route-health-state.test.js
 
       - name: Build and validate npm package
         working-directory: cli

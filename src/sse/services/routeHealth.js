@@ -33,6 +33,11 @@ export function beforeRouteAttempt(model, now) {
   return routeHealth.beforeAttempt(model, now);
 }
 
+export async function inspectRouteHealth(model, now) {
+  await routeHealth.hydrate();
+  return routeHealth.inspect(model, now);
+}
+
 export async function recordRouteFailure(model, { status, errorText, retryAfter } = {}, now = Date.now()) {
   const snapshot = await routeHealth.snapshot();
   const previousLevel = snapshot[model]?.failureCount || 0;
@@ -53,6 +58,10 @@ export async function recordRouteFailure(model, { status, errorText, retryAfter 
 
 export function recordRouteSuccess(model) {
   return routeHealth.recordSuccess(model);
+}
+
+export function cancelRouteAttempt(model) {
+  return routeHealth.cancelProbe(model);
 }
 
 export function getRouteHealthSnapshot() {

@@ -48,4 +48,17 @@ describe("route health persistence and probing", () => {
     expect(decision.skip).toBe(true);
     expect(decision.nextProbeAt).toBe(new Date(now + 300_000).toISOString());
   });
+
+  it("releases a cancelled half-open probe without changing route health", async () => {
+    const state = new RouteHealthState(storage());
+    const now = Date.parse("2026-09-10T00:00:00.000Z");
+    await state.recordFailure("provider/model", {
+      routeState: "cooldown", reason: "rate_limited", routeCooldownMs: 60_000, effectiveStatus: 429,
+    }, null, now);
+    expect((await state.beforeAttempt("provider/model", now + 60_001)).probe).toBe(true);
+    await state.cancelProbe("provider/model");
+    const snapshot = await state.snapshot();
+    expect(snapshot["provider/model"]).toMatchObject({ state: "cooldown", failureCount: 1 });
+    expect((await state.beforeAttempt("provider/model", now + 60_002)).probe).toBe(true);
+  });
 });
