@@ -52,18 +52,21 @@ jobs:
             tests/unit/combo-planner.test.js \
             tests/unit/fusion-strip-stream-options-3024.test.js
 
+      - name: Build root production app
+        run: npm run build
+
       - name: Build and validate npm package
+        working-directory: cli
         shell: bash
         run: |
           set -euo pipefail
           npm run build
-          npm --prefix cli run build
-          npm --prefix cli pack --dry-run --json > /tmp/showdar-router-pack.json
+          npm pack --dry-run --json > /tmp/showdar-router-pack.json
           PACK_FILE=/tmp/showdar-router-pack.json node - <<'NODE'
           const fs = require("node:fs");
           const pack = JSON.parse(fs.readFileSync(process.env.PACK_FILE, "utf8"))[0];
-          const root = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          const cli = JSON.parse(fs.readFileSync("cli/package.json", "utf8"));
+          const cli = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const root = JSON.parse(fs.readFileSync("../package.json", "utf8"));
           if (root.version !== cli.version) throw new Error(`Version mismatch: root ${root.version}, cli ${cli.version}`);
           const files = new Set(pack.files.map((file) => file.path));
           for (const file of [
