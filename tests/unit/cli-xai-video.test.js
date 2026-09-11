@@ -1,7 +1,7 @@
 /**
- * Tests for the `9router xai video` CLI command (cli/src/cli/commands/xaiVideo.js)
+ * Tests for the `Showdar Router xai video` CLI command (cli/src/cli/commands/xaiVideo.js)
  *
- * Uses a real local HTTP server standing in for the 9router gateway + video CDN.
+ * Uses a real local HTTP server standing in for the Showdar Router gateway + video CDN.
  * No real credentials or upstream calls.
  *
  * Covers:

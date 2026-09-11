@@ -164,7 +164,7 @@ Problemas comunes y soluciones al usar Showdar Router.
 4. **Usa el endpoint en la nube:**
    Si localhost no funciona (ej. Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://showdar-router.com/v1
    ```
 
 ---
@@ -346,6 +346,6 @@ Problemas comunes y soluciones al usar Showdar Router.
 
 ## ¿Necesitas más ayuda?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentación:** [showdar-router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
+- **Documentación:** [showdar-router.com/docs](https://showdar-router.com/docs)
 - **FAQ:** [faq.md](faq.md)

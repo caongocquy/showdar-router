@@ -19,7 +19,7 @@ Showdar RouterをOpenAI Codex CLIと統合し、OpenAI APIリクエストをShow
 export OPENAI_BASE_URL="http://localhost:21298/v1"
 
 # Showdar RouterダッシュボードからのAPIキー
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-showdar-router-api-key"
 ```
 
 ### 2. シェル設定をリロード
@@ -77,7 +77,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 ```json
 {
   "baseUrl": "http://localhost:21298/v1",
-  "apiKey": "your-9router-api-key",
+  "apiKey": "your-showdar-router-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
 ```
@@ -113,7 +113,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 localhostの代わりにShowdar Routerクラウドエンドポイントを使用するには:
 
 ```bash
-export OPENAI_BASE_URL="https://9router.com"
+export OPENAI_BASE_URL="https://showdar-router.com"
 ```
 
 Showdar RouterクラウドダッシュボードでAPIキーが設定されていることを確認してください。

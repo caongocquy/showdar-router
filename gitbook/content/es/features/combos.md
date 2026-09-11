@@ -354,7 +354,7 @@ Edita `~/.claude/config.json`:
 ```json
 {
   "anthropic_api_base": "http://localhost:21298/v1",
-  "anthropic_api_key": "your-9router-api-key",
+  "anthropic_api_key": "your-showdar-router-api-key",
   "model": "budget-combo"
 }
 ```
@@ -363,7 +363,7 @@ Edita `~/.claude/config.json`:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:21298"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-showdar-router-api-key"
 
 codex --model quality-first "your prompt"
 ```

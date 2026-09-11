@@ -6,7 +6,7 @@ Integra Showdar Router con la extensión Continue para llevar la asistencia de I
 
 - Visual Studio Code instalado
 - Extensión Continue instalada desde el marketplace de VSCode
-- API key de Showdar Router desde el [dashboard](https://9router.com/dashboard)
+- API key de Showdar Router desde el [dashboard](https://showdar-router.com/dashboard)
 - Showdar Router ejecutándose (local o en la nube)
 
 ## Pasos de configuración
@@ -76,7 +76,7 @@ Agrega la siguiente configuración a tu `config.json`:
 **Para Showdar Router en la nube:**
 Reemplaza `apiBase` con:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://showdar-router.com/v1"
 ```
 
 ### 3. Guardar y recargar

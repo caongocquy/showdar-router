@@ -164,7 +164,7 @@
 4. **使用云端 endpoint:**
    如果 localhost 不行(例如 Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://showdar-router.com/v1
    ```
 
 ---
@@ -346,6 +346,6 @@
 
 ## 需要更多帮助?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **文档:** [showdar-router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
+- **文档:** [showdar-router.com/docs](https://showdar-router.com/docs)
 - **常见问题:** [faq.md](faq.md)

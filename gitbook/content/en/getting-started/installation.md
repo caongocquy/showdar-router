@@ -53,8 +53,8 @@ showdar-router
 Install in a specific project:
 
 ```bash
-mkdir my-9router
-cd my-9router
+mkdir my-showdar-router
+cd my-showdar-router
 npm install showdar-router
 ```
 
@@ -74,8 +74,8 @@ npx showdar-router
 Clone and build from GitHub:
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install
 npm run build
 npm start
@@ -270,7 +270,7 @@ showdar-router --port 3000
 
 **Error:**
 ```
-Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/9router'
+Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/showdar-router'
 ```
 
 **Solution: Use sudo (not recommended) or fix npm permissions**
@@ -401,15 +401,15 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull showdar-router/showdar-router:latest
 
 docker run -d \
   -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.showdar-router \
+  -v showdar-router-data:/root/.showdar-router \
   --name showdar-router \
-  9router/9router:latest
+  showdar-router/showdar-router:latest
 ```
 
 **Use case:** Containerized deployment, Kubernetes
@@ -458,7 +458,7 @@ rm -rf ~/.showdar-router
 ```bash
 # Remove environment variables from shell config
 nano ~/.bashrc  # or ~/.zshrc
-# Delete 9router-related exports
+# Delete showdar-router-related exports
 ```
 
 ---
@@ -473,6 +473,6 @@ nano ~/.bashrc  # or ~/.zshrc
 
 ## Need Help?
 
-- **Website**: [showdar-router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Website**: [showdar-router.com](https://showdar-router.com)
+- **GitHub**: [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues**: [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)

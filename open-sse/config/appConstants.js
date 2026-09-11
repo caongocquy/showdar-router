@@ -208,6 +208,10 @@ function getAppPackageVersion() {
 
 // Kimi Code OAuth / API headers (CLIProxyAPI internal/auth/kimi commonHeaders parity).
 // deviceId must stay stable per connection for the whole OAuth session.
+// Provider compatibility: Kimi's X-Msh-Platform value is part of its upstream
+// device-code contract, not Showdar Router product branding.
+export const KIMI_PLATFORM = "9router";
+
 export function buildKimiHeaders(deviceId) {
   const osName = platform();
   const architecture = arch();
@@ -228,7 +232,7 @@ export function buildKimiHeaders(deviceId) {
     : `kimi-${Date.now()}`;
 
   return {
-    "X-Msh-Platform": "9router",
+    "X-Msh-Platform": KIMI_PLATFORM,
     "X-Msh-Version": getAppPackageVersion(),
     "X-Msh-Device-Name": deviceName,
     "X-Msh-Device-Model": deviceModel,

@@ -6,7 +6,7 @@ Tích hợp Showdar Router với extension Continue để mang trợ lý AI tr�
 
 - Visual Studio Code đã cài đặt
 - Extension Continue đã cài đặt từ VSCode marketplace
-- Showdar Router API key từ [dashboard](https://9router.com/dashboard)
+- Showdar Router API key từ [dashboard](https://showdar-router.com/dashboard)
 - Showdar Router đang chạy (cục bộ hoặc cloud)
 
 ## Các bước Cấu hình
@@ -76,7 +76,7 @@ Thêm cấu hình sau vào `config.json`:
 **Cho Cloud Showdar Router:**
 Thay `apiBase` bằng:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://showdar-router.com/v1"
 ```
 
 ### 3. Lưu và Reload

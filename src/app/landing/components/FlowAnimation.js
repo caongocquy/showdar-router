@@ -19,7 +19,7 @@ const PROVIDERS = [
   {
     id: "anthropic",
     name: "Anthropic",
-    color: "bg-orange-400",
+    color: "bg-primary",
     textColor: "text-white",
   },
   {
@@ -49,8 +49,8 @@ export default function FlowAnimation() {
   return (
     <div className="mt-16 w-full max-w-4xl relative h-[360px] hidden md:flex items-center justify-center animate-[float_6s_ease-in-out_infinite]">
       {/* Showdar Router Hub - Center */}
-      <div className="relative z-20 w-32 h-32 rounded-full bg-[#23180f] border-2 border-[#f97815] shadow-[0_0_40px_rgba(249,120,21,0.3)] flex flex-col items-center justify-center gap-1 group cursor-pointer hover:scale-105 transition-transform duration-500">
-        <span className="material-symbols-outlined text-4xl text-[#f97815]">
+      <div className="relative z-20 w-32 h-32 rounded-full bg-surface border-2 border-primary shadow-[0_0_40px_rgba(91,124,250,0.3)] flex flex-col items-center justify-center gap-1 group cursor-pointer hover:scale-105 transition-transform duration-500">
+        <span className="material-symbols-outlined text-4xl text-primary">
           hub
         </span>
         <span className="text-xs font-bold text-white tracking-widest uppercase">

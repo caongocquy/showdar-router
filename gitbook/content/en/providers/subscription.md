@@ -121,7 +121,7 @@ a Codex account.
 
 ```bash
 curl http://localhost:21298/v1/images/generations \
-  -H "Authorization: Bearer $NINE_ROUTER_API_KEY" \
+  -H "Authorization: Bearer $SHOWDAR_ROUTER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"cx/gpt-5.6-sol-image","prompt":"A blue square","size":"1024x1024"}'
 ```

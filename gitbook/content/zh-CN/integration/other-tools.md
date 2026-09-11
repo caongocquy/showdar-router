@@ -24,7 +24,7 @@ Model: 任意 Showdar Router 模型(cc/*, cx/*, glm/*, 等)
 
 **云端 Showdar Router:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 Model: 任意 Showdar Router 模型(cc/*, cx/*, glm/*, 等)
 ```

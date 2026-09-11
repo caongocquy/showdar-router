@@ -164,7 +164,7 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 4. **Dùng cloud endpoint:**
    Nếu localhost không hoạt động (ví dụ: Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://showdar-router.com/v1
    ```
 
 ---
@@ -346,6 +346,6 @@ Các vấn đề và giải pháp phổ biến khi dùng Showdar Router.
 
 ## Cần trợ giúp thêm?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentation:** [showdar-router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
+- **Documentation:** [showdar-router.com/docs](https://showdar-router.com/docs)
 - **FAQ:** [faq.md](faq.md)

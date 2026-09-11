@@ -131,6 +131,80 @@ function mergeServerArtifacts(buildDistDir, cliAppDir) {
   copyRecursive(serverSrc, serverDest);
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeGeneratedText(contents, buildRoot, { dynamicFileUrls = true } = {}) {
+  const root = path.resolve(buildRoot).replace(/\\/g, "/");
+  const escapedRoot = root.replaceAll("/", "\\/");
+  const stringBoundary = `([\"'\`]|\\\\[\"'\`])`;
+  const replaceQuotedReference = (text, reference, replacement) => {
+    const after = "(?=$|[^A-Za-z0-9._-])";
+    const pattern = new RegExp(`${stringBoundary}${escapeRegExp(reference)}${after}`, "g");
+    return text.replace(pattern, (_match, prefix) => `${prefix}${replacement}`);
+  };
+
+  let normalized = contents;
+  if (dynamicFileUrls) {
+    const fileUrlRoot = `file://${root}`;
+    normalized = replaceQuotedReference(
+      normalized,
+      fileUrlRoot,
+      'file://" + process.cwd() + "',
+    );
+  }
+  return replaceQuotedReference(
+    replaceQuotedReference(normalized, root, "."),
+    escapedRoot,
+    ".",
+  );
+}
+
+function normalizeStructuredText(value, buildRoot) {
+  const root = path.resolve(buildRoot).replace(/\\/g, "/");
+  const escapedRoot = root.replaceAll("/", "\\/");
+  const replaceReference = (text, reference) => text.replace(
+    new RegExp(`(^|[^A-Za-z0-9._/-])${escapeRegExp(reference)}(?=$|[^A-Za-z0-9._-])`, "g"),
+    (_match, prefix) => `${prefix}.`,
+  );
+  return replaceReference(replaceReference(value, root), escapedRoot);
+}
+
+function normalizeJsonValue(value, buildRoot) {
+  if (typeof value === "string") return normalizeStructuredText(value, buildRoot);
+  if (Array.isArray(value)) return value.map((item) => normalizeJsonValue(item, buildRoot));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        normalizeStructuredText(key, buildRoot),
+        normalizeJsonValue(item, buildRoot),
+      ]),
+    );
+  }
+  return value;
+}
+
+function normalizeGeneratedFile(filePath, buildRoot) {
+  const contents = fs.readFileSync(filePath, "utf8");
+  const normalized = path.extname(filePath) === ".json"
+    ? JSON.stringify(normalizeJsonValue(JSON.parse(contents), buildRoot), null, 2) + "\n"
+    : normalizeGeneratedText(contents, buildRoot);
+  if (normalized !== contents) fs.writeFileSync(filePath, normalized);
+}
+
+function normalizeGeneratedPaths(rootDir, buildRoot) {
+  const generatedExtensions = new Set([".js", ".json"]);
+  function visit(currentDir) {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const filePath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) visit(filePath);
+      else if (generatedExtensions.has(path.extname(entry.name))) normalizeGeneratedFile(filePath, buildRoot);
+    }
+  }
+  visit(rootDir);
+}
+
 function assertRequiredApiArtifacts(cliAppDir) {
   const requiredArtifacts = [
     "app/api/v1/chat/completions/route.js",
@@ -331,6 +405,10 @@ function buildCliPackage() {
     process.exit(1);
   }
 
+  // Keep generated module IDs and metadata portable without changing runtime-relative paths.
+  normalizeGeneratedPaths(path.join(cliAppDir, buildDistDirName), appDir);
+  normalizeGeneratedFile(path.join(cliAppDir, "server.js"), appDir);
+
   console.log("✨ CLI package build completed!");
   console.log(`📁 Output: ${cliAppDir}`);
 
@@ -347,6 +425,14 @@ module.exports = {
   assertRequiredApiArtifacts,
   copyStandaloneBuild,
   mergeServerArtifacts,
+  normalizeGeneratedFile,
+  normalizeGeneratedJson: (contents, buildRoot) => JSON.stringify(
+    normalizeJsonValue(JSON.parse(contents), buildRoot),
+    null,
+    2,
+  ) + "\n",
+  normalizeGeneratedText,
+  normalizeGeneratedPaths,
 };
 
 if (require.main === module) {

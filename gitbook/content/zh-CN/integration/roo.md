@@ -5,7 +5,7 @@
 ## 前置要求
 
 - 已安装 Roo AI 助手
-- 来自 [仪表盘](https://9router.com/dashboard) 的 Showdar Router API key
+- 来自 [仪表盘](https://showdar-router.com/dashboard) 的 Showdar Router API key
 - Showdar Router 正在运行(本地或云端)
 
 ## 配置步骤
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **云端 Showdar Router:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

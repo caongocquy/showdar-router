@@ -11,9 +11,10 @@ describe("kimchi registry entry", () => {
     kimchiEntry = (await import("../../open-sse/providers/registry/kimchi.js")).default;
   });
 
-  it("is an oauth provider auto-listed via byCategory", () => {
+  it("is a free-tier provider with OAuth authentication", () => {
     assert.equal(kimchiEntry.id, "kimchi");
-    assert.equal(kimchiEntry.category, "oauth");
+    assert.equal(kimchiEntry.category, "freeTier");
+    assert.ok(kimchiEntry.authModes.includes("oauth"));
   });
 
   it("points at the OpenAI-compatible gateway with an authenticated UA", () => {
@@ -113,7 +114,7 @@ function mapKimchiMetadata(raw) {
 }
 
 describe("kimchiModels", () => {
-  it("maps Kimchi metadata entries to 9router model shape", () => {
+  it("maps Kimchi metadata entries to showdar-router model shape", () => {
     const raw = [{
       slug: "glm-5.2-fp8",
       display_name: "GLM 5.2",

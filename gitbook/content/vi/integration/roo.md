@@ -5,7 +5,7 @@ Tích hợp Showdar Router với Roo AI Assistant để truy cập nhiều model
 ## Yêu cầu
 
 - Roo AI Assistant đã cài đặt
-- Showdar Router API key từ [dashboard](https://9router.com/dashboard)
+- Showdar Router API key từ [dashboard](https://showdar-router.com/dashboard)
 - Showdar Router đang chạy (cục bộ hoặc cloud)
 
 ## Các bước Cấu hình
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **Cho Showdar Router cloud:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

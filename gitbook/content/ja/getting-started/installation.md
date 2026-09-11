@@ -53,8 +53,8 @@ showdar-router
 特定のプロジェクトにインストール:
 
 ```bash
-mkdir my-9router
-cd my-9router
+mkdir my-showdar-router
+cd my-showdar-router
 npm install showdar-router
 ```
 
@@ -74,8 +74,8 @@ npx showdar-router
 GitHubからクローンしてビルド:
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install
 npm run build
 npm start
@@ -270,7 +270,7 @@ showdar-router --port 3000
 
 **エラー:**
 ```
-Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/9router'
+Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/showdar-router'
 ```
 
 **解決策: sudoを使用 (非推奨) またはnpm権限を修正**
@@ -401,15 +401,15 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull showdar-router/showdar-router:latest
 
 docker run -d \
   -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.showdar-router \
+  -v showdar-router-data:/root/.showdar-router \
   --name showdar-router \
-  9router/9router:latest
+  showdar-router/showdar-router:latest
 ```
 
 **ユースケース:** コンテナデプロイ、Kubernetes
@@ -473,6 +473,6 @@ nano ~/.bashrc  # または ~/.zshrc
 
 ## ヘルプが必要?
 
-- **ウェブサイト**: [showdar-router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **ウェブサイト**: [showdar-router.com](https://showdar-router.com)
+- **GitHub**: [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues**: [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)

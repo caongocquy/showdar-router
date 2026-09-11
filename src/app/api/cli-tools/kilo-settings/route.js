@@ -44,7 +44,7 @@ const readJson = async (filePath) => {
   }
 };
 
-const has9RouterConfig = (auth) => {
+const hasShowdarRouterConfig = (auth) => {
   if (!auth) return false;
   const entry = auth["openai-compatible"] || auth["showdar-router"];
   if (!entry) return false;
@@ -62,7 +62,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       settings: { auth: auth ? Object.keys(auth) : [] },
-      has9Router: has9RouterConfig(auth),
+      hasShowdarRouter: hasShowdarRouterConfig(auth),
       authPath: getAuthPath(),
     });
   } catch (error) {

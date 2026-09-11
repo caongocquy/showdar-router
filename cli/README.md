@@ -649,7 +649,7 @@ The supported distribution target is the local npm/CLI installation.
 
 ## Upstream
 
-Showdar Router is an independent fork and evolution of [decolua/9router](https://github.com/decolua/9router).
+Showdar Router is an independent fork and evolution of the upstream project.
 
 The project preserves upstream attribution and compatibility where appropriate while maintaining its own product identity, runtime, routing behavior, and release process.
 
@@ -659,5 +659,5 @@ Showdar Router is not affiliated with OpenAI, OpenCode, Anthropic, Google, NVIDI
 
 Licensed under the [MIT License](https://github.com/caongocquy/showdar-router/blob/main/LICENSE).
 
-Showdar Router is based on 9router by decolua. Upstream copyright and
+Showdar Router is based on the upstream project. Upstream copyright and
 license notices are preserved.

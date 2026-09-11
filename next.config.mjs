@@ -1,12 +1,10 @@
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
-// CLI bundling needs workspace root so tracing includes hoisted node_modules (slim ~50MB).
-// Docker / default uses projectRoot so server.js lands at /app/server.js (not nested).
-const tracingRoot = process.env.NEXT_TRACING_ROOT_MODE === "workspace"
-  ? join(projectRoot, "..")
-  : projectRoot;
+// Keep tracing scoped to the application so generated manifests do not expose
+// the build machine's workspace path.
+const tracingRoot = projectRoot;
 const proxyClientMaxBodySize = process.env.SHOWDAR_ROUTER_PROXY_CLIENT_MAX_BODY_SIZE
   || process.env.NINEROUTER_PROXY_CLIENT_MAX_BODY_SIZE
   || "128mb";

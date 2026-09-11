@@ -236,7 +236,7 @@ export const DOCS_CONFIG = {
   title: "Showdar Router Documentation",
   description: "Smart AI model router - Maximize subscriptions, minimize costs",
   logo: "Showdar Router",
-  appUrl: "https://9router.com",
-  githubUrl: "https://github.com/decolua/9router",
+  appUrl: "https://showdar-router.com",
+  githubUrl: "https://github.com/caongocquy/showdar-router",
   navigation: getNavigation(DEFAULT_LANG)
 };

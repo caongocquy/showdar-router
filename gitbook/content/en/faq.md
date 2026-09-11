@@ -164,7 +164,7 @@ See [quota tracking documentation](features/quota-tracking.md) for details.
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://showdar-router.com/v1
   OpenAI API Key: [from dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **Alternative:** Self-host on VPS with public domain:
 ```bash
 # Deploy to VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 npm start
 
@@ -206,8 +206,8 @@ showdar-router
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -223,13 +223,13 @@ docker build -t showdar-router .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd showdar-router/app
 npm run deploy:cloudflare
 ```
 
@@ -292,7 +292,7 @@ npm update -g showdar-router
 
 ### Local Install
 ```bash
-cd 9router/app
+cd showdar-router/app
 git pull origin main
 npm install
 npm run build
@@ -306,7 +306,7 @@ docker stop showdar-router
 docker rm showdar-router
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router:latest
 ```
 
@@ -316,7 +316,7 @@ showdar-router --version
 ```
 
 **Breaking changes:**
-- Check [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
+- Check [CHANGELOG.md](https://github.com/caongocquy/showdar-router/blob/main/CHANGELOG.md)
 - Backup `~/.showdar-router` before major updates
 - Review migration guides for major versions
 
@@ -329,17 +329,17 @@ showdar-router --version
 ### Ways to contribute:
 
 1. **Report bugs:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/caongocquy/showdar-router/issues)
    - Include error logs, steps to reproduce
 
 2. **Request features:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/caongocquy/showdar-router/discussions)
    - Describe use case and benefits
 
 3. **Submit code:**
    ```bash
    # Fork repo
-   git clone https://github.com/YOUR_USERNAME/9router.git
+   git clone https://github.com/YOUR_USERNAME/showdar-router.git
    cd showdar-router
    
    # Create branch
@@ -375,13 +375,13 @@ showdar-router --version
 - Update documentation
 - Keep commits atomic and descriptive
 
-See [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md) for details.
+See [CONTRIBUTING.md](https://github.com/caongocquy/showdar-router/blob/main/CONTRIBUTING.md) for details.
 
 ---
 
 ## Need More Help?
 
-- **Documentation:** [showdar-router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Documentation:** [showdar-router.com/docs](https://showdar-router.com/docs)
+- **GitHub:** [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

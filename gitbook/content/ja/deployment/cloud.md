@@ -16,8 +16,8 @@
 ### ステップ1: リポジトリをクローン
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 ```
 
 ### ステップ2: 依存関係をインストール
@@ -39,7 +39,7 @@ npm run build
 ```bash
 export JWT_SECRET="your-secure-secret-change-this-to-random-string"
 export INITIAL_PASSWORD="your-secure-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/showdar-router"
 export NODE_ENV="production"
 ```
 
@@ -56,8 +56,8 @@ export NODE_ENV="production"
 ### ステップ5: データディレクトリを作成
 
 ```bash
-sudo mkdir -p /var/lib/9router
-sudo chown $USER:$USER /var/lib/9router
+sudo mkdir -p /var/lib/showdar-router
+sudo chown $USER:$USER /var/lib/showdar-router
 ```
 
 ### ステップ6: アプリケーションを起動
@@ -156,7 +156,7 @@ docker run -d \
   -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router
 ```
 
@@ -180,11 +180,11 @@ services:
       - INITIAL_PASSWORD=your-secure-password
       - DATA_DIR=/app/data
     volumes:
-      - 9router-data:/app/data
+      - showdar-router-data:/app/data
     restart: unless-stopped
 
 volumes:
-  9router-data:
+  showdar-router-data:
 ```
 
 **Docker Composeで実行:**
@@ -223,7 +223,7 @@ sudo apt install nginx
 
 ### ステップ2: Nginxを設定
 
-`/etc/nginx/sites-available/9router` を作成:
+`/etc/nginx/sites-available/showdar-router` を作成:
 
 ```nginx
 server {
@@ -284,7 +284,7 @@ server {
 
 ```bash
 # シンボリックリンクを作成
-sudo ln -s /etc/nginx/sites-available/9router /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/showdar-router /etc/nginx/sites-enabled/
 
 # 設定をテスト
 sudo nginx -t
@@ -364,7 +364,7 @@ ssh -L 3000:localhost:3000 user@your-server.com
 sudo apt update && sudo apt upgrade -y
 
 # Showdar Routerを更新
-cd /path/to/9router/app
+cd /path/to/showdar-router/app
 git pull
 npm install
 npm run build
@@ -375,10 +375,10 @@ pm2 restart showdar-router
 
 ```bash
 # データディレクトリをバックアップ
-tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
+tar -czf showdar-router-backup-$(date +%Y%m%d).tar.gz /var/lib/showdar-router
 
 # 自動毎日バックアップ (crontabに追加)
-0 2 * * * tar -czf /backups/9router-$(date +\%Y\%m\%d).tar.gz /var/lib/9router
+0 2 * * * tar -czf /backups/showdar-router-$(date +\%Y\%m\%d).tar.gz /var/lib/showdar-router
 ```
 
 ---
@@ -460,8 +460,8 @@ SSEサポート用にNginx設定で `proxy_buffering off` が設定されてい�
 
 ```bash
 # データディレクトリ権限を修正
-sudo chown -R $USER:$USER /var/lib/9router
-chmod 755 /var/lib/9router
+sudo chown -R $USER:$USER /var/lib/showdar-router
+chmod 755 /var/lib/showdar-router
 ```
 
 ---

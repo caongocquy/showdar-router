@@ -6,7 +6,7 @@ Showdar RouterをContinue拡張機能と統合し、Visual Studio Codeに直接A
 
 - Visual Studio Codeがインストール済み
 - VSCodeマーケットプレイスからContinue拡張機能がインストール済み
-- [ダッシュボード](https://9router.com/dashboard)からのShowdar Router APIキー
+- [ダッシュボード](https://showdar-router.com/dashboard)からのShowdar Router APIキー
 - Showdar Routerが動作中 (ローカルまたはクラウド)
 
 ## 設定手順
@@ -76,7 +76,7 @@ Showdar RouterをContinue拡張機能と統合し、Visual Studio Codeに直接A
 **クラウドShowdar Router用:**
 `apiBase` を以下に置き換え:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://showdar-router.com/v1"
 ```
 
 ### 3. 保存してリロード

@@ -9,6 +9,7 @@ import { getUsageForProvider } from "../../open-sse/services/usage.js";
 import { USAGE_SUPPORTED_PROVIDERS, USAGE_APIKEY_PROVIDERS } from "../../src/shared/constants/providers.js";
 import { PROVIDERS } from "../../open-sse/providers/index.js";
 import { parseQuotaData } from "../../src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js";
+import { KIMI_PLATFORM } from "../../open-sse/config/appConstants.js";
 
 const KIMI_USAGE_URL = "https://api.kimi.com/coding/v1/usages";
 
@@ -81,7 +82,7 @@ describe("getUsageForProvider(kimi) auth selection", () => {
     expect(opts.method).toBe("GET");
     expect(opts.headers.Authorization).toBe("Bearer tok-abc");
     expect(opts.headers["x-api-key"]).toBeUndefined();
-    expect(opts.headers["X-Msh-Platform"]).toBe("9router");
+    expect(opts.headers["X-Msh-Platform"]).toBe(KIMI_PLATFORM);
     expect(opts.headers["X-Msh-Device-Id"]).toBe("stable-device-1");
     expect(opts.headers["X-Msh-Version"]).toBeTruthy();
   });

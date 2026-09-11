@@ -164,7 +164,7 @@ Xem [tài liệu quota tracking](features/quota-tracking.md) để biết chi ti
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://showdar-router.com/v1
   OpenAI API Key: [from dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **Thay thế:** Self-host trên VPS với domain công khai:
 ```bash
 # Deploy to VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 npm start
 
@@ -206,8 +206,8 @@ showdar-router
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -223,13 +223,13 @@ docker build -t showdar-router .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd showdar-router/app
 npm run deploy:cloudflare
 ```
 
@@ -292,7 +292,7 @@ npm update -g showdar-router
 
 ### Local Install
 ```bash
-cd 9router/app
+cd showdar-router/app
 git pull origin main
 npm install
 npm run build
@@ -306,7 +306,7 @@ docker stop showdar-router
 docker rm showdar-router
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router:latest
 ```
 
@@ -316,7 +316,7 @@ showdar-router --version
 ```
 
 **Breaking changes:**
-- Xem [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
+- Xem [CHANGELOG.md](https://github.com/caongocquy/showdar-router/blob/main/CHANGELOG.md)
 - Backup `~/.showdar-router` trước khi update lớn
 - Xem hướng dẫn migration cho major version
 
@@ -329,17 +329,17 @@ showdar-router --version
 ### Các cách đóng góp:
 
 1. **Report bugs:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/caongocquy/showdar-router/issues)
    - Bao gồm error logs, các bước reproduce
 
 2. **Request features:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/caongocquy/showdar-router/discussions)
    - Mô tả use case và lợi ích
 
 3. **Submit code:**
    ```bash
    # Fork repo
-   git clone https://github.com/YOUR_USERNAME/9router.git
+   git clone https://github.com/YOUR_USERNAME/showdar-router.git
    cd showdar-router
    
    # Create branch
@@ -375,13 +375,13 @@ showdar-router --version
 - Cập nhật tài liệu
 - Giữ commit nhỏ gọn và mô tả rõ ràng
 
-Xem [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md) để biết chi tiết.
+Xem [CONTRIBUTING.md](https://github.com/caongocquy/showdar-router/blob/main/CONTRIBUTING.md) để biết chi tiết.
 
 ---
 
 ## Cần trợ giúp thêm?
 
-- **Documentation:** [showdar-router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Documentation:** [showdar-router.com/docs](https://showdar-router.com/docs)
+- **GitHub:** [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)
