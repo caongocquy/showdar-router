@@ -306,7 +306,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
 
-    if (comboStrategy !== "round-robin" && beforeModelAttempt) {
+    if (beforeModelAttempt && !(comboStrategy === "round-robin" && i === 0)) {
       try {
         const healthDecision = await beforeModelAttempt(modelStr);
         if (healthDecision?.skip) {
@@ -587,6 +587,8 @@ function collectPanel(models, invoke, { minPanel, stragglerGraceMs, panelHardTim
 }
 
 async function replayPanelResponse(response, body) {
+  // v0.3.0 Fusion is exposed through the OpenAI-compatible local API. Keep
+  // this replay intentionally scoped to OpenAI Chat Completions framing.
   if (body?.stream !== true) return response;
   let json;
   try { json = await response.clone().json(); } catch { return response; }
@@ -690,7 +692,20 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       const decision = await beforeModelAttempt(model, { signal });
       if (decision?.skip) return { __skipped: true, nextProbeAt: decision.nextProbeAt };
     }
-    const result = await handleSingleModel(panelBody, model, true, { signal });
+    let result;
+    try {
+      result = await handleSingleModel(panelBody, model, true, { signal });
+    } catch (error) {
+      if (signal.aborted || error?.name === "AbortError") {
+        await onModelCancelled?.(model);
+        return { kind: "cancelled", model };
+      }
+      const failure = { status: Number(error?.status) || 500, errorText: error?.message || String(error), retryAfter: null };
+      try { await onModelFailure?.(model, failure); } catch (healthError) {
+        log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
+      }
+      return { kind: "failure", model, errorText: failure.errorText, retryAfter: null };
+    }
     if (signal.aborted || result?.status === 499) {
       await onModelCancelled?.(model);
       return { kind: "cancelled", model, response: result };
@@ -765,7 +780,25 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       if (decision.nextProbeAt && (!judgeRetryAfter || new Date(decision.nextProbeAt) < new Date(judgeRetryAfter))) judgeRetryAfter = decision.nextProbeAt;
       continue;
     }
-    const result = await handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal });
+    let result;
+    try {
+      result = await handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal });
+    } catch (error) {
+      if (requestSignal?.aborted || error?.name === "AbortError") {
+        await onModelCancelled?.(candidate);
+        return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
+      }
+      const status = Number(error?.status) || 500;
+      const errorText = error?.message || String(error);
+      const failure = { status, errorText, retryAfter: null };
+      try { await onModelFailure?.(candidate, failure); } catch (healthError) {
+        log.warn("FUSION", `Health update failed for ${candidate}`, { error: healthError?.message || String(healthError) });
+      }
+      if (!checkFallbackError(status, errorText).shouldFallback) {
+        return new Response(JSON.stringify({ error: { message: errorText } }), { status, headers: { "Content-Type": "application/json" } });
+      }
+      continue;
+    }
     if (requestSignal?.aborted || result?.status === 499) {
       await onModelCancelled?.(candidate);
       return result;

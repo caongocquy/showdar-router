@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { handleFusionChat } from "../../open-sse/services/combo.js";
 import { validateChatComboResponse } from "../../open-sse/services/chatComboResponseValidator.js";
+import { RouteHealthState } from "../../open-sse/services/routeHealthState.js";
 
 const log = { info: () => {}, warn: () => {}, debug: () => {} };
 
@@ -25,6 +26,11 @@ function realResponse(content) {
 function sseResponse(content = "answer") {
   const chunk = { choices: [{ delta: { content }, finish_reason: null }] };
   return new Response(`data: ${JSON.stringify(chunk)}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } });
+}
+
+function memoryStorage() {
+  const values = {};
+  return { async getAll() { return { ...values }; }, async set(k, v) { values[k] = v; }, async remove(k) { delete values[k]; }, async clear() { for (const k of Object.keys(values)) delete values[k]; } };
 }
 
 describe("fusion combo", () => {
@@ -207,6 +213,56 @@ describe("fusion combo", () => {
     });
     expect(res.status).toBe(503);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("releases a half-open panel probe after AbortError without recording failure", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/a", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const before = (model) => health.beforeAttempt(model);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: before,
+      onModelCancelled: (model) => health.cancelProbe(model),
+      onModelFailure: async () => { throw new Error("must not fail health"); },
+      handleSingleModel: async (_body, model) => model === "p/a" ? Promise.reject(Object.assign(new Error("aborted"), { name: "AbortError" })) : realResponse("survivor"),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/a"]).toMatchObject({ failureCount: 1, state: "cooldown" });
+    expect((await health.beforeAttempt("p/a")).probe).toBe(true);
+  });
+
+  it("records a genuine thrown panel attempt and releases its probe", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/a", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"],
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: (model) => health.beforeAttempt(model),
+      onModelFailure: (model, failure) => health.recordFailure(model, { routeState: "open", reason: "thrown", routeCooldownMs: 1000, effectiveStatus: failure.status }, failure.retryAfter, Date.now(), failure.errorText),
+      handleSingleModel: async (_body, model) => model === "p/a" ? Promise.reject(new Error("provider exploded")) : realResponse("survivor"),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/a"]).toMatchObject({ failureCount: 2, state: "open" });
+    expect((await health.beforeAttempt("p/a")).probe).toBe(false);
+  });
+
+  it("releases a judge probe after a genuine thrown execution", async () => {
+    const health = new RouteHealthState(memoryStorage());
+    const now = Date.now();
+    await health.recordFailure("p/judge", { routeState: "cooldown", reason: "quota", routeCooldownMs: 1, effectiveStatus: 429 }, null, now - 10);
+    const res = await handleFusionChat({
+      body: { messages: [{ role: "user", content: "Q" }] }, models: ["p/a", "p/b"], judgeModel: "p/judge",
+      inspectModel: (model) => health.inspect(model), beforeModelAttempt: (model) => health.beforeAttempt(model),
+      onModelFailure: (model, failure) => health.recordFailure(model, { routeState: "open", reason: "judge_throw", routeCooldownMs: 1000, effectiveStatus: failure.status }, failure.retryAfter, Date.now(), failure.errorText),
+      handleSingleModel: async (_body, model) => model === "p/judge" ? Promise.reject(new Error("judge exploded")) : realResponse(`answer-${model}`),
+      log,
+    });
+    expect(res.ok).toBe(true);
+    expect((await health.snapshot())["p/judge"]).toMatchObject({ failureCount: 2, state: "open" });
+    expect((await health.beforeAttempt("p/judge")).probe).toBe(false);
   });
 
   it("fans out to the panel then routes a synthesis turn to the judge", async () => {

@@ -75,4 +75,52 @@ describe("combo round-robin routing", () => {
     await Promise.all(Array.from({ length: 6 }, run));
     expect(seen).toEqual(["p/a", "p/b", "p/c", "p/a", "p/b", "p/c"]);
   });
+
+  it("rechecks health for RR fallback candidates without moving the cursor", async () => {
+    const attempted = [];
+    const checked = [];
+    const first = () => handleComboChat({
+      body: {}, models: ["p/a", "p/b", "p/c"], comboName: "fallback-health", comboStrategy: "round-robin",
+      handleSingleModel: async () => new Response("ok"), log: { info() {}, warn() {} },
+    });
+    await first();
+    const res = await handleComboChat({
+      body: {}, models: ["p/a", "p/b", "p/c"], comboName: "fallback-health", comboStrategy: "round-robin",
+      beforeModelAttempt: async (model, options) => {
+        if (!options?.inspectOnly) checked.push(model);
+        return model === "p/c" && !options?.inspectOnly
+          ? { skip: true, nextProbeAt: new Date(Date.now() + 60_000).toISOString() }
+          : { skip: false };
+      },
+      handleSingleModel: async (_body, model) => {
+        attempted.push(model);
+        return model === "p/b" ? new Response("fail", { status: 500 }) : new Response("ok");
+      },
+      log: { info() {}, warn() {} },
+    });
+    expect(res.ok).toBe(true);
+    expect(attempted).toEqual(["p/b", "p/a"]);
+    expect(checked).toEqual(["p/b", "p/c", "p/a"]);
+  });
+
+  it("skips an RR fallback candidate owned by another half-open probe", async () => {
+    const attempted = [];
+    const first = () => handleComboChat({
+      body: {}, models: ["p/a", "p/b", "p/c"], comboName: "half-open-fallback", comboStrategy: "round-robin",
+      handleSingleModel: async () => new Response("ok"), log: { info() {}, warn() {} },
+    });
+    await first();
+    const res = await handleComboChat({
+      body: {}, models: ["p/a", "p/b", "p/c"], comboName: "half-open-fallback", comboStrategy: "round-robin",
+      beforeModelAttempt: async (model, options) => model === "p/c" && !options?.inspectOnly
+        ? { skip: true, reason: "half-open" } : { skip: false },
+      handleSingleModel: async (_body, model) => {
+        attempted.push(model);
+        return model === "p/b" ? new Response("fail", { status: 500 }) : new Response("ok");
+      },
+      log: { info() {}, warn() {} },
+    });
+    expect(res.ok).toBe(true);
+    expect(attempted).toEqual(["p/b", "p/a"]);
+  });
 });
