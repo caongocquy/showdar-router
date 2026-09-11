@@ -490,8 +490,16 @@ export default function ProviderDetailPage() {
 
   // Fetch suggested models from provider's public API (if configured)
   useEffect(() => {
-    fetchSuggestedModels(providerId).then(setSuggestedModels);
-  }, [providerId]);
+    if (!providerInfo?.modelsFetcher) {
+      setSuggestedModels([]);
+      return;
+    }
+    let cancelled = false;
+    fetchSuggestedModels(providerId).then((data) => {
+      if (!cancelled) setSuggestedModels(data);
+    });
+    return () => { cancelled = true; };
+  }, [providerId, providerInfo?.modelsFetcher]);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;

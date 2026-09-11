@@ -44,7 +44,7 @@ export function createModelDiscovery({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetchImpl(url, { signal: controller.signal });
+      const response = await fetchImpl(url, { signal: controller.signal, redirect: "error" });
       if (!response.ok) return { data: [], cacheable: false };
       const payload = await response.json();
       const raw = payload?.data ?? payload?.models ?? payload;

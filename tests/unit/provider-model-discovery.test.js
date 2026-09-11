@@ -68,7 +68,7 @@ describe("provider model discovery", () => {
     })).resolves.toHaveLength(2);
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://openrouter.ai/api/v1/models",
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
+      expect.objectContaining({ signal: expect.any(AbortSignal), redirect: "error" })
     );
     expect(fetchImpl.mock.calls[0][0]).not.toContain("attacker.example");
   });
@@ -166,7 +166,11 @@ describe("provider model discovery", () => {
     expect(client).toContain("fetchSuggestedModels(providerId)");
     expect(client).toContain("providerId");
     expect(client).not.toContain("searchParams = new URLSearchParams({ url:");
+    expect(client).not.toContain("const cache = new Map");
+    expect(client).not.toContain("CACHE_TTL_MS");
     expect(page).toContain("fetchSuggestedModels(providerId)");
+    expect(page).toContain("if (!providerInfo?.modelsFetcher)");
+    expect(page).toContain("setSuggestedModels([])");
     expect(page).toContain("Suggested free models:");
     expect(page).not.toContain("Suggested free models (≥200k context):");
   });
