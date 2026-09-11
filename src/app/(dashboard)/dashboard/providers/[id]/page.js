@@ -490,10 +490,16 @@ export default function ProviderDetailPage() {
 
   // Fetch suggested models from provider's public API (if configured)
   useEffect(() => {
-    const fetcher = (OAUTH_PROVIDERS[providerId] || APIKEY_PROVIDERS[providerId] || FREE_PROVIDERS[providerId] || FREE_TIER_PROVIDERS[providerId])?.modelsFetcher;
-    if (!fetcher) return;
-    fetchSuggestedModels(fetcher).then(setSuggestedModels);
-  }, [providerId]);
+    if (!providerInfo?.modelsFetcher) {
+      setSuggestedModels([]);
+      return;
+    }
+    let cancelled = false;
+    fetchSuggestedModels(providerId).then((data) => {
+      if (!cancelled) setSuggestedModels(data);
+    });
+    return () => { cancelled = true; };
+  }, [providerId, providerInfo?.modelsFetcher]);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;
@@ -1200,7 +1206,7 @@ export default function ProviderDetailPage() {
           if (notAdded.length === 0) return null;
           return (
             <div className="w-full mt-2">
-              <p className="text-xs text-text-muted mb-2">Suggested free models (≥200k context):</p>
+              <p className="text-xs text-text-muted mb-2">Suggested free models:</p>
               <div className="flex flex-wrap gap-2">
                 {notAdded.map((m) => (
                   <button
@@ -1209,7 +1215,7 @@ export default function ProviderDetailPage() {
                       await handleAddCustomModel(m.id, "llm", providerStorageAlias);
                     }}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                    title={`${m.name} · ${(m.contextLength / 1000).toFixed(0)}k ctx`}
+                    title={m.contextLength ? `${m.name} · ${(m.contextLength / 1000).toFixed(0)}k ctx` : m.name}
                   >
                     <span className="material-symbols-outlined text-[13px]">add</span>
                     {m.id.split("/").pop()}

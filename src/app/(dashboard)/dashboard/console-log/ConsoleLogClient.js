@@ -22,7 +22,19 @@ function colorLine(line) {
 export default function ConsoleLogClient() {
   const [logs, setLogs] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("Copy log");
   const logRef = useRef(null);
+
+  const handleCopy = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(logs.join("\n"));
+      setCopyStatus("Copied");
+    } catch {
+      setCopyStatus("Copy failed");
+    }
+    window.setTimeout(() => setCopyStatus("Copy log"), 1500);
+  };
 
   const handleClear = async () => {
     try {
@@ -72,6 +84,9 @@ export default function ConsoleLogClient() {
     <div className="">
       <Card>
         <div className="flex items-center justify-end px-4 pt-3 pb-2">
+          <Button size="sm" variant="outline" icon="content_copy" onClick={handleCopy}>
+            {copyStatus}
+          </Button>
           <Button size="sm" variant="outline" icon="delete" onClick={handleClear}>
             Clear
           </Button>
