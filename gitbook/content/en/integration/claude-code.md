@@ -103,7 +103,7 @@ If you get "model not found" errors:
 To use Showdar Router cloud endpoint instead of localhost:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://9router.com"
+export ANTHROPIC_BASE_URL="https://showdar-router.com"
 ```
 
 Make sure you have configured your API key in the Showdar Router cloud dashboard.

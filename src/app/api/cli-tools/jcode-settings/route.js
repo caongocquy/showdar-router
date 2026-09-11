@@ -7,6 +7,8 @@ import os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { parseTOML, stringifyTOML } from "confbox";
+import { getRouterEntry, normalizeRouterEntries, removeRouterEntries } from "@/lib/cliTools/routerCompat.js";
+import { getLegacyProviderEnvPath, removeLegacyProviderEnv } from "@/lib/cliTools/jcodeCompat.js";
 
 const execAsync = promisify(exec);
 
@@ -15,9 +17,8 @@ const getConfigPath = () => path.join(getJcodeConfigDir(), "config.toml");
 
 const getProviderEnvPath = () => {
   const configDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(configDir, "jcode", "provider-9router.env");
+  return path.join(configDir, "jcode", "provider-showdar-router.env");
 };
-
 const checkJcodeInstalled = async () => {
   try {
     const isWindows = os.platform() === "win32";
@@ -44,12 +45,12 @@ const readConfig = async () => {
   }
 };
 
-const has9RouterConfig = (config) => {
+const hasShowdarRouterConfig = (config) => {
   if (!config || !config.providers) return false;
 
   const providers = config.providers;
 
-  if (providers["showdar-router"]) return true;
+  if (getRouterEntry(providers)) return true;
 
   for (const [name, provider] of Object.entries(providers)) {
     if (provider.base_url && provider.base_url.includes("localhost:21298")) {
@@ -68,7 +69,12 @@ const writeConfig = async (config) => {
 
 const readProviderEnv = async () => {
   try {
-    const envPath = getProviderEnvPath();
+    let envPath = getProviderEnvPath();
+    try {
+      await fs.access(envPath);
+    } catch {
+      envPath = getLegacyProviderEnvPath();
+    }
     const content = await fs.readFile(envPath, "utf-8");
     const env = {};
 
@@ -118,12 +124,12 @@ export async function GET() {
   }
 
   const config = await readConfig();
-  const has9Router = has9RouterConfig(config);
+  const hasShowdarRouter = hasShowdarRouterConfig(config);
 
   return NextResponse.json({
     installed: true,
     config,
-    has9Router,
+    hasShowdarRouter,
     configPath: getConfigPath(),
   });
 }
@@ -149,15 +155,15 @@ export async function POST(request) {
       config.providers = {};
     }
 
-    config.providers["showdar-router"] = {
+    config.providers = normalizeRouterEntries(config.providers, {
       type: "openai-compatible",
       base_url: normalizedBaseUrl,
       auth: "bearer",
-      api_key_env: "JCODE_9ROUTER_API_KEY",
-      env_file: "provider-9router.env",
+      api_key_env: "JCODE_SHOWDAR_ROUTER_API_KEY",
+      env_file: "provider-showdar-router.env",
       default_model: models && models.length > 0 ? models[0] : "cc/claude-opus-4-7",
       requires_api_key: true,
-    };
+    });
 
     const configDir = getJcodeConfigDir();
     await fs.mkdir(configDir, { recursive: true });
@@ -169,7 +175,8 @@ export async function POST(request) {
     await fs.mkdir(jcodeConfigDir, { recursive: true });
 
     const env = await readProviderEnv();
-    env.JCODE_9ROUTER_API_KEY = apiKey;
+    env.JCODE_SHOWDAR_ROUTER_API_KEY = apiKey;
+    delete env.JCODE_9ROUTER_API_KEY;
     await writeProviderEnv(env);
 
     return NextResponse.json({
@@ -188,17 +195,19 @@ export async function POST(request) {
 
 export async function DELETE() {
   try {
+    await removeLegacyProviderEnv();
     const config = await readConfig();
 
     if (!config.providers) {
       return NextResponse.json({ success: true, message: "No configuration to remove" });
     }
 
-    delete config.providers["showdar-router"];
+    config.providers = removeRouterEntries(config.providers);
 
     await writeConfig(config);
 
     const env = await readProviderEnv();
+    delete env.JCODE_SHOWDAR_ROUTER_API_KEY;
     delete env.JCODE_9ROUTER_API_KEY;
     await writeProviderEnv(env);
 

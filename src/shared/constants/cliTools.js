@@ -121,7 +121,7 @@ export const CLI_TOOLS = {
     color: "#1F6FEB",
     description: "GitHub Copilot in VS Code via Showdar Router extension",
     configType: "guide",
-    docsUrl: "https://marketplace.visualstudio.com/items?itemName=hotrungnhan.9router-for-github-copilot",
+    docsUrl: "https://marketplace.visualstudio.com/items?itemName=hotrungnhan.showdar-router-for-github-copilot",
     guideSteps: [
       {
         step: 1,

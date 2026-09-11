@@ -5,7 +5,7 @@ Integra Showdar Router con Roo AI Assistant para acceder a múltiples modelos de
 ## Requisitos previos
 
 - Roo AI Assistant instalado
-- API key de Showdar Router desde el [dashboard](https://9router.com/dashboard)
+- API key de Showdar Router desde el [dashboard](https://showdar-router.com/dashboard)
 - Showdar Router ejecutándose (local o en la nube)
 
 ## Pasos de configuración
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **Para Showdar Router en la nube:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

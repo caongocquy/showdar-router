@@ -34,7 +34,7 @@ http://localhost:21298/v1
 
 **Para Showdar Router en la nube:**
 ```
-https://9router.com
+https://showdar-router.com
 ```
 
 **Pasos:**
@@ -45,7 +45,7 @@ https://9router.com
 
 1. En el campo **API Key**, ingresa tu API key de Showdar Router
 2. Puedes encontrar tu API key en el dashboard de Showdar Router en **Settings → API Keys**
-3. La key debe comenzar con `sk-9router-`
+3. La key debe comenzar con `sk-showdar-router-`
 
 ### 5. Seleccionar modelo
 
@@ -71,7 +71,7 @@ Tu configuración de Cline debería verse así:
 ```
 API Provider: Ollama
 Base URL: http://localhost:21298/v1
-API Key: sk-9router-xxxxxxxxxxxxx
+API Key: sk-showdar-router-xxxxxxxxxxxxx
 Model: gpt-4
 ```
 
@@ -126,7 +126,7 @@ Puedes usar cualquier modelo configurado en tu dashboard de Showdar Router. Ejem
 ### Error "Invalid API Key"
 
 1. Verifica tu API key en el dashboard de Showdar Router
-2. Asegúrate de haber copiado la key completa incluyendo el prefijo `sk-9router-`
+2. Asegúrate de haber copiado la key completa incluyendo el prefijo `sk-showdar-router-`
 3. Verifica que la API key no haya expirado
 4. Intenta regenerar una nueva API key
 
@@ -150,7 +150,7 @@ Puedes usar cualquier modelo configurado en tu dashboard de Showdar Router. Ejem
 
 Para usar el endpoint en la nube de Showdar Router en lugar de localhost:
 
-1. En la configuración de Cline, establece Base URL a: `https://9router.com`
+1. En la configuración de Cline, establece Base URL a: `https://showdar-router.com`
 2. Asegúrate de haber configurado tu API key en el dashboard en la nube de Showdar Router
 3. Asegúrate de que tu endpoint en la nube esté activo y accesible
 

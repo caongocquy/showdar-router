@@ -70,7 +70,7 @@ const normalizeSubagentModels = (value) => {
   return result;
 };
 
-const has9RouterConfig = (settings) => Boolean(settings?.model?.base_url);
+const hasShowdarRouterConfig = (settings) => Boolean(settings?.model?.base_url);
 
 export async function GET() {
   try {
@@ -87,7 +87,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       settings,
-      has9Router: has9RouterConfig(settings),
+      hasShowdarRouter: hasShowdarRouterConfig(settings),
       configPath: getGrokConfigPath(),
     });
   } catch (error) {
@@ -108,7 +108,7 @@ export async function POST(request) {
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
     const toml = applyGrokBuildConfig(await readConfigToml(), {
       baseUrl: normalizedBaseUrl,
-      apiKey: apiKey || "sk_9router",
+      apiKey: apiKey || "sk_showdar",
       model: selectedModel,
       contextWindow: normalizeContextWindow(contextWindow, selectedModel),
       subagentModels: normalizeSubagentModels(subagentModels),

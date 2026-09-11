@@ -16,8 +16,8 @@ Triển khai Showdar Router trên VPS hoặc Docker để truy cập từ xa và
 ### Bước 1: Clone Repository
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 ```
 
 ### Bước 2: Cài đặt Dependencies
@@ -39,7 +39,7 @@ Tạo file `.env` hoặc export biến:
 ```bash
 export JWT_SECRET="your-secure-secret-change-this-to-random-string"
 export INITIAL_PASSWORD="your-secure-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/showdar-router"
 export NODE_ENV="production"
 ```
 
@@ -56,8 +56,8 @@ export NODE_ENV="production"
 ### Bước 5: Tạo Data Directory
 
 ```bash
-sudo mkdir -p /var/lib/9router
-sudo chown $USER:$USER /var/lib/9router
+sudo mkdir -p /var/lib/showdar-router
+sudo chown $USER:$USER /var/lib/showdar-router
 ```
 
 ### Bước 6: Khởi động Application
@@ -156,7 +156,7 @@ docker run -d \
   -p 21298:21298 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router
 ```
 
@@ -180,11 +180,11 @@ services:
       - INITIAL_PASSWORD=your-secure-password
       - DATA_DIR=/app/data
     volumes:
-      - 9router-data:/app/data
+      - showdar-router-data:/app/data
     restart: unless-stopped
 
 volumes:
-  9router-data:
+  showdar-router-data:
 ```
 
 **Chạy với Docker Compose:**
@@ -223,7 +223,7 @@ sudo apt install nginx
 
 ### Bước 2: Cấu hình Nginx
 
-Tạo `/etc/nginx/sites-available/9router`:
+Tạo `/etc/nginx/sites-available/showdar-router`:
 
 ```nginx
 server {
@@ -284,7 +284,7 @@ server {
 
 ```bash
 # Create symbolic link
-sudo ln -s /etc/nginx/sites-available/9router /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/showdar-router /etc/nginx/sites-enabled/
 
 # Test configuration
 sudo nginx -t
@@ -364,7 +364,7 @@ ssh -L 3000:localhost:3000 user@your-server.com
 sudo apt update && sudo apt upgrade -y
 
 # Update Showdar Router
-cd /path/to/9router/app
+cd /path/to/showdar-router/app
 git pull
 npm install
 npm run build
@@ -375,10 +375,10 @@ pm2 restart showdar-router
 
 ```bash
 # Backup data directory
-tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
+tar -czf showdar-router-backup-$(date +%Y%m%d).tar.gz /var/lib/showdar-router
 
 # Automated daily backup (add to crontab)
-0 2 * * * tar -czf /backups/9router-$(date +\%Y\%m\%d).tar.gz /var/lib/9router
+0 2 * * * tar -czf /backups/showdar-router-$(date +\%Y\%m\%d).tar.gz /var/lib/showdar-router
 ```
 
 ---
@@ -460,8 +460,8 @@ sudo nginx -t
 
 ```bash
 # Fix data directory permissions
-sudo chown -R $USER:$USER /var/lib/9router
-chmod 755 /var/lib/9router
+sudo chown -R $USER:$USER /var/lib/showdar-router
+chmod 755 /var/lib/showdar-router
 ```
 
 ---

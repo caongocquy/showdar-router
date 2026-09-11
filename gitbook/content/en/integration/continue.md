@@ -6,7 +6,7 @@ Integrate Showdar Router with Continue extension to bring AI assistance directly
 
 - Visual Studio Code installed
 - Continue extension installed from VSCode marketplace
-- Showdar Router API key from [dashboard](https://9router.com/dashboard)
+- Showdar Router API key from [dashboard](https://showdar-router.com/dashboard)
 - Showdar Router running (local or cloud)
 
 ## Configuration Steps
@@ -76,7 +76,7 @@ Add the following configuration to your `config.json`:
 **For Cloud Showdar Router:**
 Replace `apiBase` with:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://showdar-router.com/v1"
 ```
 
 ### 3. Save and Reload

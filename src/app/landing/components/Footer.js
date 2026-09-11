@@ -8,7 +8,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="size-6 rounded bg-[#f97815] flex items-center justify-center text-white">
+              <div className="size-6 rounded bg-primary flex items-center justify-center text-white">
                 <span className="material-symbols-outlined text-[16px]">hub</span>
               </div>
               <h3 className="text-white text-lg font-bold">Showdar Router</h3>
@@ -17,7 +17,7 @@ export default function Footer() {
               The unified endpoint for AI generation. Connect, route, and manage your AI providers with ease.
             </p>
             <div className="flex gap-4">
-              <a className="text-gray-400 hover:text-white transition-colors" href="https://github.com/decolua/9router" target="_blank" rel="noopener noreferrer">
+              <a className="text-gray-400 hover:text-white transition-colors" href="https://github.com/caongocquy/showdar-router" target="_blank" rel="noopener noreferrer">
                 <span className="material-symbols-outlined">code</span>
               </a>
             </div>
@@ -26,23 +26,23 @@ export default function Footer() {
           {/* Product */}
           <div className="flex flex-col gap-4">
             <h4 className="font-bold text-white">Product</h4>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="#features">Features</a>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="/dashboard">Dashboard</a>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="https://github.com/decolua/9router" target="_blank" rel="noopener noreferrer">Changelog</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="#features">Features</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="/dashboard">Dashboard</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="https://github.com/caongocquy/showdar-router" target="_blank" rel="noopener noreferrer">Changelog</a>
           </div>
           
           {/* Resources */}
           <div className="flex flex-col gap-4">
             <h4 className="font-bold text-white">Resources</h4>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="https://github.com/decolua/9router#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="https://github.com/decolua/9router" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="https://www.npmjs.com/package/9router" target="_blank" rel="noopener noreferrer">NPM</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="https://github.com/caongocquy/showdar-router#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="https://github.com/caongocquy/showdar-router" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="https://www.npmjs.com/package/showdar-router" target="_blank" rel="noopener noreferrer">NPM</a>
           </div>
           
           {/* Legal */}
           <div className="flex flex-col gap-4">
             <h4 className="font-bold text-white">Legal</h4>
-            <a className="text-gray-400 hover:text-[#f97815] text-sm transition-colors" href="https://github.com/decolua/9router/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
+            <a className="text-gray-400 hover:text-primary text-sm transition-colors" href="https://github.com/caongocquy/showdar-router/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
           </div>
         </div>
         
@@ -50,12 +50,11 @@ export default function Footer() {
         <div className="border-t border-[#3a2f27] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-600 text-sm">© 2025 Showdar Router. All rights reserved.</p>
           <div className="flex gap-6">
-            <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://github.com/decolua/9router" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://www.npmjs.com/package/9router" target="_blank" rel="noopener noreferrer">NPM</a>
+            <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://github.com/caongocquy/showdar-router" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a className="text-gray-600 hover:text-white text-sm transition-colors" href="https://www.npmjs.com/package/showdar-router" target="_blank" rel="noopener noreferrer">NPM</a>
           </div>
         </div>
       </div>
     </footer>
   );
 }
-

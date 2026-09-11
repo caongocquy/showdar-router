@@ -7,6 +7,7 @@ import BaseUrlSelect from "./BaseUrlSelect";
 import { rememberEndpoint } from "./cliEndpointPresets";
 import ApiKeySelect from "./ApiKeySelect";
 import { matchKnownEndpoint } from "./cliEndpointMatch";
+import { getJcodeProvider } from "@/lib/cliTools/routerCompat";
 
 export default function JcodeToolCard({
   tool,
@@ -36,12 +37,13 @@ export default function JcodeToolCard({
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const hasInitializedModel = useRef(false);
 
-  const currentBaseUrl = jcodeStatus?.config?.providers?.["showdar-router"]?.base_url || "";
+  const providerConfig = getJcodeProvider(jcodeStatus?.config);
+  const currentBaseUrl = providerConfig?.base_url || "";
 
   const getConfigStatus = () => {
     if (!jcodeStatus?.installed) return null;
-    if (!jcodeStatus?.has9Router) return "not_configured";
-    const currentProvider = jcodeStatus.config?.providers?.["showdar-router"];
+    if (!jcodeStatus?.hasShowdarRouter) return "not_configured";
+    const currentProvider = getJcodeProvider(jcodeStatus.config);
     if (!currentProvider) return "not_configured";
     return matchKnownEndpoint(currentProvider.base_url, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
   };
@@ -78,7 +80,7 @@ export default function JcodeToolCard({
   useEffect(() => {
     if (jcodeStatus?.installed && !hasInitializedModel.current) {
       hasInitializedModel.current = true;
-      const provider = jcodeStatus.config?.providers?.["showdar-router"];
+      const provider = getJcodeProvider(jcodeStatus.config);
       if (provider) {
         if (provider.default_model) {
           setSelectedModel(provider.default_model);
@@ -130,7 +132,7 @@ export default function JcodeToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_showdar" : null);
 
       const res = await fetch("/api/cli-tools/jcode-settings", {
         method: "POST",
@@ -186,21 +188,21 @@ export default function JcodeToolCard({
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_showdar" : "<API_KEY_FROM_DASHBOARD>");
 
     const configToml = `[providers.showdar-router]
 type = "openai-compatible"
 base_url = "${getEffectiveBaseUrl()}"
 auth = "bearer"
-api_key_env = "JCODE_9ROUTER_API_KEY"
-env_file = "provider-9router.env"
+api_key_env = "JCODE_SHOWDAR_ROUTER_API_KEY"
+env_file = "provider-showdar-router.env"
 default_model = "${selectedModel || "cc/claude-opus-4-7"}"
 requires_api_key = true
 
 [[providers.showdar-router.models]]
 id = "${selectedModel || "cc/claude-opus-4-7"}"`;
 
-    const envContent = `JCODE_9ROUTER_API_KEY="${keyToUse}"`;
+    const envContent = `JCODE_SHOWDAR_ROUTER_API_KEY="${keyToUse}"`;
 
     return [
       {
@@ -208,7 +210,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
         content: configToml,
       },
       {
-        filename: "~/.config/jcode/provider-9router.env",
+        filename: "~/.config/jcode/provider-showdar-router.env",
         content: envContent,
       },
     ];
@@ -305,12 +307,12 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                 </div>
 
                 {/* Current configured */}
-                {jcodeStatus?.config?.providers?.["showdar-router"]?.base_url && (
+                {providerConfig?.base_url && (
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
                     <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">Current</span>
                     <span className="material-symbols-outlined hidden text-text-muted text-[14px] sm:inline">arrow_forward</span>
                     <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                      {jcodeStatus.config.providers["showdar-router"].base_url}
+                      {providerConfig.base_url}
                     </span>
                   </div>
                 )}
@@ -352,7 +354,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                 <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={!selectedModel} loading={applying}>
                   <span className="material-symbols-outlined text-[14px] mr-1">save</span>Apply
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={!jcodeStatus?.has9Router} loading={restoring}>
+                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={!jcodeStatus?.hasShowdarRouter} loading={restoring}>
                   <span className="material-symbols-outlined text-[14px] mr-1">restore</span>Reset
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>

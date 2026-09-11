@@ -5,7 +5,7 @@ Showdar RouterをRoo AIアシスタントと統合し、統一インターフェ
 ## 前提条件
 
 - Roo AIアシスタントがインストール済み
-- [ダッシュボード](https://9router.com/dashboard)からのShowdar Router APIキー
+- [ダッシュボード](https://showdar-router.com/dashboard)からのShowdar Router APIキー
 - Showdar Routerが動作中 (ローカルまたはクラウド)
 
 ## 設定手順
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **クラウドShowdar Router用:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

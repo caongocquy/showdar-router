@@ -164,7 +164,7 @@
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://showdar-router.com/v1
   OpenAI API Key: [从仪表盘获取]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **替代方案:** 在 VPS 上自托管,使用公开域名:
 ```bash
 # 部署到 VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 npm start
 
@@ -206,8 +206,8 @@ showdar-router
 
 ### VPS/云
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/caongocquy/showdar-router.git
+cd showdar-router/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -223,13 +223,13 @@ docker build -t showdar-router .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd showdar-router/app
 npm run deploy:cloudflare
 ```
 
@@ -292,7 +292,7 @@ npm update -g showdar-router
 
 ### 本地安装
 ```bash
-cd 9router/app
+cd showdar-router/app
 git pull origin main
 npm install
 npm run build
@@ -306,7 +306,7 @@ docker stop showdar-router
 docker rm showdar-router
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
+  -v showdar-router-data:/app/data \
   showdar-router:latest
 ```
 
@@ -316,7 +316,7 @@ showdar-router --version
 ```
 
 **破坏性变更:**
-- 查看 [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
+- 查看 [CHANGELOG.md](https://github.com/caongocquy/showdar-router/blob/main/CHANGELOG.md)
 - 大版本更新前备份 `~/.showdar-router`
 - 阅读大版本的迁移指南
 
@@ -329,17 +329,17 @@ showdar-router --version
 ### 贡献方式:
 
 1. **报告 bug:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/caongocquy/showdar-router/issues)
    - 附上错误日志、复现步骤
 
 2. **功能请求:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/caongocquy/showdar-router/discussions)
    - 描述使用场景和价值
 
 3. **提交代码:**
    ```bash
    # Fork 仓库
-   git clone https://github.com/YOUR_USERNAME/9router.git
+   git clone https://github.com/YOUR_USERNAME/showdar-router.git
    cd showdar-router
    
    # 创建分支
@@ -375,13 +375,13 @@ showdar-router --version
 - 更新文档
 - 提交保持原子化、描述清晰
 
-详情见 [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md)。
+详情见 [CONTRIBUTING.md](https://github.com/caongocquy/showdar-router/blob/main/CONTRIBUTING.md)。
 
 ---
 
 ## 需要更多帮助?
 
-- **文档:** [showdar-router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **文档:** [showdar-router.com/docs](https://showdar-router.com/docs)
+- **GitHub:** [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues:** [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)
 - **故障排除:** [troubleshooting.md](troubleshooting.md)

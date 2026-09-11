@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### 移动/远程编码
 
-- 使用云端部署(https://9router.com)
+- 使用云端部署(https://showdar-router.com)
 - 从 iPad、手机、任何地方访问
 - 没有 localhost 限制
 - Cloudflare 边缘网络(300+ 节点)

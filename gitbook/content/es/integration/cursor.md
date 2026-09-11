@@ -11,7 +11,7 @@ Integra Showdar Router con Cursor IDE para enrutar tus solicitudes de IA a trav�
 
 ## ⚠️ Notas importantes
 
-> **Endpoint en la nube requerido**: Cursor enruta solicitudes a través de su propio servidor y no soporta endpoints localhost. Debes usar el endpoint en la nube de Showdar Router: `https://9router.com`
+> **Endpoint en la nube requerido**: Cursor enruta solicitudes a través de su propio servidor y no soporta endpoints localhost. Debes usar el endpoint en la nube de Showdar Router: `https://showdar-router.com`
 
 > **Cursor Pro requerido**: Esta característica requiere una cuenta Cursor Pro para usar endpoints de API personalizados.
 
@@ -33,12 +33,12 @@ Integra Showdar Router con Cursor IDE para enrutar tus solicitudes de IA a trav�
 Establece la URL base al endpoint en la nube de Showdar Router:
 
 ```
-https://9router.com
+https://showdar-router.com
 ```
 
 **Pasos:**
 1. En la configuración de Models, localiza el campo **Base URL**
-2. Ingresa: `https://9router.com`
+2. Ingresa: `https://showdar-router.com`
 3. Clic en **Save**
 
 ### 4. Agregar API Key
@@ -66,8 +66,8 @@ Tu configuración de Cursor debería verse así:
 
 ```
 OpenAI API: ✓ Enabled
-Base URL: https://9router.com
-API Key: sk-9router-xxxxxxxxxxxxx
+Base URL: https://showdar-router.com
+API Key: sk-showdar-router-xxxxxxxxxxxxx
 Custom Models: gpt-4, claude-opus-4-5, gemini-2.0-flash
 ```
 
@@ -110,7 +110,7 @@ Puedes usar cualquier modelo configurado en tu dashboard de Showdar Router. Ejem
 ### Error "Invalid API Key"
 
 1. Verifica tu API key en el dashboard de Showdar Router
-2. Asegúrate de haber copiado la key completa incluyendo el prefijo `sk-9router-`
+2. Asegúrate de haber copiado la key completa incluyendo el prefijo `sk-showdar-router-`
 3. Verifica que la API key no haya expirado
 4. Intenta regenerar una nueva API key
 
@@ -123,14 +123,14 @@ Puedes usar cualquier modelo configurado en tu dashboard de Showdar Router. Ejem
 
 ### Problemas de conexión
 
-1. Verifica que estés usando el endpoint en la nube: `https://9router.com`
+1. Verifica que estés usando el endpoint en la nube: `https://showdar-router.com`
 2. Verifica tu conexión a internet
 3. Asegúrate de que el servicio en la nube de Showdar Router esté operativo
 4. Intenta deshabilitar VPN o proxy si está habilitado
 
 ### Localhost no funciona
 
-> **Recuerda**: Cursor no soporta endpoints localhost. Debes usar el endpoint en la nube `https://9router.com`. Si necesitas usar una instancia local de Showdar Router, considera usar un servicio de tunneling como ngrok para exponer tu endpoint local.
+> **Recuerda**: Cursor no soporta endpoints localhost. Debes usar el endpoint en la nube `https://showdar-router.com`. Si necesitas usar una instancia local de Showdar Router, considera usar un servicio de tunneling como ngrok para exponer tu endpoint local.
 
 ## Configuración del endpoint en la nube
 

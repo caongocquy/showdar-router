@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### モバイル/リモートコーディング向け
 
-- クラウドデプロイ(https://9router.com)を使用
+- クラウドデプロイ(https://showdar-router.com)を使用
 - iPad、スマホ、どこからでもアクセス
 - localhost制限なし
 - Cloudflareエッジネットワーク(300以上のロケーション)

@@ -118,7 +118,7 @@ export default function DeepSeekTuiToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_showdar" : null);
 
       const res = await fetch(ENDPOINT, {
         method: "POST",
@@ -173,7 +173,7 @@ export default function DeepSeekTuiToolCard({
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_showdar" : "<API_KEY_FROM_DASHBOARD>");
 
     const tomlContent = `[providers.openai]
 base_url = "${getEffectiveBaseUrl()}"
@@ -310,7 +310,7 @@ model = "${selectedModel || "provider/model-id"}"
                 <Button variant="primary" size="sm" onClick={handleApply} disabled={!selectedModel} loading={applying}>
                   <span className="material-symbols-outlined text-[14px] mr-1">save</span>Apply
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={!deepseekStatus?.has9Router} loading={restoring}>
+                <Button variant="outline" size="sm" onClick={handleReset} disabled={!deepseekStatus?.hasShowdarRouter} loading={restoring}>
                   <span className="material-symbols-outlined text-[14px] mr-1">restore</span>Reset
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>

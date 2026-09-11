@@ -19,7 +19,7 @@ Set the following environment variables in your shell configuration file (`~/.ba
 export OPENAI_BASE_URL="http://localhost:21298/v1"
 
 # API Key from Showdar Router dashboard
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-showdar-router-api-key"
 ```
 
 ### 2. Reload Shell Configuration
@@ -77,7 +77,7 @@ You can also configure Codex CLI using a configuration file. Create or edit `~/.
 ```json
 {
   "baseUrl": "http://localhost:21298/v1",
-  "apiKey": "your-9router-api-key",
+  "apiKey": "your-showdar-router-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
 ```
@@ -113,7 +113,7 @@ If you get "model not available" errors:
 To use Showdar Router cloud endpoint instead of localhost:
 
 ```bash
-export OPENAI_BASE_URL="https://9router.com"
+export OPENAI_BASE_URL="https://showdar-router.com"
 ```
 
 Make sure you have configured your API key in the Showdar Router cloud dashboard.

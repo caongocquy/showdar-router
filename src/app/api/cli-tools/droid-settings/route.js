@@ -47,7 +47,7 @@ const readSettings = async () => {
 };
 
 // Check if settings has Showdar Router customModels
-const has9RouterConfig = (settings) => {
+const hasShowdarRouterConfig = (settings) => {
   if (!settings || !settings.customModels) return false;
   return settings.customModels.some(m => m.id?.startsWith("custom:Showdar Router"));
 };
@@ -70,7 +70,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       settings,
-      has9Router: has9RouterConfig(settings),
+      hasShowdarRouter: hasShowdarRouterConfig(settings),
       settingsPath: getDroidSettingsPath(),
     });
   } catch (error) {

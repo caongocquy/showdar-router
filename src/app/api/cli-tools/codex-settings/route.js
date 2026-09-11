@@ -74,7 +74,7 @@ const readConfig = async () => {
 };
 
 // Check if config has Showdar Router settings
-const has9RouterConfig = (config) => {
+const hasShowdarRouterConfig = (config) => {
   if (!config) return false;
   return config.includes("model_provider = \"showdar-router\"") || config.includes("[model_providers.showdar-router]");
 };
@@ -97,7 +97,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasShowdarRouter: hasShowdarRouterConfig(config),
       configPath: getCodexConfigPath(),
     });
   } catch (error) {

@@ -6,6 +6,7 @@ import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { getRouterEntry, isRouterModel, normalizeRouterEntries, removeRouterEntries, stripRouterModel } from "@/lib/cliTools/routerCompat.js";
 
 const execAsync = promisify(exec);
 
@@ -48,9 +49,9 @@ const readConfig = async () => {
   }
 };
 
-const has9RouterConfig = (config) => {
+const hasShowdarRouterConfig = (config) => {
   if (!config?.provider) return false;
-  return !!config.provider["showdar-router"];
+  return !!getRouterEntry(config.provider);
 };
 
 // GET - Check opencode CLI and read current settings
@@ -67,17 +68,17 @@ export async function GET() {
     }
 
     const config = await readConfig();
-    const providerConfig = config?.provider?.["showdar-router"];
+    const providerConfig = getRouterEntry(config?.provider);
     const modelMap = providerConfig?.models || {};
 
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasShowdarRouter: hasShowdarRouterConfig(config),
       configPath: getConfigPath(),
         opencode: {
           models: Object.keys(modelMap),
-          activeModel: config?.model?.startsWith("9router/") ? config.model.replace(/^showdar-router\//, "") : null,
+          activeModel: stripRouterModel(config?.model),
           baseURL: providerConfig?.options?.baseURL || null,
         },
     });
@@ -112,14 +113,14 @@ export async function POST(request) {
     } catch { /* No existing config */ }
 
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-    const keyToUse = apiKey || "sk_9router";
+    const keyToUse = apiKey || "sk_showdar";
     const effectiveSubagentModel = subagentModel || modelsArray[0];
 
     // Ensure provider object
     if (!config.provider) config.provider = {};
 
     // Preserve any existing showdar-router provider entry and its models
-    const existingProvider = config.provider["showdar-router"] || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
+    const existingProvider = getRouterEntry(config.provider) || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
 
     // Merge options (overwrite baseURL/apiKey)
     existingProvider.options = {
@@ -138,7 +139,7 @@ export async function POST(request) {
     }
 
     // Save merged provider back
-    config.provider["showdar-router"] = existingProvider;
+    config.provider = normalizeRouterEntries(config.provider, existingProvider);
 
     // Set the active model: prefer explicit activeModel, else first of modelsArray
     // If activeModel is explicitly empty string, clear the model
@@ -147,7 +148,7 @@ export async function POST(request) {
     } else {
       const finalActive = activeModel || modelsArray[0];
       if (finalActive) {
-        config.model = `9router/${finalActive}`;
+        config.model = `showdar-router/${finalActive}`;
       }
     }
 
@@ -156,7 +157,7 @@ export async function POST(request) {
     config.agent.explorer = {
       description: "Fast explorer subagent for codebase exploration",
       mode: "subagent",
-      model: `9router/${effectiveSubagentModel}`,
+      model: `showdar-router/${effectiveSubagentModel}`,
     };
 
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));
@@ -191,7 +192,7 @@ export async function PATCH(request) {
 
     if (clearActiveModel === true) {
       // Clear active model but keep models in the list
-      if (config.model?.startsWith("9router/")) {
+      if (isRouterModel(config.model)) {
         config.model = "";
       }
     }
@@ -226,27 +227,29 @@ export async function DELETE(request) {
       throw error;
     }
 
+    const routerProvider = getRouterEntry(config.provider);
+
     // If specific model provided, remove just that model
-    if (modelToRemove && config.provider?.["showdar-router"]?.models) {
-      delete config.provider["showdar-router"].models[modelToRemove];
+    if (modelToRemove && routerProvider?.models) {
+      delete routerProvider.models[modelToRemove];
       
       // If no models left, remove the provider
-      if (Object.keys(config.provider["showdar-router"].models).length === 0) {
-        delete config.provider["showdar-router"];
-        if (config.model?.startsWith("9router/")) delete config.model;
-      } else if (config.model === `9router/${modelToRemove}`) {
+      if (Object.keys(routerProvider.models).length === 0) {
+        config.provider = removeRouterEntries(config.provider);
+        if (isRouterModel(config.model)) delete config.model;
+      } else if (isRouterModel(config.model) && stripRouterModel(config.model) === modelToRemove) {
         // If removed model was active, switch to first remaining model
-        const remainingModels = Object.keys(config.provider["showdar-router"].models);
-        config.model = `9router/${remainingModels[0]}`;
+        const remainingModels = Object.keys(routerProvider.models);
+        config.model = `showdar-router/${remainingModels[0]}`;
       }
     } else {
       // No specific model - remove entire showdar-router provider
-      if (config.provider) delete config.provider["showdar-router"];
-      if (config.model?.startsWith("9router/")) delete config.model;
+      config.provider = removeRouterEntries(config.provider);
+      if (isRouterModel(config.model)) delete config.model;
     }
 
     // Remove subagent configuration
-    if (config.agent?.explorer?.model?.startsWith("9router/")) {
+    if (isRouterModel(config.agent?.explorer?.model)) {
       delete config.agent.explorer;
       // Clean up empty agent object
       if (Object.keys(config.agent).length === 0) delete config.agent;

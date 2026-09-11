@@ -166,7 +166,7 @@ export default function GrokBuildToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_showdar" : null);
       const mappedSubagents = {};
       for (const type of SUBAGENT_TYPES) {
         const model = subagentModels[type.id]?.trim();
@@ -232,7 +232,7 @@ export default function GrokBuildToolCard({
 
   const getManualConfigs = () => {
     const keyToUse = selectedApiKey?.trim()
-      || (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      || (!cloudEnabled ? "sk_showdar" : "<API_KEY_FROM_DASHBOARD>");
     const baseUrl = getEffectiveBaseUrl();
     const mainModel = selectedModel || "provider/model-id";
     const blocks = [
@@ -361,7 +361,7 @@ export default function GrokBuildToolCard({
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <Button variant="primary" size="sm" onClick={handleApply} disabled={!selectedModel} loading={applying} className="w-full sm:w-auto"><span className="material-symbols-outlined text-[14px] mr-1">save</span>Apply</Button>
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={!grokStatus?.has9Router} loading={restoring} className="w-full sm:w-auto"><span className="material-symbols-outlined text-[14px] mr-1">restore</span>Reset</Button>
+                <Button variant="outline" size="sm" onClick={handleReset} disabled={!grokStatus?.hasShowdarRouter} loading={restoring} className="w-full sm:w-auto"><span className="material-symbols-outlined text-[14px] mr-1">restore</span>Reset</Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)} className="w-full sm:w-auto"><span className="material-symbols-outlined text-[14px] mr-1">content_copy</span>Manual Config</Button>
               </div>
             </>

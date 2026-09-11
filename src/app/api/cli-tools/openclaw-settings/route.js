@@ -6,6 +6,7 @@ import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { getRouterEntry, isRouterModel, normalizeRouterEntries, removeRouterEntries, stripRouterModel } from "@/lib/cliTools/routerCompat.js";
 
 const execAsync = promisify(exec);
 
@@ -57,18 +58,18 @@ const readSettings = async () => {
 };
 
 // Check if settings has Showdar Router config
-const has9RouterConfig = (settings) => {
+const hasShowdarRouterConfig = (settings) => {
   if (!settings || !settings.models || !settings.models.providers) return false;
-  return !!settings.models.providers["showdar-router"];
+  return !!getRouterEntry(settings.models.providers);
 };
 
-// Read per-agent models.json and return current model id (without "9router/" prefix)
+// Read per-agent models.json and return current model id (without "showdar-router/" prefix)
 const readAgentModel = async (agentDir) => {
   try {
     const modelsPath = path.join(agentDir, "models.json");
     const content = await fs.readFile(modelsPath, "utf-8");
     const data = JSON.parse(content);
-    const models = data?.providers?.["showdar-router"]?.models;
+    const models = getRouterEntry(data?.providers)?.models;
     return models?.[0]?.id || null;
   } catch {
     return null;
@@ -105,7 +106,7 @@ export async function GET() {
       installed: true,
       settings,
       agents: enrichedAgents,
-      has9Router: has9RouterConfig(settings),
+      hasShowdarRouter: hasShowdarRouterConfig(settings),
       settingsPath: getOpenClawSettingsPath(),
     });
   } catch (error) {
@@ -125,12 +126,12 @@ const writeAgentModels = async (agentDir, model, baseUrl, apiKey) => {
   } catch { /* No existing */ }
 
   if (!existing.providers) existing.providers = {};
-  existing.providers["showdar-router"] = {
+  existing.providers = normalizeRouterEntries(existing.providers, {
     baseUrl,
     apiKey: apiKey || "your_api_key",
     api: "openai-completions",
     models: [{ id: model, name: model.split("/").pop() || model }],
-  };
+  });
   await fs.writeFile(modelsPath, JSON.stringify(existing, null, 2));
 };
 
@@ -163,11 +164,11 @@ export async function POST(request) {
     if (!settings.models.providers) settings.models.providers = {};
 
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-    const fullModelId = `9router/${model}`;
+    const fullModelId = `showdar-router/${model}`;
 
-    // Remove all old 9router/* entries from agents.defaults.models
+    // Remove all old showdar-router/* entries from agents.defaults.models
     Object.keys(settings.agents.defaults.models)
-      .filter((k) => k.startsWith("9router/"))
+      .filter((k) => isRouterModel(k))
       .forEach((k) => { delete settings.agents.defaults.models[k]; });
 
     // Update default model
@@ -179,14 +180,14 @@ export async function POST(request) {
 
     // Add fresh showdar-router models to allowlist
     allModelIds.forEach((m) => {
-      settings.agents.defaults.models[`9router/${m}`] = {};
+      settings.agents.defaults.models[`showdar-router/${m}`] = {};
     });
 
     // Remove old showdar-router model from each agent in agents.list. The
     // model field may be a plain string or `{ primary, fallbacks }`.
     if (settings.agents.list) {
       settings.agents.list = settings.agents.list.map((agent) => {
-        if (resolveAgentModel(agent.model).startsWith("9router/")) {
+        if (isRouterModel(resolveAgentModel(agent.model))) {
           const { model: _, ...rest } = agent;
           return rest;
         }
@@ -195,18 +196,18 @@ export async function POST(request) {
     }
 
     // Update models.providers.showdar-router with all models
-    settings.models.providers["showdar-router"] = {
+    settings.models.providers = normalizeRouterEntries(settings.models.providers, {
       baseUrl: normalizedBaseUrl,
       apiKey: apiKey || "your_api_key",
       api: "openai-completions",
       models: [...allModelIds].map((m) => ({ id: m, name: m.split("/").pop() || m })),
-    };
+    });
 
     // Set per-agent model in agents.list and write models.json
     if (settings.agents.list) {
       settings.agents.list = settings.agents.list.map((agent) => {
         const agentModel = agentModels[agent.id];
-        if (agentModel) return { ...agent, model: `9router/${agentModel}` };
+        if (agentModel) return { ...agent, model: `showdar-router/${agentModel}` };
         return agent;
       });
 
@@ -256,7 +257,7 @@ export async function DELETE() {
 
     // Remove Showdar Router from models.providers
     if (settings.models && settings.models.providers) {
-      delete settings.models.providers["showdar-router"];
+      settings.models.providers = removeRouterEntries(settings.models.providers);
       
       // Remove providers object if empty
       if (Object.keys(settings.models.providers).length === 0) {
@@ -266,7 +267,7 @@ export async function DELETE() {
 
     // Remove showdar-router models from agents.defaults.models allowlist
     if (settings.agents?.defaults?.models) {
-      const keysToRemove = Object.keys(settings.agents.defaults.models).filter((k) => k.startsWith("9router/"));
+      const keysToRemove = Object.keys(settings.agents.defaults.models).filter((k) => isRouterModel(k));
       for (const key of keysToRemove) {
         delete settings.agents.defaults.models[key];
       }
@@ -276,7 +277,7 @@ export async function DELETE() {
     }
 
     // Reset agents.defaults.model.primary if it uses showdar-router
-    if (settings.agents?.defaults?.model?.primary?.startsWith("9router/")) {
+    if (isRouterModel(settings.agents?.defaults?.model?.primary)) {
       delete settings.agents.defaults.model.primary;
     }
 

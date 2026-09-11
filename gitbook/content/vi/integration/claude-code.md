@@ -103,7 +103,7 @@ Nếu gặp lỗi "model not found":
 Để dùng Showdar Router cloud endpoint thay vì localhost:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://9router.com"
+export ANTHROPIC_BASE_URL="https://showdar-router.com"
 ```
 
 Đảm bảo bạn đã cấu hình API key trong Showdar Router cloud dashboard.

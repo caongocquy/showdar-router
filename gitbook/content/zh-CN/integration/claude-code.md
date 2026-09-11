@@ -103,7 +103,7 @@ Claude Code 将配置存储在 `~/.claude/settings.json`。如有需要可手动
 使用 Showdar Router 云端 endpoint 而非 localhost:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://9router.com"
+export ANTHROPIC_BASE_URL="https://showdar-router.com"
 ```
 
 确保已在 Showdar Router 云端仪表盘中配置 API key。

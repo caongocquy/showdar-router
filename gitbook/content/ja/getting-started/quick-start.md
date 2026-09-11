@@ -101,7 +101,7 @@ Settings → Models → Advanced:
 ```json
 {
   "anthropic_api_base": "http://localhost:21298/v1",
-  "anthropic_api_key": "your-9router-api-key"
+  "anthropic_api_key": "your-showdar-router-api-key"
 }
 ```
 
@@ -118,7 +118,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:21298"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-showdar-router-api-key"
 
 codex "your prompt"
 ```
@@ -242,6 +242,6 @@ CLIで使用: premium-coding
 
 ## ヘルプが必要?
 
-- **ウェブサイト**: [showdar-router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **ウェブサイト**: [showdar-router.com](https://showdar-router.com)
+- **GitHub**: [github.com/caongocquy/showdar-router](https://github.com/caongocquy/showdar-router)
+- **Issues**: [github.com/caongocquy/showdar-router/issues](https://github.com/caongocquy/showdar-router/issues)

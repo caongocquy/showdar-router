@@ -24,7 +24,7 @@ Model: any Showdar Router model (cc/*, cx/*, glm/*, etc.)
 
 **Showdar Router cloud:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://showdar-router.com/v1
 API Key: your-api-key-from-dashboard
 Model: any Showdar Router model (cc/*, cx/*, glm/*, etc.)
 ```
