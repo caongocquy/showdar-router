@@ -166,15 +166,15 @@ jobs:
 
           release_file="$(mktemp)"
           if gh release view "$TAG" --json tagName,name,isDraft,isPrerelease > "$release_file"; then
-            node - "$release_file" "$TAG" <<'NODE'
-            const fs = require("node:fs");
-            const release = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-            const tag = process.argv[3];
-            if (release.tagName !== tag || release.name !== `Showdar Router ${tag}` || release.isDraft || release.isPrerelease) {
-              throw new Error("Existing GitHub Release does not match the requested release");
-            }
-            console.log(`Existing GitHub Release ${tag} matches; skipping duplicate`);
-            NODE
+            RELEASE_FILE="$release_file" node -e '
+              const fs = require("node:fs");
+              const release = JSON.parse(fs.readFileSync(process.env.RELEASE_FILE, "utf8"));
+              const tag = process.env.TAG;
+              if (release.tagName !== tag || release.name !== `Showdar Router ${tag}` || release.isDraft || release.isPrerelease) {
+                throw new Error("Existing GitHub Release does not match the requested release");
+              }
+              console.log(`Existing GitHub Release ${tag} matches; skipping duplicate`);
+            '
           else
             gh release create "$TAG" \
               --verify-tag \

@@ -54,6 +54,10 @@ Default dashboard:
 http://localhost:21298
 ```
 
+Suggested free models are discovered dynamically from registered provider
+catalogs. Showdar Router contacts only those trusted catalog endpoints and
+caches successful discovery results briefly.
+
 ## Why Showdar Router?
 
 Instead of configuring every AI client against every provider separately:
