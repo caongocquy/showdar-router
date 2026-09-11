@@ -66,6 +66,7 @@ export function createSSEStream(options = {}) {
   let totalContentLength = 0;
   let accumulatedContent = "";
   let accumulatedThinking = "";
+  let finishReason = null;
   let ttftAt = null;
   let sseLineCount = 0;
   let sseEmittedCount = 0;
@@ -102,7 +103,7 @@ export function createSSEStream(options = {}) {
       onStreamComplete({
         content: accumulatedContent,
         thinking: accumulatedThinking
-      }, finalUsage, ttftAt);
+      }, finalUsage, ttftAt, finishReason || state?.finishReason || null);
     }
   };
 
@@ -142,6 +143,8 @@ export function createSSEStream(options = {}) {
               const parsed = JSON.parse(trimmed.slice(5).trim());
 
               const idFixed = fixInvalidId(parsed);
+              const parsedFinishReason = parsed.choices?.[0]?.finish_reason;
+              if (parsedFinishReason) finishReason = parsedFinishReason;
 
               // Ensure OpenAI-required fields are present on streaming chunks (Letta compat)
               let fieldsInjected = false;
@@ -336,6 +339,7 @@ export function createSSEStream(options = {}) {
 
         // Translate: targetFormat -> openai -> sourceFormat
         const translated = translateResponse(targetFormat, sourceFormat, parsed, state);
+        if (state.finishReason) finishReason = state.finishReason;
 
         // Log OpenAI intermediate chunks (if available)
         if (translated?._openaiIntermediate) {
@@ -366,6 +370,7 @@ export function createSSEStream(options = {}) {
             }
 
             const output = formatSSE(item, sourceFormat);
+            if (item.choices?.[0]?.finish_reason) finishReason = item.choices[0].finish_reason;
             reqLogger?.appendConvertedChunk?.(output);
             controller.enqueue(sharedEncoder.encode(output));
             sseEmittedCount++;
@@ -425,6 +430,7 @@ export function createSSEStream(options = {}) {
             if (extracted) state.usage = mergeUsage(state.usage, extracted);
 
             const translated = translateResponse(targetFormat, sourceFormat, parsed, state);
+            if (state.finishReason) finishReason = state.finishReason;
 
             if (translated?._openaiIntermediate) {
               for (const item of translated._openaiIntermediate) {
@@ -437,6 +443,7 @@ export function createSSEStream(options = {}) {
               for (const item of translated) {
                 if (item === null || item === undefined) continue;
                 const output = formatSSE(item, sourceFormat);
+                if (item.choices?.[0]?.finish_reason) finishReason = item.choices[0].finish_reason;
                 reqLogger?.appendConvertedChunk?.(output);
                 controller.enqueue(sharedEncoder.encode(output));
               }
