@@ -308,17 +308,23 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   const msgCount = translatedBody.messages?.length || translatedBody.input?.length || translatedBody.contents?.length || translatedBody.request?.contents?.length || 0;
   log?.debug?.("REQUEST", `${provider.toUpperCase()} | ${model} | ${msgCount} msgs`);
 
+  let detachExternalAbort = () => {};
   const streamController = createStreamController({
     onDisconnect: (reason) => {
       trackPendingRequest(model, provider, connectionId, false);
       if (onDisconnect) onDisconnect(reason);
     },
     onError: () => trackPendingRequest(model, provider, connectionId, false),
+    onComplete: () => detachExternalAbort(),
     log, provider, model, reqTag
   });
   if (externalSignal) {
     if (externalSignal.aborted) streamController.abort?.(externalSignal.reason);
-    else externalSignal.addEventListener("abort", () => streamController.abort?.(externalSignal.reason), { once: true });
+    else {
+      const onExternalAbort = () => streamController.abort?.(externalSignal.reason);
+      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+      detachExternalAbort = () => externalSignal.removeEventListener("abort", onExternalAbort);
+    }
   }
 
   const proxyOptions = {
