@@ -160,8 +160,7 @@ export function fixMissingToolResponses(body) {
 // Spread order matters: `{ ...tool, type: "custom" }` (spread first, override last)
 // ensures that falsy `type` values (null, undefined, "") in the original tool don't
 // overwrite the default. `{ type: "custom", ...tool }` would let `type: null` survive.
-export function defaultClaudeToolType(tools) {
-  if (!Array.isArray(tools)) return tools;
+export function defaultClaudeToolType(tools, { requireClaudeToolType = false } = {}) {
+  if (!Array.isArray(tools) || !requireClaudeToolType) return tools;
   return tools.map(tool => tool?.type ? tool : { ...tool, type: "custom" });
 }
-

@@ -1,3 +1,5 @@
+import { DAILY_QUOTA_MIN_PROBE_MS } from "../config/errorConfig.js";
+
 export class RouteHealthState {
   constructor(storage) {
     if (!storage) throw new Error("RouteHealthState requires storage");
@@ -73,7 +75,10 @@ export class RouteHealthState {
     const retryAfterMs = retryAfter ? new Date(retryAfter).getTime() : NaN;
     // Explicit upstream recovery metadata is authoritative. Generic route
     // cooldown is only a fallback when the provider gives no usable deadline.
-    const deadline = Number.isFinite(retryAfterMs) && retryAfterMs > now
+    const isDailyQuota = failure?.reason === "daily_quota";
+    const hasShortDailyRetry = isDailyQuota && Number.isFinite(retryAfterMs)
+      && retryAfterMs > now && retryAfterMs - now < DAILY_QUOTA_MIN_PROBE_MS;
+    const deadline = Number.isFinite(retryAfterMs) && retryAfterMs > now && !hasShortDailyRetry
       ? retryAfterMs
       : fallbackDeadline;
 

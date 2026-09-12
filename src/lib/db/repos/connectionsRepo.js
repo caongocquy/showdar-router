@@ -7,7 +7,7 @@ const OPTIONAL_FIELDS = [
   "accessToken", "refreshToken", "expiresAt", "tokenType",
   "scope", "projectId", "apiKey", "testStatus",
   "lastTested", "lastError", "lastErrorAt", "rateLimitedUntil", "expiresIn", "errorCode",
-  "consecutiveUseCount", "idToken", "lastRefreshAt",
+  "consecutiveUseCount", "backoffLevel", "idToken", "lastRefreshAt",
 ];
 
 function rowToConn(row) {
@@ -199,6 +199,25 @@ export async function updateProviderConnection(id, data) {
     const merged = { ...existing, ...data, updatedAt: new Date().toISOString() };
     upsert(db, merged);
     if (data.priority !== undefined) reorderInTx(db, existing.provider);
+    result = merged;
+  });
+  return result;
+}
+
+export async function revalidateProviderConnection(id, data, healthy = false) {
+  const db = await getAdapter();
+  let result;
+  db.transaction(() => {
+    const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
+    if (!row) { result = null; return; }
+    const merged = { ...rowToConn(row), ...data, updatedAt: new Date().toISOString() };
+    if (healthy) {
+      for (const key of Object.keys(merged)) if (key.startsWith("modelLock_")) merged[key] = null;
+      Object.assign(merged, { rateLimitedUntil: null, backoffLevel: 0, errorCode: null, testStatus: "active" });
+      if (!Object.prototype.hasOwnProperty.call(data || {}, "lastError")) merged.lastError = null;
+      if (!Object.prototype.hasOwnProperty.call(data || {}, "lastErrorAt")) merged.lastErrorAt = null;
+    }
+    upsert(db, merged);
     result = merged;
   });
   return result;

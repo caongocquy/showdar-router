@@ -244,13 +244,13 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   const conn = connections.find(c => c.id === connectionId);
   const backoffLevel = conn?.backoffLevel || 0;
   const retryDeadline = extractRetryDeadline({ resetAt: resetsAtMs, errorText });
+  const classification = options?.routeAware ? classifyRouteFailure(status, errorText, backoffLevel) : null;
 
   // Chat combo routing owns model/provider failures. Do not poison credentials
   // for errors where changing API keys cannot help. Other modalities retain
   // upstream behavior unless they explicitly opt into route-aware scoping.
   if (options?.routeAware) {
-    const classification = classifyRouteFailure(status, errorText, backoffLevel);
-    if (classification.scope !== "credential") {
+    if (classification.scope !== "credential" && classification.reason !== "daily_quota") {
       log.warn("AUTH", `non-credential failure; credential remains healthy [${classification.effectiveStatus}] ${classification.reason}`);
       return {
         shouldFallback: false,
@@ -268,6 +268,10 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   if (githubResetAtMs) {
     shouldFallback = true;
     cooldownMs = githubResetAtMs - Date.now();
+    newBackoffLevel = 0;
+  } else if (classification?.reason === "daily_quota") {
+    shouldFallback = true;
+    cooldownMs = classification.routeCooldownMs;
     newBackoffLevel = 0;
   } else if (retryDeadline) {
     shouldFallback = true;

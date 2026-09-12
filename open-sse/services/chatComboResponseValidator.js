@@ -29,7 +29,8 @@ function scanSseText(buffer) {
     const line = rawLine.trim();
     if (!line.startsWith("data:")) continue;
     const payload = line.slice(5).trim();
-    if (!payload || payload === "[DONE]") continue;
+    if (!payload) continue;
+    if (payload === "[DONE]") return { meaningful: false, terminal: true, remainder };
     try {
       if (hasMeaningfulOpenAIPayload(JSON.parse(payload))) {
         return { meaningful: true, remainder };
@@ -42,11 +43,17 @@ function scanSseText(buffer) {
   return { meaningful: false, remainder };
 }
 
-function replayResponse(response, reader, bufferedChunks) {
+import { COMBO_FIRST_MEANINGFUL_TIMEOUT_MS } from "../config/runtimeConfig.js";
+
+function replayResponse(response, reader, bufferedChunks, closeAfterBuffer = false) {
   const body = new ReadableStream({
     async start(controller) {
       try {
         for (const chunk of bufferedChunks) controller.enqueue(chunk);
+        if (closeAfterBuffer) {
+          controller.close();
+          return;
+        }
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -69,7 +76,7 @@ function replayResponse(response, reader, bufferedChunks) {
   });
 }
 
-export async function validateChatComboResponse(response) {
+export async function validateChatComboResponse(response, _model = null, { firstMeaningfulTimeoutMs = COMBO_FIRST_MEANINGFUL_TIMEOUT_MS, requestSignal = null } = {}) {
   if (!response?.ok) {
     return { ok: false, response, status: response?.status || 502, errorText: "Upstream response failed" };
   }
@@ -93,36 +100,62 @@ export async function validateChatComboResponse(response) {
   const decoder = new TextDecoder();
   const bufferedChunks = [];
   let textBuffer = "";
+  let meaningfulSeen = false;
+  let cancelled = false;
+  const cancelReader = async () => {
+    if (cancelled) return;
+    cancelled = true;
+    await reader.cancel();
+  };
+  const read = () => {
+    let timer;
+    let onAbort;
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("first meaningful stream timeout")), firstMeaningfulTimeoutMs); });
+    const abort = requestSignal ? new Promise((_, reject) => {
+      if (requestSignal.aborted) reject(Object.assign(new Error("Request aborted"), { name: "AbortError" }));
+      else {
+        onAbort = () => reject(Object.assign(new Error("Request aborted"), { name: "AbortError" }));
+        requestSignal.addEventListener("abort", onAbort, { once: true });
+      }
+    }) : null;
+    return Promise.race([reader.read(), timeout, ...(abort ? [abort] : [])]).finally(() => {
+      clearTimeout(timer);
+      if (onAbort) requestSignal.removeEventListener("abort", onAbort);
+    });
+  };
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (!value?.length) continue;
+  try {
+    while (true) {
+      const { value, done } = await read();
+      if (done) break;
+      if (!value?.length) continue;
 
-    bufferedChunks.push(value);
-    textBuffer += decoder.decode(value, { stream: true });
-    const scan = scanSseText(textBuffer);
-    textBuffer = scan.remainder;
+      bufferedChunks.push(value);
+      textBuffer += decoder.decode(value, { stream: true });
+      const scan = scanSseText(textBuffer);
+      textBuffer = scan.remainder;
 
-    if (scan.meaningful) {
-      return {
-        ok: true,
-        response: replayResponse(response, reader, bufferedChunks),
-      };
+      if (scan.meaningful) meaningfulSeen = true;
+      if (scan.meaningful) {
+        return { ok: true, response: replayResponse(response, reader, bufferedChunks) };
+      }
+      if (scan.terminal && meaningfulSeen) {
+        void cancelReader();
+        return { ok: true, response: replayResponse(response, reader, bufferedChunks, true) };
+      }
     }
+
+    textBuffer += decoder.decode();
+    if (textBuffer && scanSseText(`${textBuffer}\n`).meaningful) {
+      return { ok: true, response: replayResponse(response, reader, bufferedChunks) };
+    }
+  } catch (error) {
+    void cancelReader();
+    if (error?.name === "AbortError") throw error;
+    return { ok: false, status: 504, errorText: error.message };
   }
 
-  textBuffer += decoder.decode();
-  if (textBuffer) {
-    const finalScan = scanSseText(`${textBuffer}\n`);
-    if (finalScan.meaningful) {
-      return {
-        ok: true,
-        response: replayResponse(response, reader, bufferedChunks),
-      };
-    }
-  }
-
+  void cancelReader();
   return {
     ok: false,
     status: 502,

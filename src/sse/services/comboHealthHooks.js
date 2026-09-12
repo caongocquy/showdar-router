@@ -28,9 +28,9 @@ export function createChatComboHealthHooks(log) {
         ? await inspectRouteHealth(model)
         : await beforeRouteAttempt(model);
       if (decision.skip) {
-        log.info("COMBO", `skip ${model} — ${decision.reason || "unhealthy"}, probe in ${formatWait(decision.nextProbeAt)}`);
+        log.info("ROUTE", `${model} healthy → ${decision.reason || "unhealthy"} · skip, probe in ${formatWait(decision.nextProbeAt)}`);
       } else if (decision.probe && !options.inspectOnly) {
-        log.info("COMBO", `probe ${model} — half-open`);
+        log.info("ROUTE", `${model} cooldown → half_open`);
       }
       return decision;
     },
@@ -39,16 +39,15 @@ export function createChatComboHealthHooks(log) {
       const snapshot = await getRouteHealthSnapshot();
       const wasRecovering = !!snapshot[model];
       await recordRouteSuccess(model);
-      if (wasRecovering) log.info("COMBO", `recover ${model}`);
+      if (wasRecovering) {
+        log.info("ROUTE", `${model} half_open → healthy`);
+      }
     },
 
     async onModelFailure(model, failure) {
       const { classification, record } = await recordRouteFailure(model, failure);
       if (!record) return;
-      log.info(
-        "COMBO",
-        `${record.state === "open" ? "open" : "cooldown"} ${model} — ${classification.reason}, probe in ${formatWait(record.nextProbeAt)}`,
-      );
+      log.info("ROUTE", `${model} healthy → ${classification.reason} · ${record.state}, probe in ${formatWait(record.nextProbeAt)}`);
     },
 
     async onModelCancelled(model) {

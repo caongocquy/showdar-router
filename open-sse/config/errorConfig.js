@@ -35,6 +35,7 @@ export const BACKOFF_CONFIG = {
 
 export const TRANSIENT_COOLDOWN_MS = 30 * 1000;
 export const MAX_RATE_LIMIT_COOLDOWN_MS = 30 * 60 * 1000;
+export const DAILY_QUOTA_MIN_PROBE_MS = 6 * 60 * 60 * 1000;
 
 const COOLDOWN = {
   long: 2 * 60 * 1000,
@@ -70,6 +71,8 @@ export const COOLDOWN_MS = {
 // remain available for other models.
 export const ROUTE_HEALTH_CONFIG = {
   quota: { baseMs: 30_000, maxMs: 15 * 60_000, state: "cooldown" },
+  transient_rate_limit: { baseMs: 30_000, maxMs: 15 * 60_000, state: "cooldown" },
+  daily_quota: { baseMs: DAILY_QUOTA_MIN_PROBE_MS, maxMs: 24 * 60 * 60 * 1000, state: "cooldown" },
   subscription: { baseMs: 30 * 60_000, maxMs: 60 * 60_000, state: "cooldown" },
   authentication: { baseMs: 5 * 60_000, maxMs: 15 * 60_000, state: "cooldown" },
   unsupported_model: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
