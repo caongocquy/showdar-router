@@ -97,7 +97,20 @@ export async function parseUpstreamError(response, executor = null) {
   const message = errorBody?.error?.message || errorBody?.message || errorBody?.error || bodyText;
 
   const messageStr = typeof message === "string" ? message : JSON.stringify(message);
-  const finalMessage = messageStr || DEFAULT_ERROR_MESSAGES[response.status] || `Upstream error: ${response.status}`;
+  const quotaIds = [];
+  const collectQuotaIds = (value, depth = 0) => {
+    if (depth > 6 || value == null) return;
+    if (Array.isArray(value)) return value.forEach((item) => collectQuotaIds(item, depth + 1));
+    if (typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value)) {
+      if (key.toLowerCase() === "quotaid" && child) quotaIds.push(String(child));
+      else collectQuotaIds(child, depth + 1);
+    }
+  };
+  collectQuotaIds(errorBody);
+  const quotaContext = [...new Set(quotaIds)].slice(0, 3).join(",");
+  const baseMessage = messageStr || DEFAULT_ERROR_MESSAGES[response.status] || `Upstream error: ${response.status}`;
+  const finalMessage = quotaContext ? `${baseMessage} [quotaId:${quotaContext}]` : baseMessage;
 
   return { statusCode: response.status, message: finalMessage, resetsAtMs: recoveryDeadline() };
 }

@@ -7,9 +7,10 @@ vi.mock("@/lib/usageDb.js", () => ({
   trackPendingRequest: vi.fn(),
 }));
 
+import { trackPendingRequest } from "@/lib/usageDb.js";
 import { formatDoneLine } from "../../open-sse/handlers/chatCore/requestDetail.js";
 import { buildOnStreamComplete } from "../../open-sse/handlers/chatCore/streamingHandler.js";
-import { createPassthroughStreamWithLogger } from "../../open-sse/utils/stream.js";
+import { createPassthroughStreamWithLogger, createSSETransformStreamWithLogger } from "../../open-sse/utils/stream.js";
 
 async function consume(stream) {
   const reader = stream.getReader();
@@ -17,6 +18,44 @@ async function consume(stream) {
 }
 
 describe("stream finish reason logging", () => {
+  it("clears pending accounting once when a terminal event ends a lingering stream", async () => {
+    vi.mocked(trackPendingRequest).mockClear();
+    const onComplete = vi.fn();
+    const source = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(
+          'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n',
+        ));
+      },
+    });
+
+    const reader = source.pipeThrough(createSSETransformStreamWithLogger(
+      "openai", "openai", "openai", null, null, "gpt-5.5", "connection-1", null, onComplete,
+    )).getReader();
+    while (!(await reader.read()).done) {}
+
+    expect(trackPendingRequest).toHaveBeenCalledTimes(1);
+    expect(trackPendingRequest).toHaveBeenCalledWith("gpt-5.5", "openai", "connection-1", false);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears pending accounting once when upstream closes normally", async () => {
+    vi.mocked(trackPendingRequest).mockClear();
+    const source = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'));
+        controller.close();
+      },
+    });
+
+    await consume(source.pipeThrough(createSSETransformStreamWithLogger(
+      "openai", "openai", "openai", null, null, "gpt-5.5", "connection-2",
+    )));
+
+    expect(trackPendingRequest).toHaveBeenCalledTimes(1);
+    expect(trackPendingRequest).toHaveBeenCalledWith("gpt-5.5", "openai", "connection-2", false);
+  });
+
   it("adds the provider finish reason to the final DONE line", () => {
     expect(formatDoneLine({
       usage: { prompt_tokens: 3, completion_tokens: 4 },

@@ -241,10 +241,9 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     delete translatedBody.tools;
   }
 
-  // Claude tool schema requires `type` to be explicitly set; strict gateways (e.g., MiniMax)
-  // reject legacy payloads that omit it with HTTP 400. Default to "custom" when missing.
+  // Only strict Claude gateways require the legacy typeless tool shape to gain a type.
   if (finalFormat === FORMATS.CLAUDE && Array.isArray(translatedBody.tools)) {
-    translatedBody.tools = defaultClaudeToolType(translatedBody.tools);
+    translatedBody.tools = defaultClaudeToolType(translatedBody.tools, PROVIDERS[provider]?.quirks);
   }
 
   // Per-request opt-out: client can bypass all token savers via header

@@ -1,4 +1,4 @@
-import { getProviderConnectionById, updateProviderConnection } from "@/lib/localDb";
+import { getProviderConnectionById, updateProviderConnection, revalidateProviderConnection } from "@/lib/localDb";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { testProxyUrl } from "@/lib/network/proxyTest";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
@@ -889,7 +889,7 @@ export async function testSingleConnection(id) {
     }
   }
 
-  await updateProviderConnection(id, updateData);
+  await revalidateProviderConnection(id, updateData, result.valid);
 
   return { valid: result.valid, error: result.error, refreshed: !!result.refreshed, latencyMs, testedAt: new Date().toISOString() };
 }

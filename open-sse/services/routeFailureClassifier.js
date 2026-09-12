@@ -26,6 +26,10 @@ const QUOTA_MARKERS = [
   "free-models-per-day",
   "usage limit",
 ];
+const DAILY_QUOTA_MARKERS = [
+  "generaterequestsperdayperprojectpermodelfreetier",
+  "generaterequestsperdaypermodelfreetier",
+];
 
 const CAPACITY_MARKERS = ["capacity", "overloaded", "temporarily unavailable"];
 const TIMEOUT_MARKERS = ["timeout", "timed out", "operation was aborted", "aborted"];
@@ -35,6 +39,10 @@ function lowerText(errorText) {
   if (!errorText) return "";
   if (typeof errorText === "string") return errorText.toLowerCase();
   try { return JSON.stringify(errorText).toLowerCase(); } catch { return String(errorText).toLowerCase(); }
+}
+
+function normalizedText(errorText) {
+  return lowerText(errorText).replace(/[^a-z0-9]/g, "");
 }
 
 export function extractEffectiveStatus(status, errorText) {
@@ -62,6 +70,7 @@ function exponential(baseMs, maxMs, failureLevel = 0) {
 
 export function classifyRouteFailure(status, errorText, failureLevel = 0) {
   const text = lowerText(errorText);
+  const normalized = normalizedText(errorText);
   const effectiveStatus = extractEffectiveStatus(status, errorText);
   let reason = "unknown";
   let scope = "route";
@@ -70,7 +79,12 @@ export function classifyRouteFailure(status, errorText, failureLevel = 0) {
     reason = "unsupported_model";
   } else if (effectiveStatus === 404) {
     reason = "model_not_found";
-  } else if (effectiveStatus === 429 || includesAny(text, QUOTA_MARKERS)) {
+  } else if (DAILY_QUOTA_MARKERS.some((marker) => normalized.includes(marker))) {
+    reason = "daily_quota";
+  } else if (effectiveStatus === 429) {
+    reason = "transient_rate_limit";
+    scope = "credential";
+  } else if (includesAny(text, QUOTA_MARKERS)) {
     reason = "quota";
     scope = "credential";
   } else if (effectiveStatus === 402 || text.includes("subscription") || text.includes("payment required")) {

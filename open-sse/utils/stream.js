@@ -84,6 +84,7 @@ export function createSSEStream(options = {}) {
   const finalizeStream = () => {
     if (finalized) return;
     finalized = true;
+    trackPendingRequest(model, provider, connectionId, false);
 
     const isPassthrough = mode === STREAM_MODE.PASSTHROUGH;
     let finalUsage = isPassthrough ? usage : state?.usage;
@@ -239,7 +240,11 @@ export function createSSEStream(options = {}) {
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           // Responses clients (codex CLI) close on response.completed instead of [DONE]
-          if (responsesTerminal) finalizeStream();
+          if (responsesTerminal) {
+            finalizeStream();
+            controller.terminate();
+            return;
+          }
           continue;
         }
 
@@ -279,7 +284,9 @@ export function createSSEStream(options = {}) {
           }
           streamDoneSent = true;
           if (keepsOpenAIResponsesFormat) openAIResponsesDoneSent = true;
-          continue;
+          finalizeStream();
+          controller.terminate();
+          return;
         }
 
         // Claude format - content
@@ -382,7 +389,6 @@ export function createSSEStream(options = {}) {
     flush(controller) {
       const evtSummary = Object.entries(eventTypeCounts).map(([k, v]) => `${k}=${v}`).join(",") || "none";
       dbg("SSE", `flush | provider=${provider} | model=${model} | recvLines=${sseLineCount} | emitted=${sseEmittedCount} | events=[${evtSummary}]`);
-      trackPendingRequest(model, provider, connectionId, false);
       try {
         const remaining = decoder.decode();
         if (remaining) buffer += remaining;

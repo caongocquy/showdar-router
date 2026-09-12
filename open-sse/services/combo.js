@@ -338,7 +338,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       if (result.ok) {
         let successResponse = result;
         if (validateSuccess) {
-          const validation = await validateSuccess(result, modelStr);
+          const validation = await validateSuccess(result, modelStr, { requestSignal });
           if (!validation?.ok) {
             const validationStatus = validation?.status || 502;
             const validationError = validation?.errorText || "Invalid successful response";
