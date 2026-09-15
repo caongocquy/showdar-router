@@ -67,8 +67,8 @@ jobs:
 
       - name: Install repository dependencies
         run: |
-          npm install --no-package-lock
-          npm --prefix cli install --no-package-lock --ignore-scripts
+          npm install --no-package-lock --legacy-peer-deps
+          npm --prefix cli install --no-package-lock --ignore-scripts --legacy-peer-deps
 
       - name: Run focused release verification
         run: |
