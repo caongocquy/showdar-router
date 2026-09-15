@@ -67,108 +67,6 @@ const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRunt
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
 
-function getPortOption(argv) {
-  const index = argv.findIndex((arg) => arg === "--port" || arg === "-p");
-  if (index < 0) return null;
-  const value = Number(argv[index + 1]);
-  if (!Number.isInteger(value) || value < 1 || value > 65535) throw new Error("Invalid port. Use a number from 1 to 65535.");
-  return value;
-}
-
-const daemonCommands = new Set(["start", "stop", "restart", "status", "logs", "version", "help"]);
-const explicitCommand = args[0];
-const launcher = require("./src/launcher");
-const requestedCommand = launcher.getLaunchMode(args, Boolean(process.stdin.isTTY && process.stdout.isTTY));
-const cliRoot = __dirname;
-const daemon = require("./src/daemon");
-const appRoot = daemon.resolveAppRoot(cliRoot);
-const env = { ...process.env };
-let portOption;
-try { portOption = getPortOption(args); } catch (error) {
-  console.error(`Showdar Router: ${error.message}`);
-  process.exitCode = 1;
-  return;
-}
-
-if (requestedCommand === "interactive") {
-  runInteractiveLauncher();
-  return;
-}
-
-if (requestedCommand === "tray" || explicitCommand === "--tray" || explicitCommand === "-t") {
-  try {
-    if (!env.SHOWDAR_ROUTER_TRAY_CHILD) {
-      const child = spawn(process.execPath, [__filename, ...launcher.getTrayChildArgs(args)], {
-        detached: true,
-        stdio: "ignore",
-        env: { ...env, SHOWDAR_ROUTER_TRAY_CHILD: "1" },
-      });
-      child.unref();
-      console.log("Showdar Router tray started in background");
-    } else {
-      try { ensureTrayRuntime({ silent: false }); } catch { /* tray remains optional */ }
-      launcher.runTray({ daemon, tray: require("./src/cli/tray/tray"), appRoot, env, port: portOption, explicitPort: portOption !== null, cliPath: __filename });
-    }
-  } catch (error) {
-    console.error(`Showdar Router: ${error.message}`);
-    process.exitCode = 1;
-  }
-  return;
-}
-
-if (daemonCommands.has(requestedCommand)) {
-  const appServer = daemon.resolveServerPath(appRoot);
-  const state = daemon.paths(env);
-  const printHelp = () => console.log(`Showdar Router\n\nUsage: showdar-router [start|stop|restart|status|logs [-f]|tray|version|help]\n\nDefault port: ${daemon.DEFAULT_PORT}\nData directory: ~/.showdar-router`);
-  try {
-    if (requestedCommand === "help") return printHelp();
-    if (requestedCommand === "version") return console.log(`Showdar Router ${pkg.version}`);
-    if (requestedCommand === "logs") {
-      fs.mkdirSync(state.logDir, { recursive: true });
-      const follow = args[1] === "-f";
-      require("child_process").execFileSync(follow ? "tail" : "tail", follow ? ["-f", state.logFile] : ["-n", "100", state.logFile], { stdio: "inherit" });
-      return;
-    }
-    if (requestedCommand === "stop") {
-      daemon.stop({ appRoot, env });
-      console.log("Showdar Router stopped");
-      return;
-    }
-    if (requestedCommand === "status") {
-      const current = daemon.status({ appRoot, env });
-      if (!current.running) return console.log("Showdar Router: stopped");
-      console.log(`Showdar Router: running\nPID: ${current.pid}\nURL: http://localhost:${current.port}`);
-      return;
-    }
-    const running = requestedCommand === "restart"
-      ? daemon.restart({ appRoot, serverPath: appServer, env, port: portOption, explicitPort: portOption !== null ? true : null })
-      : daemon.start({ appRoot, serverPath: appServer, env, port: portOption, explicitPort: portOption !== null ? true : null });
-    if (running.autoFallback) console.log(`Port ${running.requestedPort} is busy, using ${running.port}`);
-    console.log(`Showdar Router started\nPID: ${running.pid}\nURL: http://localhost:${running.port}\nLogs: ${running.logFile}`);
-    return;
-  } catch (error) {
-    console.error(`Showdar Router: ${error.message}`);
-    process.exitCode = 1;
-    return;
-  }
-}
-
-async function runInteractiveLauncher() {
-  try {
-    try { ensureTrayRuntime({ silent: true }); } catch { /* tray is optional */ }
-    await launcher.runInteractive({
-      daemon,
-      tray: require("./src/cli/tray/tray"),
-      appRoot,
-      env,
-      cliPath: __filename,
-    });
-  } catch (error) {
-    console.error(`Showdar Router: ${error.message}`);
-    process.exitCode = 1;
-  }
-}
-
 // Subcommands (`showdar-router xai video …`) run against an already-running gateway
 // and bypass the launcher flow (no runtime self-heal, no server spawn).
 if (args[0] === "xai" && args[1] === "video") {
@@ -542,6 +440,21 @@ function killProcessOnPort(port) {
 }
 
 
+// Detect if running in restricted environment (Codespaces, Docker)
+function isRestrictedEnvironment() {
+  // Check for Codespaces
+  if (process.env.CODESPACES === "true" || process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+    return "GitHub Codespaces";
+  }
+
+  // Check for Docker
+  if (fs.existsSync("/.dockerenv") || (fs.existsSync("/proc/1/cgroup") && fs.readFileSync("/proc/1/cgroup", "utf8").includes("docker"))) {
+    return "Docker";
+  }
+
+  return null;
+}
+
 // Check if new version available, return latest version or null
 function checkForUpdate() {
   return new Promise((resolve) => {
@@ -612,9 +525,12 @@ function openBrowser(url) {
 }
 
 // Find standalone server (bundled in bin/app for published package).
+// Prefer custom-server.js (injects real socket IP) when present.
 const standaloneDir = path.join(__dirname, "app");
 const customServerPath = path.join(standaloneDir, "custom-server.js");
-const serverPath = fs.existsSync(customServerPath) ? customServerPath : path.join(standaloneDir, "server.js");
+const serverPath = fs.existsSync(customServerPath)
+  ? customServerPath
+  : path.join(standaloneDir, "server.js");
 
 if (!fs.existsSync(serverPath)) {
   console.error("Error: Standalone build not found.");
@@ -703,7 +619,6 @@ function startServer(updatePromise) {
       windowsHide: true,
       env: {
         ...buildEnvWithRuntime(process.env),
-        DATA_DIR: getAppDataDir(),
         PORT: port.toString(),
         HOSTNAME: host
       }
@@ -859,7 +774,7 @@ function startServer(updatePromise) {
             process.on("SIGHUP", () => {});
 
             console.log(`\n⏳ Switching to tray mode... (icon already visible in menu bar)`);
-            console.log(`🔔 Showdar Router is running in tray (PID: ${process.pid})`);
+            console.log(`🔔 ${pkg.name} is running in tray (PID: ${process.pid})`);
             console.log(`   Server: http://${displayHost}:${port}`);
             console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
 
@@ -878,7 +793,7 @@ function startServer(updatePromise) {
           });
           bgProcess.unref();
 
-          console.log(`🔔 Showdar Router is now running in background (PID: ${bgProcess.pid})`);
+          console.log(`🔔 ${pkg.name} is now running in background (PID: ${bgProcess.pid})`);
           console.log(`   Server: http://${displayHost}:${port}`);
           console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
 

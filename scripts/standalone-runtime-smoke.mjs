@@ -7,11 +7,18 @@ import { request } from "node:http";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const daemon = require("../cli/src/daemon.js");
 const repo = process.cwd();
 const port = 20130;
 const dataDir = mkdtempSync(join(tmpdir(), "showdar-router-runtime-"));
 let child;
+
+// Find standalone server (bundled in bin/app for published package).
+// Prefer custom-server.js (injects real socket IP) when present.
+const standaloneDir = join(repo, "app");
+const customServerPath = join(standaloneDir, "custom-server.js");
+const serverPath = existsSync(customServerPath)
+  ? customServerPath
+  : join(standaloneDir, "server.js");
 
 function get(pathname) {
   return new Promise((resolve, reject) => {
@@ -40,7 +47,6 @@ try {
     cwd: repo,
     stdio: "inherit",
   });
-  const serverPath = daemon.resolveServerPath(repo);
   assert.equal(serverPath, join(repo, ".next", "standalone", "custom-server.js"));
   assert.ok(existsSync(join(repo, ".next", "standalone", "server.js")));
   assert.ok(existsSync(join(repo, ".next", "standalone", ".next", "static")));

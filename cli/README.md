@@ -171,31 +171,7 @@ Dashboard  http://localhost:21298
 API        http://127.0.0.1:21298/v1
 ```
 
-### Automatic fallback
-
-If the default port is already occupied and you did not explicitly select a port, Showdar Router automatically searches the next available port.
-
-Example:
-
-```console
-$ showdar-router start
-
-⚠ Port 21298 is already in use
-✓ Using fallback port 21299
-
-Dashboard  http://localhost:21299
-API        http://127.0.0.1:21299/v1
-```
-
-The search starts at `21298` and checks up to ten candidate ports.
-
-Check the active port at any time:
-
-```bash
-showdar-router status
-```
-
-### Explicit port
+If the default port is already occupied and you did not explicitly select a port, Showdar Router automatically searches the next available port (up to 10 attempts).
 
 Use `--port` or `-p` when you need a stable port:
 
@@ -236,23 +212,6 @@ coding-fast
 ```
 
 use `coding-fast` as the model identifier from your client.
-
-If Showdar Router selected a fallback port:
-
-```console
-$ showdar-router status
-
-Showdar Router: running
-URL: http://localhost:21299
-```
-
-use:
-
-```text
-http://127.0.0.1:21299/v1
-```
-
-instead.
 
 ### Router API key
 
@@ -301,84 +260,36 @@ Available interfaces:
 
 **Terminal UI** opens the interactive CLI.
 
-**Hide to Tray** keeps the daemon running and attaches the system tray controller.
+**Hide to Tray** keeps the supervisor running and attaches the system tray controller.
 
-**Exit** closes the launcher without stopping an already-running daemon.
+**Exit** closes the launcher and stops the server.
 
-In non-interactive environments, running without arguments starts the daemon directly.
+In non-interactive environments, running without arguments starts the supervisor directly.
 
-## CLI
-
-Start the server:
+## CLI Options
 
 ```bash
-showdar-router start
+showdar-router                    # Start with default settings
+showdar-router --port 30000       # Custom port
+showdar-router --no-browser       # Don't open browser
+showdar-router --skip-update      # Skip auto-update check
+showdar-router --tray             # Run in system tray mode (background)
+showdar-router -t                 # Short alias for --tray
+showdar-router --help             # Show all options
+showdar-router --version          # Show version
 ```
 
-Stop it:
+**Commands:**
 
 ```bash
-showdar-router stop
-```
-
-Restart it:
-
-```bash
-showdar-router restart
-```
-
-Check status and the actual active port:
-
-```bash
-showdar-router status
-```
-
-Read logs:
-
-```bash
-showdar-router logs
-```
-
-Follow logs:
-
-```bash
-showdar-router logs -f
-```
-
-Open the tray controller:
-
-```bash
-showdar-router tray
-```
-
-or:
-
-```bash
-showdar-router --tray
-showdar-router -t
-```
-
-Use a custom port:
-
-```bash
-showdar-router --port 30000
-```
-
-Version:
-
-```bash
-showdar-router version
-```
-
-Help:
-
-```bash
-showdar-router help
+showdar-router xai video --prompt "..." --output video.mp4
+                      Generate a Grok Imagine video via the running gateway
+                      (see: showdar-router xai video --help)
 ```
 
 ## System Tray
 
-The tray is a lightweight control plane for the existing Showdar Router daemon.
+The tray is a control plane for the running Showdar Router supervisor.
 
 It does **not** launch a second server.
 
@@ -397,11 +308,11 @@ Stop Server
 Quit Tray
 ```
 
-`Quit Tray` closes only the tray process.
+`Quit Tray` closes the tray icon and stops the supervisor and server.
 
-`Stop Server` explicitly stops the Showdar Router daemon.
+`Stop Server` explicitly stops the server (the supervisor will not restart it).
 
-If the daemon is using an automatic fallback port, the tray resolves and displays the actual active port.
+`Restart Server` restarts the server while keeping the supervisor alive.
 
 ## Dashboard
 
@@ -502,25 +413,11 @@ Default data directory:
 ~/.showdar-router
 ```
 
-Runtime state:
-
-```text
-~/.showdar-router/run/
-```
-
-Default PID file:
-
-```text
-~/.showdar-router/run/showdar-router.pid
-```
-
 Logs:
 
 ```text
 ~/.showdar-router/logs/showdar-router.log
 ```
-
-The runtime state also tracks the actual active port when automatic port fallback is used.
 
 ## Development
 
@@ -625,24 +522,18 @@ The primary user flow is:
 
 ```text
 npm install -g showdar-router
-        │
-        ▼
-   showdar-router
-        │
-        ▼
- CLI / Launcher / Tray
-        │
-        ▼
-       Daemon
-        │
-        ▼
- Trusted peer wrapper
-        │
-        ▼
- Next standalone server
-        │
-        ▼
- OpenAI-compatible API
+         │
+         ▼
+    showdar-router
+         │
+         ▼
+  Supervisor (/ Launcher / Tray)
+         │
+         ▼
+  Next standalone server
+         │
+         ▼
+  OpenAI-compatible API
 ```
 
 The supported distribution target is the local npm/CLI installation.
