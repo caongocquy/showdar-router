@@ -1,6 +1,6 @@
 {
   "name": "showdar-router",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "description": "Showdar Router CLI - Start and manage the Showdar Router server",
   "bin": {
     "showdar-router": "cli.js"

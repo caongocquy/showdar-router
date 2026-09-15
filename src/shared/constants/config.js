@@ -15,8 +15,8 @@ export const GITHUB_CONFIG = {
 // Updater configuration
 export const UPDATER_CONFIG = {
   npmPackageName: "showdar-router",
-  installCmd: "npm i -g showdar-router",
-  installCmdLatest: "npm i -g showdar-router@latest --prefer-online",
+  installCmd: "npm install -g showdar-router",
+  installCmdLatest: "npm install -g showdar-router",
   shutdownCountdownSec: 3,
   exitDelayMs: 500,
   statusPort: 21298,

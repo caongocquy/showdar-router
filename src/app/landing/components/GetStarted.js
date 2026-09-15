@@ -1,5 +1,6 @@
 "use client";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { UPDATER_CONFIG } from "@/shared/constants/config";
 
 export default function GetStarted() {
   const { copied, copy } = useCopyToClipboard();
@@ -24,7 +25,7 @@ export default function GetStarted() {
                 <div className="flex-none w-8 h-8 rounded-full bg-[#f97815]/20 text-[#f97815] flex items-center justify-center font-bold">1</div>
                 <div>
                   <h4 className="font-bold text-lg">Install Showdar Router</h4>
-                  <p className="text-sm text-gray-500 mt-1">Run npx command to start the server instantly</p>
+                  <p className="text-sm text-gray-500 mt-1">Install globally, then run the command from any terminal</p>
                 </div>
               </div>
               
@@ -61,10 +62,10 @@ export default function GetStarted() {
               <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
                 <div 
                   className="flex items-center gap-2 mb-4 group cursor-pointer"
-                  onClick={() => handleCopy("npx showdar-router")}
+                  onClick={() => handleCopy(UPDATER_CONFIG.installCmd)}
                 >
                   <span className="text-green-400">$</span>
-                  <span className="text-white">npx showdar-router</span>
+                  <span className="text-white">{UPDATER_CONFIG.installCmd}</span>
                   <span className="ml-auto text-gray-500 text-xs opacity-0 group-hover:opacity-100">
                     {copied === "landing" ? "✓ Copied" : "Copy"}
                   </span>
