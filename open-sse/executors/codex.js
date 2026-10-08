@@ -114,7 +114,7 @@ function normalizeCodexTools(body) {
   }
 }
 
-// Resolve prompt-cache session id: client session → assistant-text-hash → workspaceId → connection
+// Resolve prompt-cache session id: client session → workspaceId → connection → assistant-text-hash (connectionless only)
 function resolveCacheSessionId(body, credentials) {
   return resolveSessionId({
     headers: credentials?.rawHeaders,

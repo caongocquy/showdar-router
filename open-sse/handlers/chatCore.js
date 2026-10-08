@@ -30,6 +30,7 @@ import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
 import { defaultClaudeToolType } from "../translator/concerns/toolCall.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import crypto from "crypto";
 
 /**
  * Core chat handler - shared between SSE and Worker
@@ -61,15 +62,24 @@ export function stripContinuityFields(body) {
 export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, signal: externalSignal }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
-  // Stable per-session color so all lines of one CLI conversation share a tag
+  // Stable per-session color so all lines of one CLI conversation share a tag.
+  // Without a connection identity (keyless/no-auth clients), fall back to an
+  // API-key hash: an ACCOUNT-scoped sticky identity (per provider, TTL-bounded
+  // in sessionManager), never a conversation-scoped one — two conversations on
+  // one key share a session unless the client sends an explicit conversation id.
+  const fallbackConnectionId = connectionId
+    || (apiKey ? `${provider}:client:${crypto.createHash("sha256").update(String(apiKey)).digest("hex").slice(0, 16)}` : `${provider}:anonymous`);
   const sessionSeed = (() => {
     try {
-      return resolveSessionId({ headers: clientRawRequest?.headers, body, connectionId, scope: provider });
+      return resolveSessionId({ headers: clientRawRequest?.headers, body, connectionId: fallbackConnectionId, scope: provider });
     } catch {
-      return connectionId || "";
+      return fallbackConnectionId;
     }
   })();
   const reqTag = log?.tagForSession ? log.tagForSession(sessionSeed) : (log?.nextTag ? log.nextTag() : "");
+  // Stable id for this logical request (client-supplied or minted here), so
+  // internal retries and refresh redirects reuse one upstream request id.
+  const logicalRequestId = clientRawRequest?.logicalRequestId || globalThis.crypto.randomUUID();
 
   const sourceFormat = sourceFormatOverride || detectFormat(body);
 
@@ -372,6 +382,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       credentials,
       providerSessionId: sessionSeed,
       clientTool,
+      logicalRequestId,
       signal: streamController.signal,
       log,
       proxyOptions,
@@ -436,6 +447,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
             credentials,
             providerSessionId: sessionSeed,
             clientTool,
+            logicalRequestId,
             signal: streamController.signal,
             log,
             proxyOptions,
@@ -479,13 +491,13 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     return createErrorResult(statusCode, errMsg, resetsAtMs);
   }
 
-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, credentials, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
 
   // Provider forced streaming but client wants JSON
   if (!clientRequestedStreaming && providerRequiresStreaming) {
-    const result = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, trackDone, appendLog });
+    const result = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, trackDone, appendLog, signal: streamController.signal });
     if (result) { streamController.handleComplete(); return result; }
   }
 

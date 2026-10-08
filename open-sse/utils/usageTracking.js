@@ -262,8 +262,8 @@ export function extractUsage(chunk) {
     });
   }
 
-  // OpenAI Responses API format (response.completed or response.done)
-  if ((chunk.type === "response.completed" || chunk.type === "response.done") && chunk.response?.usage && typeof chunk.response.usage === "object") {
+  // OpenAI Responses API format (response.completed / response.done / response.incomplete)
+  if ((chunk.type === "response.completed" || chunk.type === "response.done" || chunk.type === "response.incomplete") && chunk.response?.usage && typeof chunk.response.usage === "object") {
     const usage = chunk.response.usage;
     const cachedTokens = usage.input_tokens_details?.cached_tokens;
     return normalizeUsage({
@@ -318,9 +318,17 @@ export function extractUsage(chunk) {
 // message_delta has the real cumulative output (input/cache absent). Max keeps
 // the meaningful value from each without clobbering. Idempotent for other
 // providers that emit a single complete usage object.
+//
+// Real and estimated usage are different authorities, not comparable
+// measurements: a numeric max-merge would let an early estimate (e.g. 2012
+// prompt tokens from body-size estimation) permanently poison a later real
+// report (111). When the authorities differ, the real measurement wins
+// outright; equal authorities take the existing max-merge.
 export function mergeUsage(prev, next) {
   if (!prev) return next || null;
   if (!next) return prev;
+  if (prev.estimated && !next.estimated) return next; // estimate → real: real wins
+  if (!prev.estimated && next.estimated) return prev; // real → estimate: keep real
   const merged = { ...prev };
   for (const [k, v] of Object.entries(next)) {
     // typeof NaN === "number" — guard with Number.isFinite so one malformed

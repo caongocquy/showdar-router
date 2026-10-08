@@ -158,9 +158,80 @@ export function translateRequest(sourceFormat, targetFormat, model, body, stream
   return result;
 }
 
+/**
+ * Drop injected decoy tool calls (e.g. opencode's cloaked bash/read) from a
+ * response chunk so the client never sees tools it did not register.
+ * Returns the (possibly mutated) chunk, or null when the whole chunk is a
+ * decoy artifact and must be dropped. No-op without state.opencodeDecoyNames.
+ */
+export function dropInjectedDecoyCalls(chunk, state) {
+  const decoys = state?.opencodeDecoyNames;
+  if (!chunk || typeof chunk !== "object" || !decoys || decoys.size === 0) return chunk;
+  state.opencodeDecoyItemIds ||= new Set();
+  state.opencodeDecoyCallIndexes ||= new Set();
+
+  const type = typeof chunk.type === "string" ? chunk.type : "";
+  if (type.startsWith("response.")) {
+    if (type === "response.output_item.added" || type === "response.output_item.done") {
+      const item = chunk.item;
+      if (item?.type === "function_call" && decoys.has(item.name)) {
+        if (item.id) state.opencodeDecoyItemIds.add(item.id);
+        return null;
+      }
+      return chunk;
+    }
+    if (type === "response.function_call_arguments.delta" || type === "response.function_call_arguments.done") {
+      if (chunk.item_id && state.opencodeDecoyItemIds.has(chunk.item_id)) return null;
+      return chunk;
+    }
+    if ((type === "response.completed" || type === "response.incomplete" || type === "response.failed")
+      && Array.isArray(chunk.response?.output)) {
+      const before = chunk.response.output.length;
+      chunk.response.output = chunk.response.output.filter(
+        (it) => !(it?.type === "function_call" && (decoys.has(it.name) || state.opencodeDecoyItemIds.has(it.id)))
+      );
+      if (chunk.response.output.length !== before) state._decoyChanged = true;
+      return chunk;
+    }
+    return chunk;
+  }
+
+  const choice = chunk.choices?.[0];
+  const delta = choice?.delta;
+  if (delta && Array.isArray(delta.tool_calls)) {
+    const kept = delta.tool_calls.filter((tc) => {
+      const name = tc?.function?.name || tc?.name;
+      if (name && decoys.has(name)) {
+        if (tc.index != null) state.opencodeDecoyCallIndexes.add(tc.index);
+        return false;
+      }
+      // Follow-up argument deltas carry no name — drop by tracked index.
+      if (tc.index != null && state.opencodeDecoyCallIndexes.has(tc.index)) return false;
+      return true;
+    });
+    if (kept.length !== delta.tool_calls.length) {
+      state._decoyChanged = true;
+      if (kept.length) {
+        delta.tool_calls = kept;
+      } else {
+        delete delta.tool_calls;
+        if (Object.keys(delta).length === 0 && !choice.finish_reason) return null;
+      }
+    }
+  }
+  return chunk;
+}
+
 // Translate response chunk: target -> openai -> source
 export function translateResponse(targetFormat, sourceFormat, chunk, state) {
   ensureInitialized();
+  // Strip injected decoy tool calls before any format conversion (or the
+  // same-format fast path) can forward them to the client.
+  if (chunk && typeof chunk === "object") {
+    const filtered = dropInjectedDecoyCalls(chunk, state);
+    if (filtered === null) return [];
+    chunk = filtered;
+  }
   // If same format, return as-is — except the tool name may still be cloaked:
   // translateRequest() suffixes client tools for OAuth-cloaked Claude providers
   // even when no format conversion is needed, so streamed tool_use blocks must
@@ -265,7 +336,11 @@ export function initState(sourceFormat) {
       funcArgsDone: {},
       funcItemDone: {},
       customToolNames: new Set(),
-      completedSent: false
+      terminalSent: false,
+      // Set by the stream layer when a tool call is still mid-arguments at
+      // clean EOF: the flush-time terminal (and tool item close) must not
+      // report the truncated call as a successful completion.
+      suppressTerminal: false
     };
   }
 

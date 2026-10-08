@@ -8,6 +8,7 @@ import { buildChunk } from "../concerns/chunk.js";
 import { buildUsage } from "../concerns/usage.js";
 import { fallbackToolCallId } from "../concerns/toolCall.js";
 import { reasoningDelta, extractReasoningText } from "../concerns/reasoning.js";
+import { toResponsesIncompleteReason, fromResponsesTerminal } from "../concerns/finishReason.js";
 import { ROLE, OPENAI_BLOCK, RESPONSES_ITEM, OPENAI_FINISH, MODEL_FALLBACK } from "../schema/index.js";
 
 /**
@@ -109,16 +110,31 @@ export function openaiToOpenAIResponsesResponse(chunk, state) {
 
   // Handle finish_reason
   if (choice.finish_reason) {
+    state.finishReason = choice.finish_reason;
     for (const i in state.msgItemAdded) closeMessage(state, emit, i);
     closeReasoning(state, emit);
     for (const i in state.funcCallIds) closeToolCall(state, emit, i);
-    sendCompleted(state, emit);
+    sendTerminal(state, emit);
   }
 
   return events;
 }
 
 // Helper functions
+// Final output[] accumulator: the terminal Response must carry the accumulated
+// items (official contract), reusing the exact IDs/content already streamed in
+// output_item.done events — never a second set of IDs. O(1) append per close.
+function recordOutputItem(state, item) {
+  (state.outputItems ??= []).push(item);
+}
+
+// Item status at close time: an item still open when the terminal reason maps
+// to incomplete was cut mid-generation → "incomplete"; cleanly closed ones stay
+// "completed" (matches official behavior: truncated message status=incomplete).
+function itemStatus(state) {
+  return toResponsesIncompleteReason(state.finishReason) ? "incomplete" : "completed";
+}
+
 function startReasoning(state, emit, idx) {
   if (!state.reasoningId) {
     state.reasoningId = `rs_${state.responseId}_${idx}`;
@@ -181,6 +197,11 @@ function closeReasoning(state, emit) {
         type: RESPONSES_ITEM.REASONING,
         summary: [{ type: RESPONSES_ITEM.SUMMARY_TEXT, text: state.reasoningBuf }]
       }
+    });
+    recordOutputItem(state, {
+      id: state.reasoningId,
+      type: RESPONSES_ITEM.REASONING,
+      summary: [{ type: RESPONSES_ITEM.SUMMARY_TEXT, text: state.reasoningBuf }]
     });
   }
 }
@@ -254,6 +275,13 @@ function closeMessage(state, emit, idx) {
         content: [{ type: RESPONSES_ITEM.OUTPUT_TEXT, annotations: [], logprobs: [], text: fullText }],
         role: ROLE.ASSISTANT
       }
+    });
+    recordOutputItem(state, {
+      id: msgId,
+      type: RESPONSES_ITEM.MESSAGE,
+      content: [{ type: RESPONSES_ITEM.OUTPUT_TEXT, annotations: [], logprobs: [], text: fullText }],
+      role: ROLE.ASSISTANT,
+      status: itemStatus(state)
     });
   }
 }
@@ -359,31 +387,71 @@ function closeToolCall(state, emit, idx) {
         name: state.funcNames[idx] || ""
       }
     });
+    recordOutputItem(state, {
+      id: `${custom ? "ctc" : "fc"}_${callId}`,
+      type: custom ? RESPONSES_ITEM.CUSTOM_TOOL_CALL : RESPONSES_ITEM.FUNCTION_CALL,
+      ...(custom ? { input: extractCustomToolInput(args) } : { arguments: args }),
+      call_id: callId,
+      name: state.funcNames[idx] || "",
+      status: itemStatus(state)
+    });
 
     state.funcItemDone[idx] = true;
     state.funcArgsDone[idx] = true;
   }
 }
 
-function sendCompleted(state, emit) {
-  if (!state.completedSent) {
-    state.completedSent = true;
-    emit("response.completed", {
-      type: "response.completed",
-      response: {
-        id: state.responseId,
-        object: "response",
-        created_at: state.created,
-        status: "completed",
-        background: false,
-        error: null
-      }
+// Normalized (chat-shaped) usage → Responses API usage shape
+function toResponsesUsage(u) {
+  if (!u || typeof u !== "object") return null;
+  if (!(u.prompt_tokens || u.input_tokens || u.completion_tokens || u.output_tokens)) return null;
+  const out = {
+    input_tokens: u.prompt_tokens ?? u.input_tokens ?? 0,
+    output_tokens: u.completion_tokens ?? u.output_tokens ?? 0,
+  };
+  const cached = u.cached_tokens ?? u.prompt_tokens_details?.cached_tokens ?? 0;
+  if (cached > 0) out.input_tokens_details = { cached_tokens: cached };
+  const reasoning = u.reasoning_tokens ?? u.completion_tokens_details?.reasoning_tokens ?? 0;
+  if (reasoning > 0) out.output_tokens_details = { reasoning_tokens: reasoning };
+  if (u.estimated) out.estimated = true;
+  return out;
+}
+
+// One authoritative terminal decision: exactly one response.completed OR
+// response.incomplete per stream (never both, never completed-with-status-
+// incomplete). finish_reason length/content_filter → response.incomplete with
+// official incomplete_details.reason; everything else (stop, tool_calls,
+// unknown) → response.completed conservatively (no invented incomplete reason).
+function sendTerminal(state, emit) {
+  // §5: flush detected a tool call still mid-arguments — emitting a completion
+  // terminal here would report a truncated tool call as successful. The stream
+  // layer synthesizes response.failed instead.
+  if (state.suppressTerminal) return;
+  if (!state.terminalSent) {
+    state.terminalSent = true;
+    const incompleteReason = toResponsesIncompleteReason(state.finishReason);
+    const eventType = incompleteReason ? "response.incomplete" : "response.completed";
+    const response = {
+      id: state.responseId,
+      object: "response",
+      created_at: state.created,
+      status: incompleteReason ? "incomplete" : "completed",
+      background: false,
+      error: null,
+      incomplete_details: incompleteReason ? { reason: incompleteReason } : null,
+      output: state.outputItems ?? []
+    };
+    const usage = toResponsesUsage(state.usage);
+    if (usage) response.usage = usage;
+    emit(eventType, {
+      type: eventType,
+      response
     });
   }
 }
 
 function flushEvents(state) {
-  if (state.completedSent) return [];
+  if (state.terminalSent) return [];
   
   const events = [];
   const nextSeq = () => ++state.seq;
@@ -394,8 +462,18 @@ function flushEvents(state) {
 
   for (const i in state.msgItemAdded) closeMessage(state, emit, i);
   closeReasoning(state, emit);
-  for (const i in state.funcCallIds) closeToolCall(state, emit, i);
-  sendCompleted(state, emit);
+  // A tool call still open at flush has truncated arguments: closing it would
+  // emit output_item.done with status completed on a partial call (§5). Leave
+  // the item open so the synthesized response.failed marks the truncation.
+  if (!state.suppressTerminal) {
+    for (const i in state.funcCallIds) closeToolCall(state, emit, i);
+  }
+  // §3: flush() with no recorded finish_reason is an unannounced stream close,
+  // not a valid completion signal — never invent response.completed here. The
+  // stream layer's terminal guard synthesizes response.failed instead. (A real
+  // finish_reason always sends its terminal during transform(), so this branch
+  // only exists for the theoretical finish-without-terminal state.)
+  if (state.finishReason) sendTerminal(state, emit);
   
   return events;
 }
@@ -538,9 +616,9 @@ export function openaiResponsesToOpenAIResponse(chunk, state) {
     return null;
   }
 
-  // Response completed
-  if (eventType === "response.completed" || eventType === "response.done") {
-    // Extract usage from response.completed event
+  // Terminal events: completed / done / incomplete (native Responses providers)
+  if (eventType === "response.completed" || eventType === "response.done" || eventType === "response.incomplete") {
+    // Extract usage from the terminal event (usage is present on incomplete too)
     const responseUsage = data.response?.usage;
     if (responseUsage && typeof responseUsage === "object") {
       const inputTokens = responseUsage.input_tokens || responseUsage.prompt_tokens || 0;
@@ -553,7 +631,7 @@ export function openaiResponsesToOpenAIResponse(chunk, state) {
     }
     
     if (!state.finishReasonSent) {
-      const finishReason = computeFinishReason(state);
+      const finishReason = fromResponsesTerminal(data.response) || computeFinishReason(state);
 
       state.finishReasonSent = true;
       state.finishReason = finishReason; // Mark for usage injection in stream.js

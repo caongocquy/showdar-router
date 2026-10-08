@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { createDisconnectAwareStream } from "../../open-sse/utils/streamHandler.js";
 import { buildAbortedResponsesTerminalBytes } from "../../open-sse/utils/responsesStreamHelpers.js";
+import { handleStreamingResponse } from "../../open-sse/handlers/chatCore/streamingHandler.js";
+import { FORMATS } from "../../open-sse/translator/formats.js";
 
 // Minimal stream controller stub
 function makeController() {
@@ -68,5 +70,35 @@ describe("Responses abort terminal synthesis", () => {
     const text = await readAll(out);
     expect(text).not.toContain("response.failed");
     expect(text).not.toContain("[DONE]");
+  });
+});
+
+describe("Phase B: post-200 failure → in-band protocol error", () => {
+  it("Responses client + translating provider: upstream error yields response.failed + [DONE]", async () => {
+    // Client speaks Responses (codex), provider speaks chat completions →
+    // translate mode. Upstream dying after HTTP 200 must still terminate the
+    // client's protocol cleanly instead of dropping the connection raw.
+    const upstream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"index":0,"delta":{"content":"hi"}}]}\n\n'));
+        controller.error(new Error("ECONNRESET"));
+      },
+    });
+
+    const res = await handleStreamingResponse({
+      providerResponse: new Response(upstream, { headers: { "content-type": "text/event-stream" } }),
+      provider: "openai",
+      model: "gpt-4o",
+      sourceFormat: FORMATS.OPENAI_RESPONSES,
+      targetFormat: FORMATS.OPENAI,
+      stream: true,
+      body: { model: "gpt-4o", messages: [] },
+      streamController: makeController(),
+      requestStartTime: Date.now(),
+    });
+
+    const text = await res.response.text();
+    expect(text).toContain("event: response.failed");
+    expect(text).toContain("data: [DONE]");
   });
 });
