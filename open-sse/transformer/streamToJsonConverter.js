@@ -3,6 +3,65 @@
  * Converts Responses API SSE stream to single JSON response
  * Used when client requests non-streaming but provider forces streaming (e.g., Codex)
  */
+import { STREAM_FIRST_CHUNK_TIMEOUT_MS, STREAM_STALL_TIMEOUT_MS } from "../config/runtimeConfig.js";
+
+/**
+ * Read an entire SSE stream with bounded first-chunk and idle deadlines.
+ * Timeout/abort cancel the reader (releasing the lock) and surface a typed
+ * error instead of hanging forever on a silent or stalled upstream.
+ * @returns {Promise<string>} full decoded text
+ */
+export async function readAllWithDeadlines(stream, { signal, firstChunkTimeoutMs = STREAM_FIRST_CHUNK_TIMEOUT_MS, idleTimeoutMs = STREAM_STALL_TIMEOUT_MS } = {}) {
+  if (!stream || typeof stream.getReader !== "function") return "";
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let out = "";
+  let timedOut = false;
+  let timer = null;
+  const armTimer = (ms) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timedOut = true;
+      reader.cancel().catch(() => {});
+    }, ms);
+  };
+  const onAbort = () => {
+    reader.cancel().catch(() => {});
+  };
+  if (signal?.aborted) {
+    try { reader.cancel().catch(() => {}); } catch { /* already closed */ }
+    if (signal.reason instanceof Error) throw signal.reason;
+    const err = new Error("Request aborted");
+    err.name = "AbortError";
+    throw err;
+  }
+  if (signal) signal.addEventListener("abort", onAbort, { once: true });
+  armTimer(firstChunkTimeoutMs);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armTimer(idleTimeoutMs);
+      out += decoder.decode(value, { stream: true });
+    }
+    if (signal?.aborted) {
+      if (signal.reason instanceof Error) throw signal.reason;
+      const err = new Error("Request aborted");
+      err.name = "AbortError";
+      throw err;
+    }
+    if (timedOut) {
+      const err = new Error("Upstream stream timed out");
+      err.code = "UPSTREAM_TIMEOUT";
+      throw err;
+    }
+    return out + decoder.decode();
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onAbort);
+    try { reader.releaseLock(); } catch { /* lock already gone */ }
+  }
+}
 
 /**
  * Process a single SSE message and update state accordingly.
@@ -52,17 +111,15 @@ const EMPTY_RESPONSE = { input_tokens: 0, output_tokens: 0, total_tokens: 0 };
 /**
  * Convert Responses API SSE stream to single JSON response
  * @param {ReadableStream} stream - SSE stream from provider
+ * @param {object} [options] - { signal, firstChunkTimeoutMs, idleTimeoutMs }
  * @returns {Promise<Object>} Final JSON response in Responses API format
  */
-export async function convertResponsesStreamToJson(stream) {
+export async function convertResponsesStreamToJson(stream, options = {}) {
   if (!stream || typeof stream.getReader !== "function") {
     return { id: `resp_${Date.now()}`, object: "response", created_at: Math.floor(Date.now() / 1000), status: "failed", output: [], usage: { ...EMPTY_RESPONSE } };
   }
 
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
+  const text = await readAllWithDeadlines(stream, options);
   const state = {
     responseId: "",
     created: Math.floor(Date.now() / 1000),
@@ -72,26 +129,21 @@ export async function convertResponsesStreamToJson(stream) {
     items: new Map()
   };
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+  const messages = text.split("\n\n");
+  const last = messages.pop();
+  for (const msg of messages) {
+    processSSEMessage(msg, state);
+  }
+  if (last && last.trim()) {
+    processSSEMessage(last, state);
+  }
 
-      buffer += decoder.decode(value, { stream: true });
-      const messages = buffer.split("\n\n");
-      buffer = messages.pop() || "";
-
-      for (const msg of messages) {
-        processSSEMessage(msg, state);
-      }
-    }
-
-    // Flush remaining buffer (last event may not end with \n\n)
-    if (buffer.trim()) {
-      processSSEMessage(buffer, state);
-    }
-  } finally {
-    reader.releaseLock();
+  // EOF without a terminal event: the upstream died mid-response. Never
+  // report a truncated stream as a success payload.
+  if (state.status === "in_progress") {
+    const err = new Error("Upstream stream ended before a terminal event");
+    err.code = "STREAM_TRUNCATED";
+    throw err;
   }
 
   // Build output array from accumulated items (ordered by index)

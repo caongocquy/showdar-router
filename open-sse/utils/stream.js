@@ -1,4 +1,4 @@
-import { translateResponse, initState } from "../translator/index.js";
+import { translateResponse, initState, dropInjectedDecoyCalls } from "../translator/index.js";
 import { FORMATS } from "../translator/formats.js";
 import { trackPendingRequest, appendRequestLog } from "@/lib/usageDb.js";
 import { extractUsage, mergeUsage, hasValidUsage, estimateUsage, logUsage, addBufferToUsage, filterUsageForFormat, COLORS } from "./usageTracking.js";
@@ -95,7 +95,7 @@ export function createSSEStream(options = {}) {
   const decoder = new TextDecoder("utf-8", { fatal: false });
 
   const state = mode === STREAM_MODE.TRANSLATE
-    ? { ...initState(sourceFormat), provider, toolNameMap, customToolNames: new Set(customToolNames || []), model, sessionId: credentials?._clientSessionId || null }
+    ? { ...initState(sourceFormat), provider, toolNameMap, customToolNames: new Set(customToolNames || []), model, sessionId: credentials?._clientSessionId || null, opencodeDecoyNames: new Set(credentials?._opencodeDecoyNames || []) }
     : null;
 
   let totalContentLength = 0;
@@ -113,6 +113,16 @@ export function createSSEStream(options = {}) {
   let openAIResponsesDoneSent = false;
   let streamDoneSent = false;  // track duplicate [DONE] across transform + flush
   let finalized = false;
+
+  // opencode cloak decoys in same-format passthrough: filter tool calls that
+  // name an injected decoy function so clients never see tools they did not
+  // register. Held `event:` lines keep Responses framing when the paired data
+  // line is dropped. Null for every other provider (zero behavior change).
+  const decoyState = mode === STREAM_MODE.PASSTHROUGH
+    && Array.isArray(credentials?._opencodeDecoyNames) && credentials._opencodeDecoyNames.length > 0
+    ? { opencodeDecoyNames: new Set(credentials._opencodeDecoyNames), opencodeDecoyItemIds: new Set(), opencodeDecoyCallIndexes: new Set() }
+    : null;
+  let heldEventLine = null;
 
   // One authoritative terminal guard per stream, shared with the disconnect/
   // error wrapper through the transformStream property (pipeWithDisconnect):
@@ -206,6 +216,12 @@ export function createSSEStream(options = {}) {
 
         // Passthrough mode: normalize and forward
         if (mode === STREAM_MODE.PASSTHROUGH) {
+          // With decoy filtering active, hold event: lines until their data
+          // line survives — a dropped data line must not leave an orphan prefix.
+          if (decoyState && trimmed.startsWith("event:")) {
+            heldEventLine = line + "\n";
+            continue;
+          }
           let output;
           let injectedUsage = false;
           let responsesTerminal = false;
@@ -230,6 +246,14 @@ export function createSSEStream(options = {}) {
 
               // Ensure OpenAI-required fields are present on streaming chunks (Letta compat)
               let fieldsInjected = false;
+              if (decoyState) {
+                decoyState._decoyChanged = false;
+                if (dropInjectedDecoyCalls(parsed, decoyState) === null) {
+                  heldEventLine = null;
+                  continue;
+                }
+                if (decoyState._decoyChanged) fieldsInjected = true;
+              }
               if (parsed.choices !== undefined) {
                 if (!parsed.object) { parsed.object = "chat.completion.chunk"; fieldsInjected = true; }
                 if (!parsed.created) { parsed.created = Math.floor(Date.now() / 1000); fieldsInjected = true; }
@@ -264,6 +288,7 @@ export function createSSEStream(options = {}) {
               }
 
               if (!hasValuableContent(parsed, FORMATS.OPENAI)) {
+                heldEventLine = null;
                 continue;
               }
 
@@ -306,6 +331,7 @@ export function createSSEStream(options = {}) {
               // Skip non-JSON data lines silently — don't forward garbage to clients.
               // Upstream providers sometimes return plain-text errors (HTML, rate-limit
               // messages) in the SSE stream that would break downstream JSON decoders.
+              heldEventLine = null;
               continue;
             }
           }
@@ -318,6 +344,12 @@ export function createSSEStream(options = {}) {
             }
           }
 
+          if (heldEventLine) {
+            const heldEvent = heldEventLine;
+            heldEventLine = null;
+            reqLogger?.appendConvertedChunk?.(heldEvent);
+            controller.enqueue(sharedEncoder.encode(heldEvent));
+          }
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           // Responses clients (codex CLI) close on response.completed instead of [DONE]
@@ -434,6 +466,12 @@ export function createSSEStream(options = {}) {
 
         // Responses same-format passthrough: re-emit with original event framing
         if (keepsOpenAIResponsesFormat && openAIResponsesEventName) {
+          // Strip injected decoy tool calls — this branch bypasses translateResponse.
+          const filtered = dropInjectedDecoyCalls(parsed, state);
+          if (filtered === null) {
+            currentOpenAIResponsesEvent = null;
+            continue;
+          }
           // Drop duplicate terminal events after the first has gone out
           if (terminalBefore && isOpenAIResponsesTerminalEvent(openAIResponsesEventName, parsed)) {
             currentOpenAIResponsesEvent = null;
@@ -532,6 +570,12 @@ export function createSSEStream(options = {}) {
         if (remaining) buffer += remaining;
 
         if (mode === STREAM_MODE.PASSTHROUGH) {
+          if (heldEventLine) {
+            const heldEvent = heldEventLine;
+            heldEventLine = null;
+            reqLogger?.appendConvertedChunk?.(heldEvent);
+            controller.enqueue(sharedEncoder.encode(heldEvent));
+          }
           if (buffer) {
             let output = buffer;
             if (buffer.startsWith("data:") && !buffer.startsWith("data: ")) {
@@ -692,7 +736,7 @@ export function createSSETransformStreamWithLogger(targetFormat, sourceFormat, p
   });
 }
 
-export function createPassthroughStreamWithLogger(provider = null, reqLogger = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null) {
+export function createPassthroughStreamWithLogger(provider = null, reqLogger = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null, credentials = null) {
   return createSSEStream({
     mode: STREAM_MODE.PASSTHROUGH,
     provider,
@@ -701,6 +745,7 @@ export function createPassthroughStreamWithLogger(provider = null, reqLogger = n
     connectionId,
     body,
     onStreamComplete,
-    apiKey
+    apiKey,
+    credentials
   });
 }

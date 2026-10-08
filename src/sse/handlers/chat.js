@@ -49,6 +49,11 @@ export async function handleChat(request, clientRawRequest = null) {
       headers: Object.fromEntries(request.headers.entries())
     };
   }
+  // One logical-request id per client request, minted once so the
+  // account-fallback loop reuses it across every internal retry.
+  if (!clientRawRequest.logicalRequestId) {
+    clientRawRequest.logicalRequestId = globalThis.crypto.randomUUID();
+  }
   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
   // no combo, alias or provider/model pair, so it must not reach resolution.
   // The capability travels in the anthropic-beta header, forwarded as-is.
@@ -162,7 +167,7 @@ export async function handleChat(request, clientRawRequest = null) {
     });
   }
 
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, request?.signal || null);
 }
 
 /**

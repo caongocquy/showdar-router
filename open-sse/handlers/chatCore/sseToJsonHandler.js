@@ -1,4 +1,4 @@
-import { convertResponsesStreamToJson } from "../../transformer/streamToJsonConverter.js";
+import { convertResponsesStreamToJson, readAllWithDeadlines } from "../../transformer/streamToJsonConverter.js";
 import { createErrorResult } from "../../utils/error.js";
 import { HTTP_STATUS } from "../../config/runtimeConfig.js";
 import { FORMATS } from "../../translator/formats.js";
@@ -9,6 +9,22 @@ import { ROLE, RESPONSES_ITEM } from "../../translator/schema/index.js";
 // Responses-API providers (e.g. codex) may emit SSE without content-type + use Responses output shape
 const isResponsesProvider = (p) => PROVIDERS[p]?.format === FORMATS.OPENAI_RESPONSES;
 import { saveRequestDetail, appendRequestLog } from "@/lib/usageDb.js";
+
+// Map bounded-read failures (deadline/abort/truncation) to their HTTP result.
+// Checked before console.error so expected control-flow never logs as a crash.
+function deadlineErrorResult(err) {
+  if (err?.name === "AbortError") return createErrorResult(499, "Request aborted");
+  if (err?.code === "UPSTREAM_TIMEOUT") return createErrorResult(HTTP_STATUS.GATEWAY_TIMEOUT, "Upstream stream timed out");
+  if (err?.code === "STREAM_TRUNCATED") return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Upstream stream truncated");
+  return null;
+}
+
+// Drop injected decoy tool calls (e.g. opencode's bash/read cloaks) from an
+// assembled Responses output array, gated on the executor's stashed names.
+function stripDecoyFunctionCalls(output, decoyNames) {
+  if (!Array.isArray(output) || !decoyNames?.length) return output;
+  return output.filter((item) => !(item?.type === "function_call" && decoyNames.includes(item.name)));
+}
 
 function textFromResponsesMessageItem(item) {
   if (!item?.content || !Array.isArray(item.content)) return "";
@@ -179,7 +195,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
  * Handle case: provider forced streaming but client wants JSON.
  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
  */
-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, trackDone, appendLog, reqTag, log }) {
+export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, trackDone, appendLog, reqTag, log, signal = null, timeoutOptions = null, credentials = null }) {
   const contentType = providerResponse.headers.get("content-type") || "";
   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
   if (!isSSE) return null; // not handled here
@@ -199,7 +215,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
   const isCodexResponsesApi = isResponsesProvider(provider) || targetFormat === FORMATS.OPENAI_RESPONSES;
   if (isCodexResponsesApi) {
     try {
-      const jsonResponse = await convertResponsesStreamToJson(providerResponse.body);
+      const jsonResponse = await convertResponsesStreamToJson(providerResponse.body, { signal, ...(timeoutOptions || {}) });
+      jsonResponse.output = stripDecoyFunctionCalls(jsonResponse.output, credentials?._opencodeDecoyNames);
       if (onRequestSuccess) await onRequestSuccess();
 
       const usage = jsonResponse.usage || {};
@@ -283,6 +300,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
       return { success: true, response: new Response(JSON.stringify(finalResp), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
     } catch (err) {
+      const mapped = deadlineErrorResult(err);
+      if (mapped) return mapped;
       console.error("[ChatCore] Responses API SSE→JSON failed:", err);
       return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");
     }
@@ -290,7 +309,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
   // Standard Chat Completions SSE path
   try {
-    const sseText = await providerResponse.text();
+    const sseText = await readAllWithDeadlines(providerResponse.body, { signal, ...(timeoutOptions || {}) });
     const parsed = parseSSEToOpenAIResponse(sseText, model);
     if (!parsed) return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Invalid SSE response for non-streaming request");
     if (parsed.error) {
@@ -298,6 +317,15 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         HTTP_STATUS.BAD_GATEWAY,
         parsed.error.message || "Upstream SSE stream failed"
       );
+    }
+
+    // Drop injected decoy tool calls before the client ever sees them.
+    const decoyNames = credentials?._opencodeDecoyNames;
+    const parsedMessage = parsed?.choices?.[0]?.message;
+    if (decoyNames?.length && Array.isArray(parsedMessage?.tool_calls)) {
+      const kept = parsedMessage.tool_calls.filter((tc) => !decoyNames.includes(tc.function?.name));
+      if (kept.length) parsedMessage.tool_calls = kept;
+      else delete parsedMessage.tool_calls;
     }
 
     if (onRequestSuccess) await onRequestSuccess();
@@ -353,6 +381,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
     return { success: true, response: new Response(JSON.stringify(finalBody), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
   } catch (err) {
+    const mapped = deadlineErrorResult(err);
+    if (mapped) return mapped;
     console.error("[ChatCore] Chat Completions SSE→JSON failed:", err);
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");
   }

@@ -41,15 +41,18 @@ describe("opencode phase A correctness", () => {
     expect(ex).not.toHaveProperty("_currentSessionId");
   });
 
-  it("derives deterministic request ids stable across retries", () => {
+  it("derives deterministic request ids per logical request", () => {
     const ex = new OpenCodeExecutor();
-    const creds = (text) => ({ body: { messages: [{ role: "user", content: text }] }, credentials: { connectionId: "r1" } });
-    const a = ex.prepareRequestCredentials(creds("hello"))._opencodeRequest;
-    const b = ex.prepareRequestCredentials(creds("hello"))._opencodeRequest;
-    const c = ex.prepareRequestCredentials(creds("different turn"))._opencodeRequest;
-    expect(a).toBe(b);
-    expect(a).not.toBe(c);
-    expect(a).toMatch(/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/);
+    const mk = (text, logicalRequestId) => ex.prepareRequestCredentials({ body: { messages: [{ role: "user", content: text }] }, credentials: { connectionId: "r1" }, logicalRequestId })._opencodeRequest;
+    // Same logical request (internal retry) → same id, body text irrelevant.
+    expect(mk("hello", "urn:lr:1")).toBe(mk("hello again", "urn:lr:1"));
+    // Distinct logical requests → distinct ids, even with identical bodies.
+    const first = mk("hello", "urn:lr:1");
+    expect(first).not.toBe(mk("hello", "urn:lr:2"));
+    expect(first).toMatch(/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/);
+    // Missing logical id → fresh id per attempt.
+    expect(mk("hello")).not.toBe(mk("hello"));
+    // Explicit downstream x-opencode-request header still wins.
     const native = ex.prepareRequestCredentials({ body: { messages: [] }, credentials: { rawHeaders: { "x-opencode-request": VALID_REQUEST } } })._opencodeRequest;
     expect(native).toBe(VALID_REQUEST);
   });

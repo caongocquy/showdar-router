@@ -198,13 +198,22 @@ function assistantTextSessionId(scope, body) {
 }
 
 /**
- * Resolve a conversation-stable session id (generalizes Codex resolveCacheSessionId).
- * Priority: client session → accumulated-assistant-text hash → workspaceId → per-connection.
+ * Resolve a session id with a stable, explicit-first identity precedence
+ * (generalizes Codex resolveCacheSessionId).
+ * Priority: client session → workspaceId → per-connection stable session →
+ * accumulated-assistant-text hash (only when no connection identity exists).
+ *
+ * The connection-scoped session deliberately outranks the assistant-text
+ * seed: assistant history is absent on turn 1 and present from turn 2 on, so
+ * letting the auto-generated history seed win would flip the upstream session
+ * mid-conversation. Explicit conversation ids (above) split conversations;
+ * without one, all conversations on a connection share one account-scoped,
+ * TTL-bounded session — never infer conversation identity from prompt text.
  *
  * @param {object} opts
  * @param {object} [opts.headers] - Raw client request headers (lowercase keys)
  * @param {object} [opts.body] - Parsed request body
- * @param {string} [opts.connectionId] - Connection identifier (fallback scope)
+ * @param {string} [opts.connectionId] - Connection identifier (stable fallback scope)
  * @param {string} [opts.workspaceId] - Provider workspace id (account-wide fallback)
  * @param {string} [opts.scope] - Provider scope to isolate cache keys across providers
  * @returns {{sessionId: string, ephemeral: boolean}} A session id plus whether it is one-shot
@@ -212,11 +221,14 @@ function assistantTextSessionId(scope, body) {
 export function resolveSessionIdentity({ headers, body, connectionId, workspaceId, scope = "" } = {}) {
     const client = extractClientSessionId(headers, body, scope);
     if (client) return { sessionId: client, ephemeral: false };
-    const fromAssistant = scope === "kiro" ? null : assistantTextSessionId(`${scope}:${connectionId || ""}`, body);
-    if (fromAssistant) return { sessionId: fromAssistant, ephemeral: false };
     const ws = normalizeSessionId(workspaceId);
     if (ws) return { sessionId: ws, ephemeral: false };
     if (scope === "kiro") return { sessionId: generateBinaryStyleId(), ephemeral: true };
+    if (connectionId) return { sessionId: deriveSessionId(connectionId), ephemeral: false };
+    // Connectionless caller: history text is the only remaining stable anchor
+    // (best effort, prompt-derived — never an identity guarantee).
+    const fromAssistant = scope === "kiro" ? null : assistantTextSessionId(`${scope}:${connectionId || ""}`, body);
+    if (fromAssistant) return { sessionId: fromAssistant, ephemeral: false };
     return { sessionId: deriveSessionId(connectionId), ephemeral: false };
 }
 

@@ -86,6 +86,20 @@ function cloakOpencodeTools(body, isResponses) {
   }
 }
 
+// Names of the decoys cloakOpencodeTools() would inject for this body —
+// computed pre-cloak (same predicate as cloak) so the response path can drop
+// any upstream tool call that uses one of them.
+function injectedOpencodeDecoyNames(body, isResponses) {
+  if (!body || typeof body !== "object") return [];
+  const decoys = isResponses
+    ? OPENCODE_DECOY_RESPONSES_TOOLS.map((t) => t.name)
+    : OPENCODE_DECOY_CHAT_TOOLS.map((t) => t.function.name);
+  const tools = Array.isArray(body.tools) ? body.tools : [];
+  if (!isResponses && tools.length === 0) return decoys;
+  const names = new Set(tools.map((t) => t?.name || t?.function?.name));
+  return decoys.filter((n) => !names.has(n));
+}
+
 function hasValidOpencodeVersion(ua) {
   const m = String(ua || "").match(/opencode\/(\d+)\.(\d+)(?:\.(\d+))?/i);
   if (!m) return false;
@@ -215,41 +229,24 @@ export function stableSessionId(credentials) {
   return sessionId;
 }
 
-function lastUserText(body) {
-  try {
-    if (!body || typeof body !== "object") return "";
-    const arr = Array.isArray(body.messages)
-      ? body.messages
-      : Array.isArray(body.input)
-        ? body.input
-        : null;
-    if (!arr) return typeof body.input === "string" ? body.input.slice(-600) : "";
-    for (let i = arr.length - 1; i >= 0; i--) {
-      const msg = arr[i];
-      if (!msg) continue;
-      if (msg.role && msg.role !== "user") continue;
-      const content = msg.content;
-      if (typeof content === "string" && content.trim()) return content.trim().slice(-600);
-      if (Array.isArray(content)) {
-        const text = content
-          .map((part) => (typeof part === "string" ? part : part?.text || part?.input_text || ""))
-          .join(" ")
-          .trim();
-        if (text) return text.slice(-600);
-      }
-    }
-  } catch {
-    return "";
-  }
-  return "";
+function normalizeRequestId(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || normalized.length > MAX_SESSION_LENGTH) return null;
+  return OPENCODE_REQUEST_RE.test(normalized) ? normalized : null;
 }
 
-export function deriveRequestId(sessionId, body) {
-  const text = lastUserText(body);
-  if (!text) return generateRequestId();
+// Deterministic msg_ id for a logical request: retries of the same logical
+// request (same id + same model) always produce the same upstream request id,
+// while combo legs targeting different models stay distinct requests.
+export function canonicalRequestId(logicalRequestId, scope = "") {
+  if (typeof logicalRequestId !== "string") return null;
+  const trimmed = logicalRequestId.trim();
+  if (!trimmed) return null;
+  if (OPENCODE_REQUEST_RE.test(trimmed)) return trimmed;
   const digest = crypto
     .createHash("sha256")
-    .update(`opencode-req\0${sessionId || ""}\0${text}`)
+    .update(`opencode-req\0${trimmed}\0${scope || ""}`)
     .digest();
   const timeHex = digest.subarray(0, 6).toString("hex");
   let randomPart = "";
@@ -258,13 +255,6 @@ export function deriveRequestId(sessionId, body) {
   }
   const id = `msg_${timeHex}${randomPart}`;
   return OPENCODE_REQUEST_RE.test(id) ? id : generateRequestId();
-}
-
-function normalizeRequestId(value) {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  if (!normalized || normalized.length > MAX_SESSION_LENGTH) return null;
-  return OPENCODE_REQUEST_RE.test(normalized) ? normalized : null;
 }
 
 function bodyHasSessionHints(body) {
@@ -343,7 +333,7 @@ function resolveOpencodeSession(body, credentials, providerSessionId, clientTool
   return stableSessionId(credentials);
 }
 
-function resolveOpencodeRequestId(body, credentials, sessionId) {
+function resolveOpencodeRequestId(credentials, logicalRequestId, model) {
   const raw = credentials?.rawHeaders || {};
   for (const [key, value] of Object.entries(raw)) {
     if (key.toLowerCase() === REQUEST_HEADER) {
@@ -352,7 +342,7 @@ function resolveOpencodeRequestId(body, credentials, sessionId) {
       break;
     }
   }
-  return deriveRequestId(sessionId, body);
+  return canonicalRequestId(logicalRequestId, baseModelId(model)) || generateRequestId();
 }
 
 function normalizeResponsesTools(body) {
@@ -436,14 +426,20 @@ export class OpenCodeExecutor extends BaseExecutor {
     super("opencode", PROVIDERS.opencode);
   }
 
-  prepareRequestCredentials({ body, credentials, providerSessionId, clientTool } = {}) {
+  prepareRequestCredentials({ body, credentials, providerSessionId, clientTool, logicalRequestId, model } = {}) {
     const sourceCredentials = credentials || {};
     const session = resolveOpencodeSession(body, sourceCredentials, providerSessionId, clientTool);
+
+    // Stash injected-decoy names for the response path (stream.js state +
+    // forced-SSE JSON), on the shared credentials object chatCore passes down.
+    if (body && typeof body === "object") {
+      sourceCredentials._opencodeDecoyNames = injectedOpencodeDecoyNames(body, isResponsesModel(model || body.model));
+    }
 
     return {
       ...sourceCredentials,
       [SESSION_FIELD]: session,
-      [REQ_FIELD]: resolveOpencodeRequestId(body, sourceCredentials, session),
+      [REQ_FIELD]: resolveOpencodeRequestId(sourceCredentials, logicalRequestId, model || body.model),
     };
   }
 
@@ -471,9 +467,7 @@ export class OpenCodeExecutor extends BaseExecutor {
       body.store = false;
       normalizeResponsesTools(body);
       sanitizeResponsesItems(body);
-      if (!Array.isArray(body.tools) || body.tools.length === 0) {
-        cloakOpencodeTools(body, true);
-      }
+      cloakOpencodeTools(body, true);
     } else if (body && typeof body === "object") {
       cloakOpencodeTools(body, false);
     }
