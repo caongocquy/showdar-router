@@ -34,6 +34,14 @@ function processSSEMessage(msg, state) {
       state.usage.output_tokens = parsed.response.usage.output_tokens || 0;
       state.usage.total_tokens = parsed.response.usage.total_tokens || 0;
     }
+  } else if (eventType === "response.incomplete") {
+    state.status = "incomplete";
+    state.incompleteDetails = parsed.response?.incomplete_details ?? null;
+    if (parsed.response?.usage) {
+      state.usage.input_tokens = parsed.response.usage.input_tokens || 0;
+      state.usage.output_tokens = parsed.response.usage.output_tokens || 0;
+      state.usage.total_tokens = parsed.response.usage.total_tokens || 0;
+    }
   } else if (eventType === "response.failed") {
     state.status = "failed";
   }
@@ -59,6 +67,7 @@ export async function convertResponsesStreamToJson(stream) {
     responseId: "",
     created: Math.floor(Date.now() / 1000),
     status: "in_progress",
+    incompleteDetails: null,
     usage: { ...EMPTY_RESPONSE },
     items: new Map()
   };
@@ -97,6 +106,7 @@ export async function convertResponsesStreamToJson(stream) {
     object: "response",
     created_at: state.created,
     status: state.status || "completed",
+    ...(state.status === "incomplete" ? { incomplete_details: state.incompleteDetails } : {}),
     output,
     usage: state.usage
   };

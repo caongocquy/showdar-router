@@ -22,6 +22,41 @@ const STREAM_MODE = {
   PASSTHROUGH: "passthrough" // No translation, normalize output, extract usage
 };
 
+// Final usage for a Responses terminal payload that lacks provider usage:
+// real accumulated usage first, estimation as last resort (marked estimated).
+// Never called when the payload already carries valid usage — real wins.
+function finalResponsesUsage(state, body, contentLength) {
+  if (!hasValidUsage(state.usage)) {
+    state.usage = estimateUsage(body, contentLength, FORMATS.OPENAI);
+  }
+  const u = state.usage;
+  if (!u || typeof u !== "object") return null;
+  return {
+    input_tokens: u.prompt_tokens ?? u.input_tokens ?? 0,
+    output_tokens: u.completion_tokens ?? u.output_tokens ?? 0,
+    ...(u.estimated ? { estimated: true } : {}),
+  };
+}
+
+// True for Responses terminal events that must carry final usage.
+// Translators emit { event, data }; raw chunks carry .type — accept both.
+function isResponsesUsageTerminal(item) {
+  const type = item?.event ?? item?.type;
+  return type === "response.completed" || type === "response.done" || type === "response.incomplete";
+}
+
+// Inject final usage into a Responses terminal event lacking provider usage.
+function injectTerminalUsage(item, state, body, contentLength) {
+  if (!isResponsesUsageTerminal(item)) return;
+  const payload = item.data ?? item;
+  if (!payload?.response || hasValidUsage(payload.response.usage)) return;
+  const usage = finalResponsesUsage(state, body, contentLength);
+  if (!usage) return;
+  const next = { ...payload, response: { ...payload.response, usage } };
+  if (item.data) item.data = next;
+  else item.response = next.response;
+}
+
 /**
  * Create unified SSE transform stream
  * @param {object} options
@@ -91,6 +126,10 @@ export function createSSEStream(options = {}) {
 
     if (!hasValidUsage(finalUsage) && totalContentLength > 0) {
       finalUsage = estimateUsage(body, totalContentLength, isPassthrough ? FORMATS.OPENAI : sourceFormat);
+      if (finalUsage && typeof finalUsage === "object") {
+        // Mark as estimated only when real provider usage is genuinely unavailable
+        finalUsage.estimated = true;
+      }
       if (isPassthrough) usage = finalUsage; else state.usage = finalUsage;
     }
 
@@ -261,6 +300,9 @@ export function createSSEStream(options = {}) {
           ? getOpenAIResponsesEventName(currentOpenAIResponsesEvent, parsed)
           : null;
 
+        // Terminal state BEFORE this event: first terminal is re-emitted,
+        // later duplicate terminals get dropped (wire-level dedup).
+        const terminalBefore = openAIResponsesTerminalSeen;
         if (isOpenAIResponsesStream && isOpenAIResponsesTerminalEvent(openAIResponsesEventName, parsed)) {
           openAIResponsesTerminalSeen = true;
         }
@@ -332,7 +374,23 @@ export function createSSEStream(options = {}) {
 
         // Responses same-format passthrough: re-emit with original event framing
         if (keepsOpenAIResponsesFormat && openAIResponsesEventName) {
-          const output = formatSSE({ event: openAIResponsesEventName, data: parsed }, sourceFormat);
+          // Drop duplicate terminal events after the first has gone out
+          if (terminalBefore && isOpenAIResponsesTerminalEvent(openAIResponsesEventName, parsed)) {
+            currentOpenAIResponsesEvent = null;
+            continue;
+          }
+          let outputData = parsed;
+          // At genuine EOF (response.completed/done/incomplete) with no provider
+          // usage in the payload: inject final usage as last resort. Real payload
+          // usage is never overwritten; estimates are marked estimated.
+          const isFinalUsageEvent = openAIResponsesEventName === "response.completed" || openAIResponsesEventName === "response.done" || openAIResponsesEventName === "response.incomplete";
+          if (isFinalUsageEvent && !hasValidUsage(parsed.response?.usage)) {
+            const usage = finalResponsesUsage(state, body, totalContentLength);
+            if (usage) {
+              outputData = { ...parsed, response: { ...parsed.response, usage } };
+            }
+          }
+          const output = formatSSE({ event: openAIResponsesEventName, data: outputData }, sourceFormat);
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           currentOpenAIResponsesEvent = null;
@@ -375,6 +433,9 @@ export function createSSEStream(options = {}) {
               const buffered = addBufferToUsage(state.usage);
               item.usage = filterUsageForFormat(buffered, sourceFormat);
             }
+
+            // Terminal Responses events must carry final usage (real or marked estimate)
+            injectTerminalUsage(item, state, body, totalContentLength);
 
             const output = formatSSE(item, sourceFormat);
             if (item.choices?.[0]?.finish_reason) finishReason = item.choices[0].finish_reason;
@@ -469,6 +530,7 @@ export function createSSEStream(options = {}) {
         if (flushed?.length > 0) {
           for (const item of flushed) {
             if (item === null || item === undefined) continue;
+            injectTerminalUsage(item, state, body, totalContentLength);
             const output = formatSSE(item, sourceFormat);
             reqLogger?.appendConvertedChunk?.(output);
             controller.enqueue(sharedEncoder.encode(output));

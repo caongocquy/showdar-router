@@ -1,6 +1,6 @@
 // Concern #6: finish_reason / stop_reason mapping.
 // One entry per direction; switch by special format, default handles common providers.
-import { OPENAI_FINISH, CLAUDE_STOP, GEMINI_FINISH } from "../schema/finishReasons.js";
+import { OPENAI_FINISH, CLAUDE_STOP, GEMINI_FINISH, RESPONSES_INCOMPLETE } from "../schema/finishReasons.js";
 
 // upstream finish/stop reason → OpenAI finish_reason
 export function toOpenAIFinish(reason, format) {
@@ -44,6 +44,27 @@ export function toOpenAIFinish(reason, format) {
       }
     default:
       return reason || OPENAI_FINISH.STOP;
+  }
+}
+
+// OpenAI finish_reason → Responses incomplete_details.reason.
+// null means the response completed normally (status stays "completed").
+export function toResponsesIncompleteReason(reason) {
+  switch (reason) {
+    case OPENAI_FINISH.LENGTH: return RESPONSES_INCOMPLETE.MAX_OUTPUT_TOKENS;
+    case OPENAI_FINISH.CONTENT_FILTER: return RESPONSES_INCOMPLETE.CONTENT_FILTER;
+    default: return null;
+  }
+}
+
+// Responses terminal response (status/incomplete_details) → OpenAI finish_reason.
+// null when the terminal state carries no truncation/filter signal.
+export function fromResponsesTerminal(response) {
+  if (response?.status !== "incomplete") return null;
+  switch (response.incomplete_details?.reason) {
+    case RESPONSES_INCOMPLETE.CONTENT_FILTER: return OPENAI_FINISH.CONTENT_FILTER;
+    // Incomplete without a known reason still means output was cut short.
+    default: return OPENAI_FINISH.LENGTH;
   }
 }
 
