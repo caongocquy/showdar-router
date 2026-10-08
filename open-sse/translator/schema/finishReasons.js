@@ -25,3 +25,9 @@ export const GEMINI_FINISH = {
   BLOCKLIST: "BLOCKLIST",
   PROHIBITED_CONTENT: "PROHIBITED_CONTENT",
 };
+
+// OpenAI Responses API incomplete_details.reason values.
+export const RESPONSES_INCOMPLETE = {
+  MAX_OUTPUT_TOKENS: "max_output_tokens",
+  CONTENT_FILTER: "content_filter",
+};
