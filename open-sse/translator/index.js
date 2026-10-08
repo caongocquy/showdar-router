@@ -265,7 +265,11 @@ export function initState(sourceFormat) {
       funcArgsDone: {},
       funcItemDone: {},
       customToolNames: new Set(),
-      terminalSent: false
+      terminalSent: false,
+      // Set by the stream layer when a tool call is still mid-arguments at
+      // clean EOF: the flush-time terminal (and tool item close) must not
+      // report the truncated call as a successful completion.
+      suppressTerminal: false
     };
   }
 

@@ -3,7 +3,7 @@ import { FORMATS } from "../translator/formats.js";
 import { trackPendingRequest, appendRequestLog } from "@/lib/usageDb.js";
 import { extractUsage, mergeUsage, hasValidUsage, estimateUsage, logUsage, addBufferToUsage, filterUsageForFormat, COLORS } from "./usageTracking.js";
 import { parseSSELine, hasValuableContent, fixInvalidId, formatSSE } from "./streamHelpers.js";
-import { getOpenAIResponsesEventName, isOpenAIResponsesTerminalEvent, formatIncompleteOpenAIResponsesStreamFailure } from "./responsesStreamHelpers.js";
+import { getOpenAIResponsesEventName, isOpenAIResponsesTerminalEvent, formatIncompleteOpenAIResponsesStreamFailure, createTerminalGuard } from "./responsesStreamHelpers.js";
 import { dbg, isDebugEnabled } from "./debugLog.js";
 
 import { SSE_DONE, SSE_HEADERS, SSE_HEADERS_NO_BUFFER } from "./sseConstants.js";
@@ -114,6 +114,16 @@ export function createSSEStream(options = {}) {
   let streamDoneSent = false;  // track duplicate [DONE] across transform + flush
   let finalized = false;
 
+  // One authoritative terminal guard per stream, shared with the disconnect/
+  // error wrapper through the transformStream property (pipeWithDisconnect):
+  // once a terminal event has actually been enqueued, a later transport error
+  // must never append a second one.
+  const terminalGuard = createTerminalGuard();
+  // A Responses-client usage terminal awaiting a trailing usage chunk or EOF.
+  // Only the terminal event is ever held — content chunks stream through
+  // immediately, so first-token latency and backpressure are unaffected.
+  let heldTerminal = null;
+
   // Usage/logging tail, callable from transform() as well as flush(): a client that
   // closes right after the terminal event cancels the reader, and flush() never runs.
   const finalizeStream = () => {
@@ -147,7 +157,29 @@ export function createSSEStream(options = {}) {
     }
   };
 
-  return new TransformStream({
+  // A Responses-client terminal event that still lacks usable usage: hold it
+  // (never content) so a trailing include_usage chunk can supply the real
+  // numbers instead of a premature estimate. Emitted on one of three triggers:
+  // real usage arrives, the [DONE] sentinel, or genuine EOF (flush).
+  const shouldHoldTerminal = (item) =>
+    isResponsesUsageTerminal(item) &&
+    !hasValidUsage((item.data ?? item).response?.usage) &&
+    !hasValidUsage(state?.usage);
+
+  const emitHeldTerminal = (controller) => {
+    if (!heldTerminal) return;
+    const item = heldTerminal;
+    heldTerminal = null;
+    injectTerminalUsage(item, state, body, totalContentLength);
+    const output = formatSSE(item, sourceFormat);
+    reqLogger?.appendConvertedChunk?.(output);
+    controller.enqueue(sharedEncoder.encode(output));
+    sseEmittedCount++;
+    terminalGuard.mark(item.data?.response?.id ?? null);
+    finalizeStream();
+  };
+
+  const transformStream = new TransformStream({
     transform(chunk, controller) {
       if (!ttftAt) ttftAt = Date.now();
       const text = decoder.decode(chunk, { stream: true });
@@ -177,10 +209,20 @@ export function createSSEStream(options = {}) {
           let output;
           let injectedUsage = false;
           let responsesTerminal = false;
+          let terminalId = null;
+          // Upstream [DONE] is forwarded below; remember it so flush() never
+          // appends a second sentinel (no double [DONE]).
+          if (trimmed.startsWith("data:") && trimmed.slice(5).trim() === "[DONE]") {
+            streamDoneSent = true;
+          }
 
           if (trimmed.startsWith("data:") && trimmed.slice(5).trim() !== "[DONE]") {
             try {
               const parsed = JSON.parse(trimmed.slice(5).trim());
+              if (parsed?.response?.id) {
+                terminalId = parsed.response.id;
+                terminalGuard.setResponseId(terminalId);
+              }
 
               const idFixed = fixInvalidId(parsed);
               const parsedFinishReason = parsed.choices?.[0]?.finish_reason;
@@ -280,6 +322,7 @@ export function createSSEStream(options = {}) {
           controller.enqueue(sharedEncoder.encode(output));
           // Responses clients (codex CLI) close on response.completed instead of [DONE]
           if (responsesTerminal) {
+            terminalGuard.mark(terminalId);
             finalizeStream();
             controller.terminate();
             return;
@@ -292,6 +335,9 @@ export function createSSEStream(options = {}) {
 
         const parsed = parseSSELine(trimmed, targetFormat);
         if (!parsed) continue;
+        // Latch the active response identity early (first write wins) so any
+        // synthesized terminal reuses it instead of inventing resp_<timestamp>.
+        if (parsed?.response?.id) terminalGuard.setResponseId(parsed.response.id);
 
         // Responses API same-format passthrough: preserve event framing + track terminal state
         const isOpenAIResponsesStream = targetFormat === FORMATS.OPENAI_RESPONSES;
@@ -310,16 +356,25 @@ export function createSSEStream(options = {}) {
         // For Ollama: done=true is the final chunk with finish_reason/usage, must translate
         // For other formats: done=true is the [DONE] sentinel, skip
         if (parsed && parsed.done && targetFormat !== FORMATS.OLLAMA) {
-          // Synthesize response.failed if the Responses stream never sent a terminal event
-          if (keepsOpenAIResponsesFormat && !openAIResponsesTerminalSeen) {
-            const failedOutput = formatIncompleteOpenAIResponsesStreamFailure();
+          // Release a held usage terminal first (usage is final by now).
+          emitHeldTerminal(controller);
+
+          // Every translated Responses stream must terminate explicitly: if no
+          // terminal went out (no finish_reason arrived), synthesize
+          // response.failed — never a bare EOF — and never a second terminal
+          // when one was already emitted (terminalGuard is authoritative).
+          let synthesizedFailed = false;
+          if (sourceFormat === FORMATS.OPENAI_RESPONSES && !terminalGuard.hasEmitted()) {
+            const failedOutput = formatIncompleteOpenAIResponsesStreamFailure(terminalGuard.getResponseId());
             reqLogger?.appendConvertedChunk?.(failedOutput);
             controller.enqueue(sharedEncoder.encode(failedOutput));
+            terminalGuard.mark(null);
             openAIResponsesTerminalSeen = true;
             sseEmittedCount++;
+            synthesizedFailed = true;
           }
 
-          if (keepsOpenAIResponsesFormat && !streamDoneSent) {
+          if ((keepsOpenAIResponsesFormat || synthesizedFailed) && !streamDoneSent) {
             const doneOutput = "data: [DONE]\n\n";
             reqLogger?.appendConvertedChunk?.(doneOutput);
             controller.enqueue(sharedEncoder.encode(doneOutput));
@@ -370,7 +425,12 @@ export function createSSEStream(options = {}) {
 
         // Extract usage
         const extracted = extractUsage(parsed);
-        if (extracted) state.usage = mergeUsage(state.usage, extracted); // Keep original usage for logging
+        if (extracted) {
+          state.usage = mergeUsage(state.usage, extracted); // Keep original usage for logging
+          // Trailing include_usage chunk arrived: release a held terminal right
+          // away so the real usage reaches the client on the terminal itself.
+          if (heldTerminal && hasValidUsage(state.usage)) emitHeldTerminal(controller);
+        }
 
         // Responses same-format passthrough: re-emit with original event framing
         if (keepsOpenAIResponsesFormat && openAIResponsesEventName) {
@@ -379,24 +439,26 @@ export function createSSEStream(options = {}) {
             currentOpenAIResponsesEvent = null;
             continue;
           }
-          let outputData = parsed;
-          // At genuine EOF (response.completed/done/incomplete) with no provider
-          // usage in the payload: inject final usage as last resort. Real payload
-          // usage is never overwritten; estimates are marked estimated.
-          const isFinalUsageEvent = openAIResponsesEventName === "response.completed" || openAIResponsesEventName === "response.done" || openAIResponsesEventName === "response.incomplete";
-          if (isFinalUsageEvent && !hasValidUsage(parsed.response?.usage)) {
-            const usage = finalResponsesUsage(state, body, totalContentLength);
-            if (usage) {
-              outputData = { ...parsed, response: { ...parsed.response, usage } };
-            }
+          const item = { event: openAIResponsesEventName, data: parsed };
+          // Terminal without usable usage: hold it until trailing usage or EOF
+          // so an estimate can never beat real numbers (see shouldHoldTerminal).
+          if (shouldHoldTerminal(item)) {
+            heldTerminal = item;
+            currentOpenAIResponsesEvent = null;
+            continue;
           }
-          const output = formatSSE({ event: openAIResponsesEventName, data: outputData }, sourceFormat);
+          // Real payload usage is never overwritten; estimates are marked estimated.
+          injectTerminalUsage(item, state, body, totalContentLength);
+          const output = formatSSE(item, sourceFormat);
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           currentOpenAIResponsesEvent = null;
           sseEmittedCount++;
-          // Responses clients (codex) close on response.completed instead of [DONE]
-          if (openAIResponsesTerminalSeen) finalizeStream();
+          // Responses clients (codex) close on the terminal instead of [DONE]
+          if (isOpenAIResponsesTerminalEvent(openAIResponsesEventName, item.data)) {
+            terminalGuard.mark(item.data?.response?.id ?? null);
+            finalizeStream();
+          }
           continue;
         }
 
@@ -405,6 +467,9 @@ export function createSSEStream(options = {}) {
         // Translate: targetFormat -> openai -> sourceFormat
         const translated = translateResponse(targetFormat, sourceFormat, parsed, state);
         if (state.finishReason) finishReason = state.finishReason;
+        // The translator latches the wire response ID on its first emitted event;
+        // reuse it for any later synthesized terminal (never a second identity).
+        if (state.started) terminalGuard.setResponseId(state.responseId);
 
         // Log OpenAI intermediate chunks (if available)
         if (translated?._openaiIntermediate) {
@@ -434,7 +499,13 @@ export function createSSEStream(options = {}) {
               item.usage = filterUsageForFormat(buffered, sourceFormat);
             }
 
-            // Terminal Responses events must carry final usage (real or marked estimate)
+            // Terminal Responses events must carry final usage (real or marked
+            // estimate). A usage terminal lacking usage is held instead so a
+            // trailing include_usage chunk can still supply the real numbers.
+            if (shouldHoldTerminal(item)) {
+              heldTerminal = item;
+              continue;
+            }
             injectTerminalUsage(item, state, body, totalContentLength);
 
             const output = formatSSE(item, sourceFormat);
@@ -442,6 +513,12 @@ export function createSSEStream(options = {}) {
             reqLogger?.appendConvertedChunk?.(output);
             controller.enqueue(sharedEncoder.encode(output));
             sseEmittedCount++;
+            if (sourceFormat === FORMATS.OPENAI_RESPONSES && isOpenAIResponsesTerminalEvent(item.event, item.data)) {
+              terminalGuard.mark(item.data?.response?.id ?? null);
+              // Responses clients close on the terminal: finalize accounting here
+              // so a client disconnect right after the terminal still counts once.
+              finalizeStream();
+            }
           }
         }
       }
@@ -498,6 +575,7 @@ export function createSSEStream(options = {}) {
 
             const translated = translateResponse(targetFormat, sourceFormat, parsed, state);
             if (state.finishReason) finishReason = state.finishReason;
+            if (state.started) terminalGuard.setResponseId(state.responseId);
 
             if (translated?._openaiIntermediate) {
               for (const item of translated._openaiIntermediate) {
@@ -509,13 +587,28 @@ export function createSSEStream(options = {}) {
             if (translated?.length > 0) {
               for (const item of translated) {
                 if (item === null || item === undefined) continue;
+                injectTerminalUsage(item, state, body, totalContentLength);
                 const output = formatSSE(item, sourceFormat);
                 if (item.choices?.[0]?.finish_reason) finishReason = item.choices[0].finish_reason;
                 reqLogger?.appendConvertedChunk?.(output);
                 controller.enqueue(sharedEncoder.encode(output));
+                if (isOpenAIResponsesTerminalEvent(item.event, item.data)) {
+                  terminalGuard.mark(item.data?.response?.id ?? null);
+                }
               }
             }
           }
+        }
+
+        // §5: a tool call whose arguments were still streaming when the upstream
+        // closed must not be reported as a successful completion. Suppress the
+        // translator's flush-time terminal (and the tool item close) — the
+        // guard-based synthesis below turns this into response.failed.
+        if (state?.funcItemAdded) {
+          const partialTool = Object.keys(state.funcItemAdded).some(
+            (i) => state.funcItemAdded[i] && !state.funcItemDone[i]
+          );
+          if (partialTool) state.suppressTerminal = true;
         }
 
         const flushed = translateResponse(targetFormat, sourceFormat, null, state);
@@ -534,19 +627,32 @@ export function createSSEStream(options = {}) {
             const output = formatSSE(item, sourceFormat);
             reqLogger?.appendConvertedChunk?.(output);
             controller.enqueue(sharedEncoder.encode(output));
+            if (isOpenAIResponsesTerminalEvent(item.event, item.data)) {
+              terminalGuard.mark(item.data?.response?.id ?? null);
+            }
           }
         }
 
-        // Synthesize response.failed if a Responses passthrough stream never reached a terminal event
-        const keepsOpenAIResponsesFormat = targetFormat === FORMATS.OPENAI_RESPONSES && sourceFormat === FORMATS.OPENAI_RESPONSES;
-        if (keepsOpenAIResponsesFormat && !openAIResponsesTerminalSeen) {
-          const failedOutput = formatIncompleteOpenAIResponsesStreamFailure();
+        // Genuine EOF: release a held usage terminal (real usage if it arrived,
+        // marked estimate as the last resort).
+        emitHeldTerminal(controller);
+
+        // Every translated Responses stream must terminate explicitly: if no
+        // terminal event ever went out (no finish_reason, partial tool call,
+        // unannounced close), synthesize response.failed — never a bare EOF,
+        // never a second terminal (terminalGuard is authoritative).
+        let synthesizedFailed = false;
+        if (sourceFormat === FORMATS.OPENAI_RESPONSES && !terminalGuard.hasEmitted()) {
+          const failedOutput = formatIncompleteOpenAIResponsesStreamFailure(terminalGuard.getResponseId());
           reqLogger?.appendConvertedChunk?.(failedOutput);
           controller.enqueue(sharedEncoder.encode(failedOutput));
+          terminalGuard.mark(null);
           openAIResponsesTerminalSeen = true;
+          synthesizedFailed = true;
         }
 
-        if (keepsOpenAIResponsesFormat && !openAIResponsesDoneSent && !streamDoneSent) {
+        const keepsOpenAIResponsesFormat = targetFormat === FORMATS.OPENAI_RESPONSES && sourceFormat === FORMATS.OPENAI_RESPONSES;
+        if ((keepsOpenAIResponsesFormat || synthesizedFailed) && !openAIResponsesDoneSent && !streamDoneSent) {
           const doneOutput = "data: [DONE]\n\n";
           reqLogger?.appendConvertedChunk?.(doneOutput);
           controller.enqueue(sharedEncoder.encode(doneOutput));
@@ -561,6 +667,11 @@ export function createSSEStream(options = {}) {
       }
     }
   });
+  // Share terminal authority with the disconnect/error boundary: the wrapper
+  // consults this guard so a transport failure can never append a second
+  // terminal after one has actually been emitted.
+  transformStream.terminalGuard = terminalGuard;
+  return transformStream;
 }
 
 export function createSSETransformStreamWithLogger(targetFormat, sourceFormat, provider = null, reqLogger = null, toolNameMap = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null, customToolNames = null, credentials = null) {

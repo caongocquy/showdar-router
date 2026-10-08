@@ -100,18 +100,23 @@ export function createStreamController({ onDisconnect, onError, onComplete, log,
  * for long periods while raw bytes still flow (e.g. Kiro EventStream
  * binary frames buffering, Claude reasoning streams).
  */
-export function createDisconnectAwareStream(transformStream, streamController, onAbortTerminal = null) {
+export function createDisconnectAwareStream(transformStream, streamController, onAbortTerminal = null, terminalGuard = null) {
   const reader = transformStream.readable.getReader();
   const writer = transformStream.writable.getWriter();
   let terminalEmitted = false;
 
-  // Emit a synthesized terminal payload (e.g. Responses response.failed + [DONE]) once
+  // Emit a synthesized terminal payload (e.g. Responses response.failed + [DONE]) once.
+  // terminalGuard is the transform's authoritative record of terminals actually
+  // emitted on the wire: if a real terminal already went out, a transport error
+  // must never append a second one (double-terminal bug).
   const emitTerminal = (controller) => {
     if (terminalEmitted || !onAbortTerminal) return;
+    if (terminalGuard?.hasEmitted?.()) return;
     terminalEmitted = true;
     try {
-      const bytes = onAbortTerminal();
+      const bytes = onAbortTerminal(terminalGuard ?? undefined);
       if (bytes) controller.enqueue(bytes);
+      terminalGuard?.mark?.(null);
     } catch { /* best-effort terminal */ }
   };
 
@@ -253,6 +258,9 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
   return createDisconnectAwareStream(
     { readable: transformedBody, writable: { getWriter: () => ({ abort: () => Promise.resolve() }) } },
     wrappedController,
-    onAbortTerminal
+    onAbortTerminal,
+    // Per-stream terminal guard created by the SSE transform (see createSSEStream):
+    // shared so the error boundary and the transform agree on emitted terminals.
+    transformStream?.terminalGuard ?? null
   );
 }

@@ -423,6 +423,10 @@ function toResponsesUsage(u) {
 // official incomplete_details.reason; everything else (stop, tool_calls,
 // unknown) → response.completed conservatively (no invented incomplete reason).
 function sendTerminal(state, emit) {
+  // §5: flush detected a tool call still mid-arguments — emitting a completion
+  // terminal here would report a truncated tool call as successful. The stream
+  // layer synthesizes response.failed instead.
+  if (state.suppressTerminal) return;
   if (!state.terminalSent) {
     state.terminalSent = true;
     const incompleteReason = toResponsesIncompleteReason(state.finishReason);
@@ -458,8 +462,18 @@ function flushEvents(state) {
 
   for (const i in state.msgItemAdded) closeMessage(state, emit, i);
   closeReasoning(state, emit);
-  for (const i in state.funcCallIds) closeToolCall(state, emit, i);
-  sendTerminal(state, emit);
+  // A tool call still open at flush has truncated arguments: closing it would
+  // emit output_item.done with status completed on a partial call (§5). Leave
+  // the item open so the synthesized response.failed marks the truncation.
+  if (!state.suppressTerminal) {
+    for (const i in state.funcCallIds) closeToolCall(state, emit, i);
+  }
+  // §3: flush() with no recorded finish_reason is an unannounced stream close,
+  // not a valid completion signal — never invent response.completed here. The
+  // stream layer's terminal guard synthesizes response.failed instead. (A real
+  // finish_reason always sends its terminal during transform(), so this branch
+  // only exists for the theoretical finish-without-terminal state.)
+  if (state.finishReason) sendTerminal(state, emit);
   
   return events;
 }
