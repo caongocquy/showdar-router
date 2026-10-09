@@ -16,14 +16,19 @@ const storage = {
 
 const routeHealth = new RouteHealthState(storage);
 
-function parseRetryAfter(value) {
+function toBoundedIso(timestampMs) {
+  const date = new Date(timestampMs);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+export function parseRetryAfter(value) {
   if (!value) return null;
   if (typeof value === "number" && Number.isFinite(value)) {
-    return new Date(Date.now() + Math.max(0, value) * 1000).toISOString();
+    return toBoundedIso(Date.now() + Math.max(0, value) * 1000);
   }
   const text = String(value).trim();
   if (/^\d+(?:\.\d+)?$/.test(text)) {
-    return new Date(Date.now() + Number(text) * 1000).toISOString();
+    return toBoundedIso(Date.now() + Number(text) * 1000);
   }
   const parsed = new Date(text).getTime();
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
@@ -38,7 +43,7 @@ export async function inspectRouteHealth(model, now) {
   return routeHealth.inspect(model, now);
 }
 
-export async function recordRouteFailure(model, { status, errorText, retryAfter } = {}, now = Date.now()) {
+export async function recordRouteFailure(model, { status, errorText, retryAfter } = {}, now = Date.now(), probeToken = null) {
   const snapshot = await routeHealth.snapshot();
   const previousLevel = snapshot[model]?.failureCount || 0;
   const classification = classifyRouteFailure(status, errorText, previousLevel);
@@ -52,16 +57,17 @@ export async function recordRouteFailure(model, { status, errorText, retryAfter 
     retryAt,
     now,
     errorText,
+    probeToken,
   );
   return { classification, record };
 }
 
-export function recordRouteSuccess(model) {
-  return routeHealth.recordSuccess(model);
+export function recordRouteSuccess(model, probeToken = null) {
+  return routeHealth.recordSuccess(model, probeToken);
 }
 
-export function cancelRouteAttempt(model) {
-  return routeHealth.cancelProbe(model);
+export function cancelRouteAttempt(model, probeToken = null) {
+  return routeHealth.cancelProbe(model, probeToken);
 }
 
 export function getRouteHealthSnapshot() {

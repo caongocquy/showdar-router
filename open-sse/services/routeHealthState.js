@@ -1,4 +1,5 @@
-import { DAILY_QUOTA_MIN_PROBE_MS } from "../config/errorConfig.js";
+import { DAILY_QUOTA_MIN_PROBE_MS, ROUTE_HEALTH_CONFIG, ROUTE_PROBE_LEASE_MS } from "../config/errorConfig.js";
+import { MAX_METADATA_DELAY_MS } from "./retryMetadata.js";
 
 export class RouteHealthState {
   constructor(storage) {
@@ -6,6 +7,7 @@ export class RouteHealthState {
     this.storage = storage;
     this.records = new Map();
     this.probes = new Map();
+    this.probeSeq = 0;
     this.hydrated = false;
     this.hydrationPromise = null;
     this.persistenceTail = Promise.resolve();
@@ -39,10 +41,17 @@ export class RouteHealthState {
     if (decision.skip) return decision;
     const record = this.records.get(model);
     if (!record) return decision;
-    if (this.probes.has(model)) return { ...decision, skip: true, probe: false };
-    this.probes.set(model, record.state);
+    const lease = this.probes.get(model);
+    if (lease && now - lease.startedAt < ROUTE_PROBE_LEASE_MS) {
+      return { ...decision, skip: true, probe: false };
+    }
+    // Ownership token: only the completion presenting this exact token may
+    // mutate circuit state, so an expired/hung probe can never overwrite a
+    // newer probe's decision.
+    const probeToken = ++this.probeSeq;
+    this.probes.set(model, { state: lease?.state ?? record.state, startedAt: now, token: probeToken });
     this.records.set(model, { ...record, state: "half_open" });
-    return { ...decision, probe: true };
+    return { ...decision, probe: true, probeToken };
   }
 
   inspect(model, now = Date.now()) {
@@ -67,8 +76,11 @@ export class RouteHealthState {
     };
   }
 
-  async recordFailure(model, failure, retryAfter = null, now = Date.now(), errorText = null) {
+  async recordFailure(model, failure, retryAfter = null, now = Date.now(), errorText = null, probeToken = null) {
     await this.hydrate();
+    // A result from a superseded/expired probe must never overwrite the newer
+    // probe's (or a recovered route's) decision.
+    if (probeToken != null && this.probes.get(model)?.token !== probeToken) return null;
     const previous = this.records.get(model);
     const failureCount = (previous?.failureCount || 0) + 1;
     const fallbackDeadline = now + Math.max(0, Number(failure?.routeCooldownMs) || 0);
@@ -78,8 +90,20 @@ export class RouteHealthState {
     const isDailyQuota = failure?.reason === "daily_quota";
     const hasShortDailyRetry = isDailyQuota && Number.isFinite(retryAfterMs)
       && retryAfterMs > now && retryAfterMs - now < DAILY_QUOTA_MIN_PROBE_MS;
-    const deadline = Number.isFinite(retryAfterMs) && retryAfterMs > now && !hasShortDailyRetry
-      ? retryAfterMs
+    // Quota-family deadlines are provider reset truth (daily windows) and keep
+    // the full metadata ceiling; every other reason's explicit upstream deadline
+    // is capped at its configured route window so a hostile or broken
+    // Retry-After cannot pin a route far beyond policy (a transient 429 must
+    // not sit out a 24h hint while its credential cools down for 30 minutes).
+    const policy = ROUTE_HEALTH_CONFIG[failure?.reason] || ROUTE_HEALTH_CONFIG.unknown;
+    const ceilingMs = (failure?.reason === "quota" || failure?.reason === "daily_quota")
+      ? MAX_METADATA_DELAY_MS
+      : policy.maxMs;
+    const boundedRetryAfterMs = Number.isFinite(retryAfterMs) && retryAfterMs > now
+      ? Math.min(retryAfterMs, now + ceilingMs)
+      : NaN;
+    const deadline = Number.isFinite(boundedRetryAfterMs) && !hasShortDailyRetry
+      ? boundedRetryAfterMs
       : fallbackDeadline;
 
     const record = {
@@ -99,21 +123,27 @@ export class RouteHealthState {
     return record;
   }
 
-  async recordSuccess(model) {
+  async recordSuccess(model, probeToken = null) {
     await this.hydrate();
+    // Stale probe fencing (see recordFailure): only the active lease holder
+    // may clear route state.
+    if (probeToken != null && this.probes.get(model)?.token !== probeToken) return;
     this.probes.delete(model);
     if (!this.records.has(model)) return;
     this.records.delete(model);
     this.enqueue(() => this.storage.remove(model));
   }
 
-  async cancelProbe(model) {
+  async cancelProbe(model, probeToken = null) {
     await this.hydrate();
-    const previousState = this.probes.get(model);
+    // A late cancellation from an expired probe must not release the newer
+    // probe's lease.
+    if (probeToken != null && this.probes.get(model)?.token !== probeToken) return;
+    const lease = this.probes.get(model);
     this.probes.delete(model);
     const record = this.records.get(model);
     if (record?.state === "half_open") {
-      this.records.set(model, { ...record, state: previousState || "cooldown" });
+      this.records.set(model, { ...record, state: lease?.state || "cooldown" });
     }
   }
 

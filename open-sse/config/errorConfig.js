@@ -36,6 +36,9 @@ export const BACKOFF_CONFIG = {
 export const TRANSIENT_COOLDOWN_MS = 30 * 1000;
 export const MAX_RATE_LIMIT_COOLDOWN_MS = 30 * 60 * 1000;
 export const DAILY_QUOTA_MIN_PROBE_MS = 6 * 60 * 60 * 1000;
+// A half-open probe must finish or be cancelled within this window, otherwise the
+// route is re-admitted for a fresh probe (protects against hung probe requests).
+export const ROUTE_PROBE_LEASE_MS = 10 * 60 * 1000;
 
 const COOLDOWN = {
   long: 2 * 60 * 1000,
@@ -78,6 +81,7 @@ export const ROUTE_HEALTH_CONFIG = {
   unsupported_model: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
   model_not_found: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
   provider_capacity: { baseMs: 15_000, maxMs: 2 * 60_000, state: "open" },
+  stream_aborted: { baseMs: 15_000, maxMs: 2 * 60_000, state: "open" },
   network: { baseMs: 30_000, maxMs: 5 * 60_000, state: "open" },
   timeout: { baseMs: 60_000, maxMs: 10 * 60_000, state: "open" },
   unknown: { baseMs: 30_000, maxMs: 2 * 60_000, state: "open" },

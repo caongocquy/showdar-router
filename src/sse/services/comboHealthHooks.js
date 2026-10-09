@@ -35,23 +35,23 @@ export function createChatComboHealthHooks(log) {
       return decision;
     },
 
-    async onModelSuccess(model) {
+    async onModelSuccess(model, decision) {
       const snapshot = await getRouteHealthSnapshot();
       const wasRecovering = !!snapshot[model];
-      await recordRouteSuccess(model);
+      await recordRouteSuccess(model, decision?.probeToken);
       if (wasRecovering) {
         log.info("ROUTE", `${model} half_open → healthy`);
       }
     },
 
-    async onModelFailure(model, failure) {
-      const { classification, record } = await recordRouteFailure(model, failure);
+    async onModelFailure(model, failure, decision) {
+      const { classification, record } = await recordRouteFailure(model, failure, Date.now(), decision?.probeToken);
       if (!record) return;
       log.info("ROUTE", `${model} healthy → ${classification.reason} · ${record.state}, probe in ${formatWait(record.nextProbeAt)}`);
     },
 
-    async onModelCancelled(model) {
-      await cancelRouteAttempt(model);
+    async onModelCancelled(model, decision) {
+      await cancelRouteAttempt(model, decision?.probeToken);
     },
 
     validateSuccess: validateChatComboResponse,

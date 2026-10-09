@@ -276,6 +276,14 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   } else if (retryDeadline) {
     shouldFallback = true;
     cooldownMs = Math.max(0, new Date(retryDeadline).getTime() - Date.now());
+    // Temporary rate/usage limits are capped so a long upstream Retry-After
+    // (parseable up to 24h) cannot pin the credential for a whole day. Applies
+    // to every modality, including non-routeAware callers (classification is
+    // only computed for routeAware ones, so resolve the reason when missing).
+    const retryReason = classification?.reason ?? classifyRouteFailure(status, errorText).reason;
+    if (retryReason === "transient_rate_limit" || retryReason === "quota") {
+      cooldownMs = Math.min(cooldownMs, MAX_RATE_LIMIT_COOLDOWN_MS);
+    }
     newBackoffLevel = 0;
   } else {
     ({ shouldFallback, cooldownMs, newBackoffLevel } = checkFallbackError(status, errorText, backoffLevel));

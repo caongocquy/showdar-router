@@ -59,7 +59,7 @@ describe("fusion combo", () => {
     });
     expect(res.ok).toBe(true);
     expect(before).toHaveBeenCalledTimes(2);
-    expect(onSuccess).toHaveBeenCalledWith("p/only");
+    expect(onSuccess).toHaveBeenCalledWith("p/only", { skip: false, probe: true });
   });
 
   it("keeps a single eligible streaming response readable", async () => {
@@ -113,7 +113,7 @@ describe("fusion combo", () => {
       log,
     });
     expect(res.status).toBe(499);
-    expect(cancelled).toHaveBeenCalledWith("p/only");
+    expect(cancelled).toHaveBeenCalledWith("p/only", { skip: false, probe: true });
     expect(failed).not.toHaveBeenCalled();
   });
 
