@@ -40,18 +40,34 @@ jobs:
       - name: Run routing tests
         run: npm run test:routing
 
+      # tests/unit/showdar-router-daemon.test.mjs was deleted in bd78c872
+      # (daemon/launcher split replaced by the cli.js supervisor). Its
+      # intentional replacement coverage is cli-tray-behavioral.test.mjs.
+      # Vitest silently ignores CLI filters that match no files, so assert
+      # every expected file exists first — a deleted or moved test must fail
+      # this gate instead of passing as a silent zero-test omission.
       - name: Run regression and focused release tests
+        shell: bash
         run: |
-          npx vitest run \
-            tests/unit/provider-model-discovery.test.js \
-            tests/unit/finish-reason-logging.test.js \
-            tests/unit/launcher-tray.test.mjs \
-            tests/unit/showdar-router-daemon.test.mjs \
-            tests/unit/donate-modal.test.js \
-            tests/unit/combo-autoswitch.test.js \
-            tests/unit/combo-cancellation.test.js \
-            tests/unit/combo-planner.test.js \
+          set -euo pipefail
+          tests=(
+            tests/unit/provider-model-discovery.test.js
+            tests/unit/finish-reason-logging.test.js
+            tests/unit/launcher-tray.test.mjs
+            tests/unit/cli-tray-behavioral.test.mjs
+            tests/unit/donate-modal.test.js
+            tests/unit/combo-autoswitch.test.js
+            tests/unit/combo-cancellation.test.js
+            tests/unit/combo-planner.test.js
             tests/unit/fusion-strip-stream-options-3024.test.js
+          )
+          for f in "${tests[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error::Expected test file missing: $f" >&2
+              exit 1
+            fi
+          done
+          npx vitest run "${tests[@]}"
 
       - name: Build root production app
         run: npm run build
