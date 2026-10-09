@@ -56,6 +56,9 @@ jobs:
       - name: Build root production app
         run: npm run build
 
+      - name: Run standalone runtime smoke
+        run: STANDALONE_SMOKE_SKIP_BUILD=1 npm run test:runtime
+
       - name: Build and validate npm package
         working-directory: cli
         shell: bash
