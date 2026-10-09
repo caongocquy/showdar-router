@@ -1,4 +1,5 @@
 import { ERROR_RULES, BACKOFF_CONFIG, TRANSIENT_COOLDOWN_MS } from "../config/errorConfig.js";
+import { classifyRouteFailure } from "./routeFailureClassifier.js";
 
 /**
  * Calculate exponential backoff cooldown for rate limits (429)
@@ -24,6 +25,13 @@ export function checkFallbackError(status, errorText, backoffLevel = 0) {
   const lowerError = errorText
     ? (typeof errorText === "string" ? errorText : JSON.stringify(errorText)).toLowerCase()
     : "";
+
+  // Request-scope failures the upstream will reject for every model/account too
+  // (malformed body, invalid parameter, oversized payload): abort the chain
+  // instead of replaying the same doomed request.
+  if (classifyRouteFailure(status, errorText).chainable === false) {
+    return { shouldFallback: false, cooldownMs: 0 };
+  }
 
   for (const rule of ERROR_RULES) {
     // Text-based rule: match substring in error message

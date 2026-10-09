@@ -16,6 +16,8 @@ const AUTH_MARKERS = [
   "authentication failed",
   "expired token",
   "invalid token",
+  "api key not valid",
+  "api_key_invalid",
 ];
 
 const QUOTA_MARKERS = [
@@ -32,8 +34,46 @@ const DAILY_QUOTA_MARKERS = [
 ];
 
 const CAPACITY_MARKERS = ["capacity", "overloaded", "temporarily unavailable"];
+const CONTEXT_OVERFLOW_MARKERS = [
+  "context length",
+  "context_length_exceeded",
+  "context window",
+  "prompt is too long",
+  "input is too long",
+  "input too long",
+  "input token count exceeds",
+  "exceeds the maximum number of tokens",
+  "too many tokens",
+];
+const OUTPUT_LIMIT_MARKERS = [
+  "max_tokens",
+  "max_tokens_to_sample",
+  "max tokens",
+  "output token limit",
+  "too many output tokens",
+];
+const COMPACTION_REJECTED_MARKERS = ["compaction", "compact rejected", "refused to compact"];
+const STREAM_ABORT_MARKERS = [
+  "stream disconnected",
+  "stream aborted",
+  "stream closed",
+  "stream ended",
+  "stream was aborted",
+  "server disconnected",
+  "connection closed",
+];
 const TIMEOUT_MARKERS = ["timeout", "timed out", "operation was aborted", "aborted"];
 const NETWORK_MARKERS = ["econnreset", "econnrefused", "enotfound", "fetch failed", "network"];
+// Locally-produced 400s that only mean "this candidate can't serve this
+// request" (no usable credential, unusable model string, unknown provider)
+// — never a defect of the request body itself, so the combo must keep
+// chaining to the next candidate.
+const CANDIDATE_SKIP_MARKERS = [
+  "no credentials",
+  "invalid model format",
+  "unknown provider",
+  "does not support web fetch",
+];
 
 function lowerText(errorText) {
   if (!errorText) return "";
@@ -95,9 +135,27 @@ export function classifyRouteFailure(status, errorText, failureLevel = 0) {
       reason = "authentication";
       scope = "credential";
     }
-  } else if ([400, 405, 409, 413, 415, 422].includes(effectiveStatus)) {
-    reason = "request";
+  } else if (includesAny(text, CONTEXT_OVERFLOW_MARKERS)) {
+    reason = "context_overflow";
     scope = "request";
+  } else if (includesAny(text, OUTPUT_LIMIT_MARKERS)) {
+    reason = "output_limit";
+    scope = "request";
+  } else if (includesAny(text, COMPACTION_REJECTED_MARKERS)) {
+    reason = "compaction_rejected";
+    scope = "request";
+  } else if ([400, 405, 409, 413, 415, 422].includes(effectiveStatus)) {
+    if (includesAny(text, AUTH_MARKERS)) {
+      // Credential failures can surface as 400s (e.g. Gemini "API key not
+      // valid"): they must rotate accounts, not abort the request.
+      reason = "authentication";
+      scope = "credential";
+    } else {
+      reason = "invalid_request";
+      scope = "request";
+    }
+  } else if (includesAny(text, STREAM_ABORT_MARKERS)) {
+    reason = "stream_aborted";
   } else if (includesAny(text, TIMEOUT_MARKERS) || effectiveStatus === 504) {
     reason = "timeout";
   } else if (includesAny(text, NETWORK_MARKERS)) {
@@ -131,6 +189,16 @@ export function classifyRouteFailure(status, errorText, failureLevel = 0) {
     routeState: routePolicy.state,
     routeCooldownMs,
     credentialCooldownMs,
+    // Request-scope failures the upstream rejects for every model too (malformed
+    // body, invalid parameter) abort the fallback chain. 409 (transient conflict /
+    // antigravity pool exhaustion, see #3561) and 413 (per-endpoint body-size caps
+    // genuinely differ) are request-scoped for health but stay chainable. So are
+    // candidate-scope skips (no credentials for this provider, unusable local
+    // model string): they only disqualify one candidate, not the request.
+    chainable: reason !== "invalid_request"
+      || effectiveStatus === 409
+      || effectiveStatus === 413
+      || includesAny(text, CANDIDATE_SKIP_MARKERS),
   };
 }
 
