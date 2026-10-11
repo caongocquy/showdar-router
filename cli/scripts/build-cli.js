@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
@@ -223,6 +224,83 @@ function assertRequiredApiArtifacts(cliAppDir) {
   }
 }
 
+// Files the packaged CLI cannot run without. Everything else under
+// cli/app/src is a Next standalone tracing artifact that must at least
+// stay byte-identical to its canonical src/ counterpart.
+const REQUIRED_GENERATED_SRC_FILES = [
+  "server.js",
+  "custom-server.js",
+  "src/sse/services/backgroundTokenRefresh.js",
+  "src/lib/updater/updater.js",
+  "src/mitm/server.js",
+];
+
+function fileSha256(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function listFilesRecursive(rootDir) {
+  const files = [];
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    const absolute = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) files.push(...listFilesRecursive(absolute));
+    else if (entry.isFile()) files.push(absolute);
+  }
+  return files;
+}
+
+// cli/app/src is generated output (gitignored, never tracked): Next standalone
+// tracing plus explicit step-7/7b copies plus the step-8 MITM esbuild bundle.
+// The single source of truth is repo-root src/. This guard fails the build when
+// a required packaged file is missing, when a generated duplicate drifts from
+// its canonical source (stale or hand-edited), or when the MITM plain source
+// copy ships instead of the self-contained bundle.
+function assertGeneratedSrcParity(cliAppDir, appDir) {
+  const errors = [];
+
+  for (const relativePath of REQUIRED_GENERATED_SRC_FILES) {
+    if (!fs.existsSync(path.join(cliAppDir, relativePath))) {
+      errors.push(`missing required packaged file: ${relativePath}`);
+    }
+  }
+
+  const mitmDir = path.join(cliAppDir, "src", "mitm");
+  const canonicalMitmServer = path.join(appDir, "src", "mitm", "server.js");
+  if (fs.existsSync(mitmDir)) {
+    const entries = fs.readdirSync(mitmDir).sort();
+    if (entries.join(",") !== "server.js") {
+      errors.push(
+        `src/mitm must contain only the built server.js bundle (buildMitm.js cleanPlainFiles), found: ${entries.join(", ")}`,
+      );
+    } else if (
+      fs.existsSync(canonicalMitmServer)
+      && fileSha256(path.join(mitmDir, "server.js")) === fileSha256(canonicalMitmServer)
+    ) {
+      errors.push("src/mitm/server.js is the plain source copy, not the esbuild bundle — buildMitm.js did not run");
+    }
+  }
+
+  const generatedSrcRoot = path.join(cliAppDir, "src");
+  if (fs.existsSync(generatedSrcRoot)) {
+    for (const absolutePath of listFilesRecursive(generatedSrcRoot)) {
+      const relativePath = path.relative(cliAppDir, absolutePath).split(path.sep).join("/");
+      if (relativePath.startsWith("src/mitm/")) continue; // bundle invariants handled above
+      const canonicalPath = path.join(appDir, relativePath);
+      if (!fs.existsSync(canonicalPath)) {
+        errors.push(`generated file has no canonical source: ${relativePath}`);
+      } else if (fileSha256(absolutePath) !== fileSha256(canonicalPath)) {
+        errors.push(`generated file drifts from canonical source: ${relativePath}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(
+      "Generated CLI source parity check failed:\n" + errors.map((e) => `  - ${e}`).join("\n"),
+    );
+  }
+}
+
 function buildCliPackage() {
   console.log("📦 Building Showdar Router CLI package with Next.js...\n");
 
@@ -409,6 +487,11 @@ function buildCliPackage() {
   normalizeGeneratedPaths(path.join(cliAppDir, buildDistDirName), appDir);
   normalizeGeneratedFile(path.join(cliAppDir, "server.js"), appDir);
 
+  // Step 9: Assert generated cli/app/src output is complete and mirrors src/.
+  console.log("9️⃣  Verifying generated source parity...");
+  assertGeneratedSrcParity(cliAppDir, appDir);
+  console.log("✅ Generated source verified\n");
+
   console.log("✨ CLI package build completed!");
   console.log(`📁 Output: ${cliAppDir}`);
 
@@ -423,6 +506,7 @@ function buildCliPackage() {
 
 module.exports = {
   assertRequiredApiArtifacts,
+  assertGeneratedSrcParity,
   copyStandaloneBuild,
   mergeServerArtifacts,
   normalizeGeneratedFile,
