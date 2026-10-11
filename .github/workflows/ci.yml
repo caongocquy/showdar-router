@@ -43,9 +43,10 @@ jobs:
       # tests/unit/showdar-router-daemon.test.mjs was deleted in bd78c872
       # (daemon/launcher split replaced by the cli.js supervisor). Its
       # intentional replacement coverage is cli-tray-behavioral.test.mjs.
-      # Vitest silently ignores CLI filters that match no files, so assert
-      # every expected file exists first — a deleted or moved test must fail
-      # this gate instead of passing as a silent zero-test omission.
+      # File existence alone is not enough: vitest silently ignores CLI
+      # filters that match no file, so include/config drift could drop a
+      # required suite while the remaining suites keep this step green.
+      # Assert per file: collected, >0 executed tests, zero failures.
       - name: Run regression and focused release tests
         shell: bash
         run: |
@@ -67,7 +68,57 @@ jobs:
               exit 1
             fi
           done
-          npx vitest run "${tests[@]}"
+          printf '%s\n' "${tests[@]}" > /tmp/focused-expected-files.txt
+          set +e
+          npx vitest run --reporter=default --reporter=json --outputFile.json=/tmp/focused-report.json "${tests[@]}"
+          vitest_exit=$?
+          node - <<'NODE'
+          const fs = require("node:fs");
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync("/tmp/focused-report.json", "utf8"));
+          } catch (error) {
+            console.error(`::error::Focused test report missing or unreadable: ${error.message}`);
+            process.exit(1);
+          }
+          const expected = fs
+            .readFileSync("/tmp/focused-expected-files.txt", "utf8")
+            .split("\n")
+            .filter(Boolean);
+          const byName = new Map(
+            report.testResults.map((result) => [
+              result.name.replace(/^.*[\\/]tests[\\/]/, "tests/"),
+              result,
+            ]),
+          );
+          let ok = true;
+          for (const file of expected) {
+            const result = byName.get(file);
+            if (!result) {
+              console.error(`::error::Expected test file collected zero tests: ${file}`);
+              ok = false;
+              continue;
+            }
+            const executed = result.assertionResults.filter((a) => a.status !== "skipped").length;
+            const failed = result.assertionResults.filter((a) => a.status === "failed").length;
+            console.log(`focused gate: ${file} -> ${executed} executed, ${failed} failed`);
+            if (executed === 0) {
+              console.error(`::error::Expected test file collected zero tests: ${file}`);
+              ok = false;
+            }
+            if (failed > 0) {
+              console.error(`::error::Expected test file has failing tests: ${file}`);
+              ok = false;
+            }
+          }
+          process.exit(ok ? 0 : 1);
+          NODE
+          report_exit=$?
+          set -e
+          if [[ "$vitest_exit" -ne 0 || "$report_exit" -ne 0 ]]; then
+            echo "::error::Focused gate failed (vitest_exit=$vitest_exit report_exit=$report_exit)" >&2
+            exit 1
+          fi
 
       - name: Build root production app
         run: npm run build
