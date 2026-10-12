@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const cliPath = path.join(__dirname, "..", "..", "cli", "cli.js");
 
 describe("Behavioral tests - Fixed implementation matches upstream", () => {
   let originalEnv;
@@ -24,7 +26,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 1: Normal startup should use upstream supervisor pattern (NOT daemon.start)
   it("cli.js should NOT have early daemon/launcher routing that intercepts startup", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     // FIXED: Should NOT have daemon/launcher imports and early returns
@@ -46,7 +47,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 2: Tray mode should spawn detached CLI supervisor
   it("Hide to Tray should spawn: node cli.js --tray --skip-update -p <port>", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     // FIXED: Should spawn detached cli.js --tray process
@@ -65,7 +65,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 3: Server restart behavior (should be reachable now)
   it("should have tryRestart function for supervisor pattern", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     const hasTryRestart = cliContent.includes("function tryRestart");
@@ -86,7 +85,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 4: Intentional shutdown should not restart
   it("should have isShuttingDown flag to prevent restart on intentional exit", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     const hasIsShuttingDown = cliContent.includes("let isShuttingDown = false");
@@ -104,7 +102,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 5: No duplicate port fallback instances
   it("should kill previous Showdar-owned processes before starting new server", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     const hasKillAllAppProcesses = cliContent.includes("function killAllAppProcesses");
@@ -120,7 +117,6 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
 
   // Test 6: Tray-only mode (--tray flag) should enter supervisor pattern
   it("trayMode should run supervisor with tray icon, not launcher", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     
     // Should have trayMode branch that initializes tray and returns (supervisor stays alive)
@@ -135,25 +131,36 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
     expect(hasTrayModeBranch).toBe(true);
     expect(usesLauncher).toBe(false);
   });
+
+  // Behavioral probe: the supervisor entry must load and answer --version from
+  // an arbitrary working directory (the exact failure mode of cwd-relative reads).
+  it("CLI entry loads and reports version from an unrelated working directory", () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "..", "..", "cli", "package.json"), "utf8"),
+    );
+    const out = execFileSync(process.execPath, [cliPath, "--version"], {
+      cwd: tempDir,
+      encoding: "utf8",
+      timeout: 20000,
+    });
+    expect(out).toContain(pkg.version);
+  });
 });
 
 describe("Showdar-specific differences preserved", () => {
   it("Showdar Router default port is 21298, not 20128", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain("const DEFAULT_PORT = 21298;");
     expect(cliContent).not.toContain("const DEFAULT_PORT = 20128;");
   });
 
   it("Showdar Router uses .showdar-router data directory, not .9router", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain(".showdar-router");
     expect(cliContent).not.toContain(".9router");
   });
 
   it("Showdar Router has xAI video subcommand", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain("xai");
     expect(cliContent).toContain("video");
@@ -161,20 +168,17 @@ describe("Showdar-specific differences preserved", () => {
   });
 
   it("Showdar Router has SQLite runtime self-heal", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain("ensureSqliteRuntime");
     expect(cliContent).toContain("buildEnvWithRuntime");
   });
 
   it("Showdar Router has tray runtime self-heal", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain("ensureTrayRuntime");
   });
 
   it("Showdar Router uses showdar-router package name for branding", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain('const APP_NAME = pkg.name;');
     expect(cliContent).toContain("showdar-router");
@@ -182,7 +186,6 @@ describe("Showdar-specific differences preserved", () => {
   });
 
   it("Showdar Router killAllAppProcesses targets showdar-router processes", () => {
-    const cliPath = "./cli/cli.js";
     const cliContent = fs.readFileSync(cliPath, "utf8");
     expect(cliContent).toContain('const PROCESS_IDENTIFIERS = [');
     expect(cliContent).toContain("showdar-router");
