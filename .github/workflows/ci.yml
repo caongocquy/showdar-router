@@ -56,6 +56,7 @@ jobs:
             tests/unit/finish-reason-logging.test.js
             tests/unit/launcher-tray.test.mjs
             tests/unit/cli-tray-behavioral.test.mjs
+            tests/unit/cli-source-parity.test.js
             tests/unit/donate-modal.test.js
             tests/unit/combo-autoswitch.test.js
             tests/unit/combo-cancellation.test.js
