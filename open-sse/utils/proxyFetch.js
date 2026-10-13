@@ -1,6 +1,7 @@
 import { Readable } from "stream";
 import { MEMORY_CONFIG } from "../config/runtimeConfig.js";
 import { dbg } from "./debugLog.js";
+import { noteUpstreamDispatch } from "./latencyTrace.js";
 
 const originalFetch = globalThis.fetch;
 const proxyDispatchers = new Map();
@@ -292,6 +293,9 @@ async function createBypassRequest(parsedUrl, realIP, options) {
 }
 
 export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
+  // Phase D1: single dispatch funnel — marks t2/dispatchedMs on the active
+  // attempt, but only inside chatCore's inExecute window (attempt-scoped gate).
+  noteUpstreamDispatch();
   const targetUrl = typeof url === "string" ? url : url.toString();
 
   // Vercel relay: forward request via relay headers

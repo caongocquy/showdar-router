@@ -9,6 +9,7 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
 import { planComboCandidates } from "./comboPlanner.js";
 import { scheduleComboModels, selectComboModels, commitComboPrimary, resetComboRoundRobin, withComboSchedulingLock } from "./comboRoundRobin.js";
+import { getActiveLatencyTrace, runWithAttempt } from "../utils/latencyTrace.js";
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
 // stripped). Must be prioritized. Soft (e.g. search) only degrades a feature.
@@ -270,9 +271,12 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @returns {Promise<Response>}
  */
 export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, onModelCancelled = null, validateSuccess = null, requestSignal = null }) {
+  const trace = getActiveLatencyTrace();
   const required = autoSwitch ? detectRequiredCapabilities(body) : new Set();
   const healthInspect = async (model) => beforeModelAttempt ? beforeModelAttempt(model, { inspectOnly: true }) : { skip: false };
-  const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: healthInspect });
+  const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: healthInspect, latencyTrace: trace });
+  // Phase D1: selection complete → t1 + combo identity (first-wins, idempotent).
+  trace?.setCombo(comboName, comboStrategy);
   if (plan.models.length === 0 && plan.missingCapabilities.length > 0) {
     return new Response(JSON.stringify({ error: { message: `No combo model supports required capabilities: ${plan.missingCapabilities.join(", ")}` } }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
@@ -293,7 +297,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       for (const candidate of candidates) {
         if (beforeModelAttempt) {
           const decision = await beforeModelAttempt(candidate);
-          if (decision?.skip) { if (decision.nextProbeAt) skipped.push(decision.nextProbeAt); continue; }
+          if (decision?.skip) { trace?.noteHealthSkip(candidate, models.indexOf(candidate), decision.reason); if (decision.nextProbeAt) skipped.push(decision.nextProbeAt); continue; }
           selectedDecision = decision;
         }
         selected = candidate;
@@ -321,6 +325,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
             earliestRetryAfter = healthDecision.nextProbeAt;
           }
           log.info("COMBO", `Skipping model ${modelStr}: ${healthDecision.reason || "route unhealthy"}`);
+          trace?.noteHealthSkip(modelStr, models.indexOf(modelStr), healthDecision.reason);
           continue;
         }
       } catch (healthError) {
@@ -338,9 +343,12 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
     }
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
+    // Phase D1: one attempt record per loop iteration (ordinal = configured order).
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(modelStr), model: modelStr }) || null;
     try {
-      const result = await handleSingleModel(body, modelStr, undefined, { signal: requestSignal });
+      const result = await runWithAttempt(attempt, () => handleSingleModel(body, modelStr, undefined, { signal: requestSignal }));
       if (requestSignal?.aborted || result?.status === 499) {
+        trace?.finishAttempt(attempt, { result: "cancelled", status: result?.status ?? 499, aborted: true });
         await onModelCancelled?.(modelStr, healthDecision);
         return result;
       }
@@ -360,6 +368,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
                 log.warn("COMBO", `Route-health failure update failed for ${modelStr}`, { error: healthError?.message || String(healthError) });
               }
             }
+            trace?.finishAttempt(attempt, { result: "failure", status: validationStatus, reason: "invalid_response" });
             lastError = validationError;
             if (!lastStatus) lastStatus = validationStatus;
             log.warn("COMBO", `Model ${modelStr} returned an empty/invalid success stream, trying next`);
@@ -376,11 +385,14 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
           }
         }
         log.info("COMBO", `Model ${modelStr} succeeded`);
+        trace?.finishAttempt(attempt, { result: "success", status: successResponse?.status ?? 200 });
+        trace?.noteWinner(attempt);
         return successResponse;
       }
 
       // Extract error info from response
       const failure = await normalizeProviderFailure(result);
+      trace?.finishAttempt(attempt, { result: "failure", status: failure.status, errorText: failure.errorText });
       let { errorText, retryAfter } = failure;
 
       // Track earliest retryAfter across all combo models
@@ -415,11 +427,13 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
       if (requestSignal?.aborted || error?.name === "AbortError") {
+        trace?.finishAttempt(attempt, { result: "cancelled", status: 499, aborted: true });
         await onModelCancelled?.(modelStr, healthDecision);
         return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
       }
       // Catch unexpected exceptions to ensure fallback continues
       const thrownError = error?.message || String(error);
+      trace?.finishAttempt(attempt, { result: "failure", status: Number(error?.status) || 500, errorText: thrownError });
       if (onModelFailure) {
         try {
           await onModelFailure(modelStr, { status: 500, errorText: thrownError, retryAfter: null }, healthDecision);
@@ -639,9 +653,12 @@ async function replayPanelResponse(response, body) {
  * @returns {Promise<Response>}
  */
 export async function handleFusionChat({ body, models, handleSingleModel, log, comboName, judgeModel, tuning, inspectModel = null, beforeModelAttempt = null, onModelSuccess = null, onModelFailure = null, onModelCancelled = null, validateSuccess = null, requestSignal = null }) {
+  const trace = getActiveLatencyTrace();
   const required = detectRequiredCapabilities(body);
   const inspect = inspectModel || (async () => ({ skip: false }));
-  const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: inspect });
+  const plan = await planComboCandidates({ models, requiredCapabilities: required, inspectHealth: inspect, latencyTrace: trace });
+  // Phase D1: selection complete → t1 + combo identity (fusion configured strategy).
+  trace?.setCombo(comboName, "fusion");
   const panel = plan.models.filter(Boolean);
   if (panel.length === 0) {
     const message = plan.missingCapabilities.length > 0
@@ -702,28 +719,37 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     let healthDecision = null;
     if (beforeModelAttempt) {
       healthDecision = await beforeModelAttempt(model, { signal });
-      if (healthDecision?.skip) return { __skipped: true, nextProbeAt: healthDecision.nextProbeAt };
+      if (healthDecision?.skip) {
+        trace?.noteHealthSkip(model, models.indexOf(model), healthDecision.reason);
+        return { __skipped: true, nextProbeAt: healthDecision.nextProbeAt };
+      }
     }
+    // Phase D1: one attempt record per panel invocation (concurrent → ALS-scoped).
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(model), model }) || null;
     let result;
     try {
-      result = await handleSingleModel(panelBody, model, true, { signal });
+      result = await runWithAttempt(attempt, () => handleSingleModel(panelBody, model, true, { signal }));
     } catch (error) {
       if (signal.aborted || error?.name === "AbortError") {
+        trace?.finishAttempt(attempt, { result: "cancelled", status: 499, aborted: true });
         await onModelCancelled?.(model, healthDecision);
         return { kind: "cancelled", model };
       }
       const failure = { status: Number(error?.status) || 500, errorText: error?.message || String(error), retryAfter: null };
+      trace?.finishAttempt(attempt, { result: "failure", status: failure.status, errorText: failure.errorText });
       try { await onModelFailure?.(model, failure, healthDecision); } catch (healthError) {
         log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
       }
       return { kind: "failure", model, errorText: failure.errorText, retryAfter: null };
     }
     if (signal.aborted || result?.status === 499) {
+      trace?.finishAttempt(attempt, { result: "cancelled", status: result?.status ?? 499, aborted: true });
       await onModelCancelled?.(model, healthDecision);
       return { kind: "cancelled", model, response: result };
     }
     if (!result?.ok) {
       const failure = await normalizeProviderFailure(result);
+      trace?.finishAttempt(attempt, { result: "failure", status: failure.status, errorText: failure.errorText });
       if (!signal.aborted) {
         try { await onModelFailure?.(model, failure, healthDecision); } catch (healthError) {
           log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
@@ -738,6 +764,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       text = "";
     }
     if (!text) {
+      trace?.finishAttempt(attempt, { result: "failure", status: 502, reason: "invalid_response" });
       try { await onModelFailure?.(model, { status: 502, errorText: "Empty or invalid successful chat response", retryAfter: null }, healthDecision); } catch (healthError) {
         log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
       }
@@ -748,6 +775,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     } catch (healthError) {
       log.warn("FUSION", `Health update failed for ${model}`, { error: healthError?.message || String(healthError) });
     }
+    trace?.finishAttempt(attempt, { result: "success", status: 200 });
     return { kind: "success", model, response: result, text };
   }, { ...cfg, minPanel, parentSignal: requestSignal });
   log.info("FUSION", `fan-out collected in ${Date.now() - t0}ms`);
@@ -778,6 +806,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }
   if (answers.length === 1) {
     log.info("FUSION", `Only ${answers[0].model} succeeded — answering directly (no fusion)`);
+    trace?.noteWinnerByModel(answers[0].model);
     return replayPanelResponse(answers[0].response, body);
   }
 
@@ -790,19 +819,24 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     const decision = beforeModelAttempt ? await beforeModelAttempt(candidate, { signal: requestSignal }) : { skip: false };
     if (decision?.skip) {
       if (decision.nextProbeAt && (!judgeRetryAfter || new Date(decision.nextProbeAt) < new Date(judgeRetryAfter))) judgeRetryAfter = decision.nextProbeAt;
+      trace?.noteHealthSkip(candidate, models.indexOf(candidate), decision.reason);
       continue;
     }
+    // Phase D1: judge attempt (ordinal -1 for an external judge model).
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(candidate), model: candidate }) || null;
     let result;
     try {
-      result = await handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal });
+      result = await runWithAttempt(attempt, () => handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal }));
     } catch (error) {
       if (requestSignal?.aborted || error?.name === "AbortError") {
+        trace?.finishAttempt(attempt, { result: "cancelled", status: 499, aborted: true });
         await onModelCancelled?.(candidate, decision);
         return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
       }
       const status = Number(error?.status) || 500;
       const errorText = error?.message || String(error);
       const failure = { status, errorText, retryAfter: null };
+      trace?.finishAttempt(attempt, { result: "failure", status, errorText });
       try { await onModelFailure?.(candidate, failure, decision); } catch (healthError) {
         log.warn("FUSION", `Health update failed for ${candidate}`, { error: healthError?.message || String(healthError) });
       }
@@ -812,6 +846,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       continue;
     }
     if (requestSignal?.aborted || result?.status === 499) {
+      trace?.finishAttempt(attempt, { result: "cancelled", status: result?.status ?? 499, aborted: true });
       await onModelCancelled?.(candidate, decision);
       return result;
     }
@@ -828,8 +863,11 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
         try { await onModelSuccess?.(candidate, decision); } catch (healthError) {
           log.warn("FUSION", `Health update failed for ${candidate}`, { error: healthError?.message || String(healthError) });
         }
+        trace?.finishAttempt(attempt, { result: "success", status: (validation.response || result)?.status ?? 200 });
+        trace?.noteWinner(attempt);
         return validation.response || result;
       }
+      trace?.finishAttempt(attempt, { result: "failure", status: validation?.status || 502, reason: "invalid_response" });
       try { await onModelFailure?.(candidate, { status: validation?.status || 502, errorText: validation?.errorText || "Empty or invalid successful chat response", retryAfter: null }, decision); } catch (healthError) {
         log.warn("FUSION", `Health update failed for ${candidate}`, { error: healthError?.message || String(healthError) });
       }
@@ -837,6 +875,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
     }
     const failure = await normalizeProviderFailure(result);
     const { errorText, retryAfter } = failure;
+    trace?.finishAttempt(attempt, { result: "failure", status: failure.status, errorText: String(errorText) });
     if (retryAfter && (!judgeRetryAfter || new Date(retryAfter) < new Date(judgeRetryAfter))) judgeRetryAfter = retryAfter;
     try { await onModelFailure?.(candidate, { ...failure, errorText: String(errorText), retryAfter }, decision); } catch (healthError) {
       log.warn("FUSION", `Health update failed for ${candidate}`, { error: healthError?.message || String(healthError) });

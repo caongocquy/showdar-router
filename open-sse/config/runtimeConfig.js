@@ -59,6 +59,10 @@ export const COMBO_FIRST_MEANINGFUL_TIMEOUT_MS = envMs("COMBO_FIRST_MEANINGFUL_T
 // Fetch connect timeout: abort if upstream doesn't return response headers within this duration
 export const FETCH_CONNECT_TIMEOUT_MS = envMs("FETCH_CONNECT_TIMEOUT_MS", 60 * 1000);
 
+// Phase D1 latency trace: max bytes buffered by the meaningful-content scanner
+// per attempt/direction before giving up (mark unavailable, never block the stream).
+export const LATENCY_TRACE_SCAN_BUFFER_LIMIT = 64 * 1024;
+
 // Gemini native TTS fetch timeout: abort if Google does not return response headers in time.
 export const GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS = envMs("GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS", 45 * 1000);
 
