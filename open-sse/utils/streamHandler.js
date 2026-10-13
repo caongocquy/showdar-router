@@ -1,6 +1,7 @@
 // Stream handler with disconnect detection - shared for all providers
 import { STREAM_STALL_TIMEOUT_MS } from "../config/runtimeConfig.js";
 import { dbg, isDebugEnabled } from "./debugLog.js";
+import { noteUpstreamChunk, noteClientChunk } from "./latencyTrace.js";
 
 // Get HH:MM:SS timestamp
 function getTimeString() {
@@ -14,12 +15,29 @@ function getTimeString() {
  * @param {object} options.log - Logger instance
  * @param {string} options.provider - Provider name
  * @param {string} options.model - Model name
+ * @param {object} [options.latency] - Phase D1 {trace, attempt} carrier (explicit
+ *   param — stream callbacks do not reliably inherit async-local context).
+ * @param {boolean} [options.latencyTerminal] - Phase D1: true only for the
+ *   client-facing controller (solo/attempt/judge). Nested fusion-panel
+ *   controllers must never finalize the shared request trace.
  */
-export function createStreamController({ onDisconnect, onError, onComplete, log, provider, model, reqTag = "" } = {}) {
+export function createStreamController({ onDisconnect, onError, onComplete, log, provider, model, reqTag = "", latency = null, latencyTerminal = true } = {}) {
   const abortController = new AbortController();
   const startTime = Date.now();
   let disconnected = false;
   let abortTimeout = null;
+
+  // First terminal wins: finalize(kind) is idempotent inside the trace.
+  // Gated on streamReturned: the handleChat wrapper must hand the response to
+  // the client first. An interposed combo/fusion validator can drain or cancel
+  // this stream before the wrapper returns — those pulls must not emit the
+  // request trace while fallback attempts may still follow.
+  const finalizeLatency = (kind) => {
+    try {
+      if (latency?.trace?.streamReturned !== true) return;
+      latency.trace.finalize?.(kind);
+    } catch { /* fail-open */ }
+  };
 
   // Only abnormal terminations are logged; normal completion is covered by "📊 done".
   // isError uses errorLine (always shown, ignores LOG_LEVEL) so failures survive quiet levels.
@@ -33,6 +51,8 @@ export function createStreamController({ onDisconnect, onError, onComplete, log,
   return {
     signal: abortController.signal,
     startTime,
+    latency,
+    latencyTerminal,
 
     isConnected: () => !disconnected,
 
@@ -40,6 +60,7 @@ export function createStreamController({ onDisconnect, onError, onComplete, log,
     handleDisconnect: (reason = "client_closed") => {
       if (disconnected) return;
       disconnected = true;
+      if (latencyTerminal) finalizeLatency("cancelled");
 
       // Debug-only: Responses API has no [DONE] sentinel, so codex/droid close the
       // socket on every completed request. "📊 done" is the authoritative outcome line.
@@ -63,6 +84,10 @@ export function createStreamController({ onDisconnect, onError, onComplete, log,
         clearTimeout(abortTimeout);
         abortTimeout = null;
       }
+      // Only the piped-stream path owns the terminal (chatCore sets
+      // finalizeOnComplete); non-streaming responses finalize in the handleChat
+      // wrapper by status, so their handleComplete here must not emit.
+      if (latencyTerminal && latency?.trace?.finalizeOnComplete) finalizeLatency("completed");
       onComplete?.();
     },
 
@@ -70,6 +95,7 @@ export function createStreamController({ onDisconnect, onError, onComplete, log,
     handleError: (error) => {
       if (disconnected) return;
       disconnected = true;
+      if (latencyTerminal) finalizeLatency(error?.name === "AbortError" ? "cancelled" : "failed");
 
       if (abortTimeout) {
         clearTimeout(abortTimeout);
@@ -104,6 +130,8 @@ export function createDisconnectAwareStream(transformStream, streamController, o
   const reader = transformStream.readable.getReader();
   const writer = transformStream.writable.getWriter();
   let terminalEmitted = false;
+  // Phase D1 carrier (explicit param via the controller — never ALS at byte time).
+  const lat = streamController.latency || null;
 
   // Emit a synthesized terminal payload (e.g. Responses response.failed + [DONE]) once.
   // terminalGuard is the transform's authoritative record of terminals actually
@@ -136,6 +164,8 @@ export function createDisconnectAwareStream(transformStream, streamController, o
           controller.close();
           return;
         }
+        // Phase D1: t4 = first byte handed to the client, t4m = first meaningful.
+        noteClientChunk(lat, value);
         controller.enqueue(value);
       } catch (error) {
         const wasConnected = streamController.isConnected();
@@ -204,6 +234,7 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
   let totalBytes = 0;
   let lastChunkAt = Date.now();
   const t0 = Date.now();
+  const lat = streamController.latency || null; // Phase D1 carrier (explicit, never ALS at byte time)
   const tag = "STREAM";
   const clearStall = () => {
     if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
@@ -224,6 +255,8 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
   const wrappedController = {
     signal: streamController.signal,
     startTime: streamController.startTime,
+    latency: streamController.latency || null,
+    latencyTerminal: streamController.latencyTerminal !== false,
     isConnected: () => streamController.isConnected(),
     handleComplete: () => { dbg(tag, `complete | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); streamController.handleComplete(); },
     handleError: (e) => { dbg(tag, `error: ${e?.message} | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); streamController.handleError(e); },
@@ -246,6 +279,8 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
         dbg(tag, `chunk #${chunkCount} | size=${sz}B | gap=${gap}ms | total=${totalBytes}B`);
       }
       armStall();
+      // Phase D1: t3 = first upstream body byte, t3m = first meaningful token.
+      noteUpstreamChunk(lat, chunk);
       controller.enqueue(chunk);
     },
     flush() { dbg(tag, `upstream EOF | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); }

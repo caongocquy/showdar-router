@@ -30,6 +30,7 @@ import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
 import { defaultClaudeToolType } from "../translator/concerns/toolCall.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import { getActiveLatencyTrace, getActiveAttempt, setExecutePhase } from "../utils/latencyTrace.js";
 import crypto from "crypto";
 
 /**
@@ -59,9 +60,19 @@ export function stripContinuityFields(body) {
   return body;
 }
 
-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, signal: externalSignal }) {
+export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, signal: externalSignal, isPanel = false }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
+  // Phase D1: request-local latency carriers. `latency` is threaded explicitly
+  // into the stream controller because WHATWG stream callbacks do not reliably
+  // inherit async-local context — no ALS is read at byte time.
+  const latencyTrace = getActiveLatencyTrace();
+  const activeAttempt = getActiveAttempt();
+  const latency = latencyTrace ? { trace: latencyTrace, attempt: activeAttempt } : null;
+  // Phase D1: only client-facing cores own the trace terminal. Nested
+  // fusion-panel cores (isPanel) run under the same request trace but their
+  // stream controllers must never finalize it early.
+  const latencyTerminal = !isPanel;
   // Stable per-session color so all lines of one CLI conversation share a tag.
   // Without a connection identity (keyless/no-auth clients), fall back to an
   // API-key hash: an ACCOUNT-scoped sticky identity (per provider, TTL-bounded
@@ -325,7 +336,9 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     },
     onError: () => trackPendingRequest(model, provider, connectionId, false),
     onComplete: () => detachExternalAbort(),
-    log, provider, model, reqTag
+    log, provider, model, reqTag,
+    latency,
+    latencyTerminal
   });
   if (externalSignal) {
     if (externalSignal.aborted) streamController.abort?.(externalSignal.reason);
@@ -374,6 +387,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Most executors return their registry format. Cursor AgentService is an
   // exception: it is decoded by the executor into OpenAI-compatible output.
   let providerResponseFormat = targetFormat;
+  // Phase D1: dispatch-phase window — proxyFetch dispatches inside this window
+  // count as this attempt's upstream call; headroom/token-refresh fetches
+  // outside it stay invisible.
+  setExecutePhase(activeAttempt, true);
   try {
     const result = await executor.execute({
       model,
@@ -394,6 +411,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     providerResponseFormat = result.responseFormat || targetFormat;
     reqLogger.logTargetRequest(providerUrl, providerHeaders, finalBody);
   } catch (error) {
+    setExecutePhase(activeAttempt, false);
     trackPendingRequest(model, provider, connectionId, false, true);
     appendRequestLog({ model, provider, connectionId, status: `FAILED ${error.name === "AbortError" ? 499 : HTTP_STATUS.BAD_GATEWAY}` }).catch(() => { });
     saveRequestDetail(buildRequestDetail({
@@ -417,6 +435,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     }
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, errMsg);
   }
+  setExecutePhase(activeAttempt, false);
 
   // Handle 401/403 - try token refresh (skip for noAuth providers)
   if (!executor.noAuth && (providerResponse.status === HTTP_STATUS.UNAUTHORIZED || providerResponse.status === HTTP_STATUS.FORBIDDEN)) {
@@ -439,6 +458,9 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
         if (onCredentialsRefreshed) {
           try { await onCredentialsRefreshed(newCredentials); } catch (e) { log?.warn?.("TOKEN", `onCredentialsRefreshed failed: ${e.message}`); }
         }
+        // Phase D1: this is a post-refresh retry dispatch on the same attempt.
+        if (activeAttempt) activeAttempt.authRefresh = true;
+        setExecutePhase(activeAttempt, true);
         try {
           const retryResult = await executor.execute({
             model,
@@ -458,6 +480,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
             providerResponseFormat = retryResult.responseFormat || targetFormat;
           }
         } catch { log?.warn?.("TOKEN", `${provider.toUpperCase()} | retry after refresh failed`); }
+        finally { setExecutePhase(activeAttempt, false); }
       } else {
         log?.warn?.("TOKEN", `${provider.toUpperCase()} | refresh failed`);
       }
@@ -509,6 +532,8 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   }
 
   // Streaming response
+  // Phase D1: from here on the stream terminal owns finalize (t5 = stream end).
+  if (latencyTrace && latencyTerminal) latencyTrace.finalizeOnComplete = true;
   const { onStreamComplete, streamDetailId } = buildOnStreamComplete({ ...sharedCtx });
   return handleStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, userAgent, reqLogger, toolNameMap, customToolNames, streamController, onStreamComplete, streamDetailId, credentials });
 }

@@ -25,6 +25,34 @@ import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+import {
+  createLatencyTrace,
+  runWithLatencyTrace,
+  runWithAttempt,
+  getActiveLatencyTrace,
+} from "open-sse/utils/latencyTrace.js";
+
+function latencyEndpointOf(request, clientRawRequest) {
+  try { return new URL(request.url).pathname || null; } catch { return clientRawRequest?.endpoint || null; }
+}
+
+function finalizeLatencyFromResponse(trace, res) {
+  try {
+    if (!trace || trace.finalized) return;
+    if (!res) { trace.finalize("failed"); return; }
+    const ct = res.headers?.get?.("content-type") || "";
+    // A piped SSE response is finalized by its stream terminal (handleComplete/
+    // handleError/handleDisconnect) — the wrapper must not close t5 at return
+    // time. Handing off here also flips streamReturned, which unlocks those
+    // terminal finalizes (and client t4 marks) for this request.
+    if (ct.includes("text/event-stream") && trace.finalizeOnComplete) {
+      trace.streamReturned = true;
+      return;
+    }
+    const status = res.status || 200;
+    trace.finalize(status === 499 ? "cancelled" : status >= 400 ? "failed" : "completed");
+  } catch { /* fail-open */ }
+}
 
 /**
  * Handle chat completion request
@@ -32,6 +60,19 @@ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
  * Format detection and translation handled by translator
  */
 export async function handleChat(request, clientRawRequest = null) {
+  const trace = createLatencyTrace({ endpoint: latencyEndpointOf(request, clientRawRequest) });
+  if (!trace) return handleChatRequest(request, clientRawRequest);
+  try {
+    const result = await runWithLatencyTrace(trace, () => handleChatRequest(request, clientRawRequest));
+    finalizeLatencyFromResponse(trace, result);
+    return result;
+  } catch (err) {
+    trace.finalize(err?.name === "AbortError" ? "cancelled" : "failed");
+    throw err;
+  }
+}
+
+async function handleChatRequest(request, clientRawRequest = null) {
   let body;
   try {
     body = await request.json();
@@ -119,7 +160,7 @@ export async function handleChat(request, clientRawRequest = null) {
             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
             cleanRawReq = { ...clientRawRequest, body: cleanBody };
           }
-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal);
+          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal, !!isPanel);
         },
         ...createChatComboHealthHooks(log),
         requestSignal: request.signal,
@@ -173,7 +214,7 @@ export async function handleChat(request, clientRawRequest = null) {
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, signal = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, signal = null, isPanel = false) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -200,7 +241,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal, !!isPanel);
           },
           ...createChatComboHealthHooks(log),
           requestSignal: request.signal,
@@ -232,6 +273,11 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   }
 
   const { provider, model } = modelInfo;
+
+  // Phase D1: solo selection mark (t1). Skipped when combo/fusion already
+  // recorded the selection — combo-level attempts own those requests.
+  const trace = getActiveLatencyTrace();
+  trace?.markSoloSelection();
 
   // Routing shown in the unified "▶" line (client model → provider/model)
 
@@ -278,50 +324,80 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     // Use shared chatCore
     const chatSettings = await getSettings();
     const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
-    const result = await handleChatCore({
-      body: { ...body, model: `${provider}/${model}` },
-      modelInfo: { provider, model },
-      credentials: refreshedCredentials,
-      log,
-      clientRawRequest,
-      connectionId: credentials.connectionId,
-      userAgent,
-      apiKey,
-      ccFilterNaming: !!chatSettings.ccFilterNaming,
-      rtkEnabled: !!chatSettings.rtkEnabled,
-      headroomEnabled: !!chatSettings.headroomEnabled,
-      headroomUrl: chatSettings.headroomUrl || DEFAULT_HEADROOM_URL,
-      headroomCompressUserMessages: !!chatSettings.headroomCompressUserMessages,
-      headroomTimeoutMs: chatSettings.headroomTimeoutMs,
-      cavemanEnabled: !!chatSettings.cavemanEnabled,
-      cavemanLevel: chatSettings.cavemanLevel || "full",
-      ponytailEnabled: !!chatSettings.ponytailEnabled,
-      ponytailLevel: chatSettings.ponytailLevel || "full",
-      signal,
-      pxpipeEnabled: !!chatSettings.pxpipeEnabled,
-      pxpipeMinChars: chatSettings.pxpipeMinChars,
-      pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,
-      // Lazily warms the in-process module on first use; null when not installed (fail-open)
-      pxpipeTransform: chatSettings.pxpipeEnabled ? await getPxpipeTransform() : null,
-      onPxpipeEvent: appendPxpipeEvent,
-      providerThinking,
-      // Detect source format by endpoint + body
-      sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
-      onCredentialsRefreshed: async (newCreds) => {
-        await updateProviderCredentials(credentials.connectionId, {
-          ...newCreds,
-          existingProviderSpecificData: credentials.providerSpecificData,
-          testStatus: "active"
-        });
-      },
-      onRequestSuccess: async () => {
-        await clearAccountError(credentials.connectionId, credentials, model);
-        // "Consecutive" strikes: a success clears the breaker for this pair.
-        clearAntigravityStrikes(credentials.connectionId, model);
-      }
-    });
+    // Phase D1: one attempt per account iteration. Combo/fusion requests carry
+    // their own attempt record (comboActive) — never double-record.
+    const attempt = trace && !trace.comboActive ? trace.beginAttempt({ ordinal: 0, model: modelStr }) : null;
+    let result;
+    try {
+      result = await runWithAttempt(attempt, async () => handleChatCore({
+        body: { ...body, model: `${provider}/${model}` },
+        modelInfo: { provider, model },
+        credentials: refreshedCredentials,
+        log,
+        clientRawRequest,
+        connectionId: credentials.connectionId,
+        userAgent,
+        apiKey,
+        ccFilterNaming: !!chatSettings.ccFilterNaming,
+        rtkEnabled: !!chatSettings.rtkEnabled,
+        headroomEnabled: !!chatSettings.headroomEnabled,
+        headroomUrl: chatSettings.headroomUrl || DEFAULT_HEADROOM_URL,
+        headroomCompressUserMessages: !!chatSettings.headroomCompressUserMessages,
+        headroomTimeoutMs: chatSettings.headroomTimeoutMs,
+        cavemanEnabled: !!chatSettings.cavemanEnabled,
+        cavemanLevel: chatSettings.cavemanLevel || "full",
+        ponytailEnabled: !!chatSettings.ponytailEnabled,
+        ponytailLevel: chatSettings.ponytailLevel || "full",
+        signal,
+        isPanel,
+        pxpipeEnabled: !!chatSettings.pxpipeEnabled,
+        pxpipeMinChars: chatSettings.pxpipeMinChars,
+        pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,
+        // Lazily warms the in-process module on first use; null when not installed (fail-open)
+        pxpipeTransform: chatSettings.pxpipeEnabled ? await getPxpipeTransform() : null,
+        onPxpipeEvent: appendPxpipeEvent,
+        providerThinking,
+        // Detect source format by endpoint + body
+        sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
+        onCredentialsRefreshed: async (newCreds) => {
+          await updateProviderCredentials(credentials.connectionId, {
+            ...newCreds,
+            existingProviderSpecificData: credentials.providerSpecificData,
+            testStatus: "active"
+          });
+        },
+        onRequestSuccess: async () => {
+          await clearAccountError(credentials.connectionId, credentials, model);
+          // "Consecutive" strikes: a success clears the breaker for this pair.
+          clearAntigravityStrikes(credentials.connectionId, model);
+        }
+      }));
+    } catch (err) {
+      // chatCore mostly returns error results, but a thrown pre-dispatch error
+      // (logger/headroom/pxpipe) must still close the attempt record.
+      trace?.finishAttempt(attempt, {
+        result: err?.name === "AbortError" ? "cancelled" : "failure",
+        status: err?.name === "AbortError" ? 499 : Number(err?.status) || 500,
+        errorText: err?.message || String(err),
+        aborted: err?.name === "AbortError",
+      });
+      throw err;
+    }
 
-    if (result.success) return result.response;
+    if (result.success) {
+      trace?.finishAttempt(attempt, { result: "success", status: result.response?.status ?? 200 });
+      trace?.noteWinner(attempt);
+      return result.response;
+    }
+
+    // Phase D1: record the failed attempt (classified enum reason only).
+    const attemptStatus = result.status ?? result.response?.status ?? 500;
+    trace?.finishAttempt(attempt, {
+      result: attemptStatus === 499 ? "cancelled" : "failure",
+      status: attemptStatus,
+      errorText: result.error || "",
+      aborted: attemptStatus === 499,
+    });
 
     // Antigravity 409/429: refresh live quota to get exact resetAt before locking
     let quotaResetMs = null;
