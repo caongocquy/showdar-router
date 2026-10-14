@@ -258,6 +258,29 @@ export function getComboModelsFromData(modelStr, combosData) {
   return null;
 }
 
+// Phase D2A: fallback-availability signal for the executor's combo capacity
+// budget. Returns a boolean when no route-health hooks are present (plan is
+// the full truth), or an inspectOnly predicate when they are, so retries are
+// only suppressed while a later plan-eligible candidate is still dispatchable.
+function makeComboFallbackRemaining(idx, candidates, healthInspect, beforeModelAttempt) {
+  const later = candidates.slice(idx + 1);
+  if (later.length === 0) return false;
+  if (!beforeModelAttempt) return true;
+  return async () => {
+    try {
+      for (const model of later) {
+        const decision = await healthInspect(model);
+        if (!decision?.skip) return true;
+      }
+      return false;
+    } catch {
+      // Health unreadable → combo itself fails open and still dispatches the
+      // candidate, so a fallback exists: keep the capacity budget cut.
+      return true;
+    }
+  };
+}
+
 /**
  * Handle combo chat with fallback
  * @param {Object} options
@@ -345,8 +368,15 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
     // Phase D1: one attempt record per loop iteration (ordinal = configured order).
     const attempt = trace?.beginAttempt({ ordinal: models.indexOf(modelStr), model: modelStr }) || null;
+    // Phase D2A: tell the executor whether a usable fallback candidate
+    // remains so capacity statuses fall through instead of burning same-URL
+    // retries. Plan-time health is already baked into rotatedModels; when
+    // route-health hooks exist, pass a LIVE predicate so retries are only
+    // suppressed while a later candidate is actually dispatchable (a health
+    // flip between planning and execution must not hide the last fallback).
+    const comboFallbackRemaining = makeComboFallbackRemaining(i, rotatedModels, healthInspect, beforeModelAttempt);
     try {
-      const result = await runWithAttempt(attempt, () => handleSingleModel(body, modelStr, undefined, { signal: requestSignal }));
+      const result = await runWithAttempt(attempt, () => handleSingleModel(body, modelStr, undefined, { signal: requestSignal, comboFallbackRemaining }));
       if (requestSignal?.aborted || result?.status === 499) {
         trace?.finishAttempt(attempt, { result: "cancelled", status: result?.status ?? 499, aborted: true });
         await onModelCancelled?.(modelStr, healthDecision);
