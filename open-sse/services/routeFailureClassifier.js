@@ -22,12 +22,14 @@ const AUTH_MARKERS = [
 
 // Deterministic capability rejections: the credential/route can never serve
 // this request shape (wrong tier, wrong surface). Retrying the same candidate
-// is futile — advance to the next candidate immediately.
+// is futile — advance to the next candidate immediately. Only strong, specific
+// signatures count here: generic upgrade/payment wording must never mark a
+// route as capability, or quota/rate-limit/subscription errors that politely
+// suggest a paid plan would lose their correct classification and cooldown.
 const CAPABILITY_MARKERS = [
   "freetiererror",
   "free tier can only be used from within",
   "only be used from within opencode",
-  "upgrade to a paid plan",
 ];
 
 const QUOTA_MARKERS = [
