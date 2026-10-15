@@ -178,7 +178,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
       ...createChatComboHealthHooks(log),
       models: augmentedModels,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
+        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
         adapterAdded
       ),
       log,
@@ -199,7 +199,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
       ...createChatComboHealthHooks(log),
       models: soloAugmented,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
+        (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
         adapterAdded
       ),
       log,
@@ -214,7 +214,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, signal = null, isPanel = false) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, signal = null, isPanel = false, comboFallbackRemaining = false) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -241,7 +241,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal, !!isPanel);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, options.signal, !!isPanel, options.comboFallbackRemaining);
           },
           ...createChatComboHealthHooks(log),
           requestSignal: request.signal,
@@ -259,7 +259,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         ...createChatComboHealthHooks(log),
         models: augmentedModels,
         handleSingleModel: withCapacityAdapterStripping(
-          (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal),
+          (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
           adapterAdded
         ),
         log,
@@ -350,6 +350,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         ponytailLevel: chatSettings.ponytailLevel || "full",
         signal,
         isPanel,
+        comboFallbackRemaining,
         pxpipeEnabled: !!chatSettings.pxpipeEnabled,
         pxpipeMinChars: chatSettings.pxpipeMinChars,
         pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,

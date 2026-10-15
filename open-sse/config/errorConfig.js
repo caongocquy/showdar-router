@@ -78,6 +78,7 @@ export const ROUTE_HEALTH_CONFIG = {
   daily_quota: { baseMs: DAILY_QUOTA_MIN_PROBE_MS, maxMs: 24 * 60 * 60 * 1000, state: "cooldown" },
   subscription: { baseMs: 30 * 60_000, maxMs: 60 * 60_000, state: "cooldown" },
   authentication: { baseMs: 5 * 60_000, maxMs: 15 * 60_000, state: "cooldown" },
+  capability: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
   unsupported_model: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
   model_not_found: { baseMs: 10 * 60_000, maxMs: 30 * 60_000, state: "cooldown" },
   provider_capacity: { baseMs: 15_000, maxMs: 2 * 60_000, state: "open" },

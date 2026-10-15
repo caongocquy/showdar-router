@@ -20,6 +20,18 @@ const AUTH_MARKERS = [
   "api_key_invalid",
 ];
 
+// Deterministic capability rejections: the credential/route can never serve
+// this request shape (wrong tier, wrong surface). Retrying the same candidate
+// is futile — advance to the next candidate immediately. Only strong, specific
+// signatures count here: generic upgrade/payment wording must never mark a
+// route as capability, or quota/rate-limit/subscription errors that politely
+// suggest a paid plan would lose their correct classification and cooldown.
+const CAPABILITY_MARKERS = [
+  "freetiererror",
+  "free tier can only be used from within",
+  "only be used from within opencode",
+];
+
 const QUOTA_MARKERS = [
   "rate limit",
   "too many requests",
@@ -115,7 +127,13 @@ export function classifyRouteFailure(status, errorText, failureLevel = 0) {
   let reason = "unknown";
   let scope = "route";
 
-  if (includesAny(text, UNSUPPORTED_MODEL_MARKERS) || effectiveStatus === 406) {
+  if (includesAny(text, CAPABILITY_MARKERS)) {
+    // Deterministic tier/surface rejection (e.g. OpenCode FreeTierError):
+    // status-independent — chainable so combo falls through, but never
+    // retry this candidate.
+    reason = "capability";
+    scope = "credential";
+  } else if (includesAny(text, UNSUPPORTED_MODEL_MARKERS) || effectiveStatus === 406) {
     reason = "unsupported_model";
   } else if (effectiveStatus === 404) {
     reason = "model_not_found";

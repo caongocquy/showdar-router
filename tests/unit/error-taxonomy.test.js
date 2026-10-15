@@ -78,6 +78,84 @@ describe("route failure taxonomy", () => {
   });
 });
 
+describe("capability classification requires explicit FreeTierError signatures", () => {
+  const freeTierBody = JSON.stringify({
+    type: "error",
+    error: {
+      type: "FreeTierError",
+      message: "OpenCode's free tier can only be used from within OpenCode. Please upgrade to a paid plan.",
+    },
+  });
+
+  it("429 rate-limit message with a paid-plan suggestion stays transient_rate_limit", () => {
+    const c = classifyRouteFailure(429, "Rate limit exceeded. Upgrade to a paid plan.");
+    expect(c.reason).toBe("transient_rate_limit");
+    expect(c.scope).toBe("credential");
+    expect(c.chainable).toBe(true);
+    expect(c.routeCooldownMs).toBe(ROUTE_HEALTH_CONFIG.transient_rate_limit.baseMs);
+  });
+
+  it("429 quota message with a paid-plan suggestion stays transient_rate_limit", () => {
+    const c = classifyRouteFailure(429, "Quota exceeded. Upgrade to a paid plan.");
+    expect(c.reason).toBe("transient_rate_limit");
+    expect(c.scope).toBe("credential");
+    expect(c.chainable).toBe(true);
+  });
+
+  it("403 explicit FreeTierError remains capability with route cooldown", () => {
+    const c = classifyRouteFailure(403, freeTierBody);
+    expect(c.reason).toBe("capability");
+    expect(c.scope).toBe("credential");
+    expect(c.chainable).toBe(true);
+    expect(c.routeCooldownMs).toBe(ROUTE_HEALTH_CONFIG.capability.baseMs);
+    expect(c.credentialCooldownMs).toBe(2 * 60_000);
+  });
+
+  it("503 wrapping an explicit FreeTierError remains capability", () => {
+    const wrapped = JSON.stringify({
+      error: {
+        code: 503,
+        status: "UNAVAILABLE",
+        message: "upstream error",
+        details: [{
+          reason: "FreeTierError",
+          message: "OpenCode's free tier can only be used from within OpenCode",
+        }],
+      },
+    });
+    const c = classifyRouteFailure(503, wrapped);
+    expect(c.reason).toBe("capability");
+    expect(c.scope).toBe("credential");
+    expect(c.chainable).toBe(true);
+  });
+
+  it("402 payment-required wording with upgrade suggestion stays subscription", () => {
+    const c = classifyRouteFailure(402, "Payment required. Upgrade to a paid plan to continue.");
+    expect(c.reason).toBe("subscription");
+    expect(c.scope).toBe("credential");
+    expect(c.chainable).toBe(true);
+    expect(c.routeCooldownMs).toBe(ROUTE_HEALTH_CONFIG.subscription.baseMs);
+  });
+
+  it("Gemini daily-quota message with paid-plan suggestion stays daily_quota", () => {
+    const body = JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded for GenerateRequestsPerDayPerProjectPerModelFreeTier with details: Upgrade to a paid plan.",
+      },
+    });
+    const c = classifyRouteFailure(429, body);
+    expect(c.reason).toBe("daily_quota");
+    expect(c.chainable).toBe(true);
+  });
+
+  it("bare paid-plan suggestion without FreeTierError signatures is not capability", () => {
+    const c = classifyRouteFailure(403, "Please upgrade to a paid plan.");
+    expect(c.reason).not.toBe("capability");
+  });
+});
+
 describe("request-scoped errors do not chain models", () => {
   it("stops the combo chain on an invalid request", async () => {
     const attempted = [];
