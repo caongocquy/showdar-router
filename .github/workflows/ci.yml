@@ -98,3 +98,25 @@ jobs:
             printf '%s\n' "$unexpected" >&2
             exit 1
           fi
+
+  # The Windows EINVAL regression is about real .cmd spawn behaviour, so it runs
+  # on an actual Windows runner rather than a simulated platform string.
+  windows-spawn:
+    name: Windows spawn safety
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install repository dependencies
+        run: |
+          npm install --no-package-lock --legacy-peer-deps
+          npm install --no-package-lock --legacy-peer-deps --no-save vite@8.2.2
+
+      - name: Run Windows spawn safety tests
+        run: npx vitest run tests/unit/windows-spawn-safety.test.js
