@@ -89,16 +89,41 @@ jobs:
           ref: ${{ needs.metadata.outputs.tag }}
           fetch-depth: 0
 
-      - name: Refresh release packager for manual backfill
+      # Explicit manual backfill of a historical tag: load the approved release
+      # tooling from the default branch. An ordinary tag push never does this and
+      # uses only the tooling that shipped inside that tag. The list is the full
+      # transitive closure (package-release-bundle.mjs imports lib/npm-invocation.mjs).
+      - name: Refresh release tooling for manual backfill
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TOOLING: scripts/package-release-bundle.mjs scripts/lib/npm-invocation.mjs scripts/release-bundle-smoke.mjs scripts/verify-release-assets.mjs
         run: |
           set -euo pipefail
           git fetch origin "$DEFAULT_BRANCH" --depth=1
-          mkdir -p scripts
-          git show FETCH_HEAD:scripts/package-release-bundle.mjs > scripts/package-release-bundle.mjs
+          for file in $TOOLING; do
+            mkdir -p "$(dirname "$file")"
+            git show "FETCH_HEAD:$file" > "$file"
+          done
+
+      # Deterministic availability check for every event: a historical tag that
+      # lacks a required script must fail here visibly rather than at a later
+      # step, and a backfill that could not restore a script must not proceed.
+      - name: Verify required release tooling is present
+        shell: bash
+        env:
+          TOOLING: scripts/package-release-bundle.mjs scripts/lib/npm-invocation.mjs scripts/release-bundle-smoke.mjs scripts/verify-release-assets.mjs
+        run: |
+          set -euo pipefail
+          missing=0
+          for file in $TOOLING; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Required release tooling missing: $file"
+              missing=1
+            fi
+          done
+          [[ "$missing" -eq 0 ]]
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v4
@@ -127,7 +152,12 @@ jobs:
       # a bundle that cannot actually run never becomes an asset.
       - name: Functional bundle smoke
         shell: bash
-        run: node scripts/release-bundle-smoke.mjs --bundle .release/bundle --version "${{ needs.metadata.outputs.version }}"
+        run: |
+          set -euo pipefail
+          if ! node scripts/release-bundle-smoke.mjs --bundle .release/bundle --version "${{ needs.metadata.outputs.version }}"; then
+            echo "::error::Functional bundle smoke failed. For workflow_dispatch this means the historical bundle is unsupported by the current smoke tooling; do not treat it as a passing backfill."
+            exit 1
+          fi
 
       - name: Create tar.gz archive
         if: runner.os != 'Windows'
@@ -179,18 +209,31 @@ jobs:
         with:
           ref: ${{ needs.metadata.outputs.tag }}
 
-      # A backfilled tag may predate this verifier; take it from the default
-      # branch so the completeness gate always runs the current logic.
-      - name: Refresh release asset verifier for manual backfill
+      # A backfilled tag may predate this verifier; take the current approved
+      # tooling from the default branch so the completeness gate always runs the
+      # current logic.
+      - name: Refresh release verifier for manual backfill
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TOOLING: scripts/verify-release-assets.mjs
         run: |
           set -euo pipefail
           git fetch origin "$DEFAULT_BRANCH" --depth=1
-          mkdir -p scripts
-          git show FETCH_HEAD:scripts/verify-release-assets.mjs > scripts/verify-release-assets.mjs
+          for file in $TOOLING; do
+            mkdir -p "$(dirname "$file")"
+            git show "FETCH_HEAD:$file" > "$file"
+          done
+
+      - name: Verify release verifier is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -f scripts/verify-release-assets.mjs ]] || {
+            echo "::error::Required release tooling missing: scripts/verify-release-assets.mjs" >&2
+            exit 1
+          }
 
       - name: Download platform artifacts
         uses: actions/download-artifact@v4
