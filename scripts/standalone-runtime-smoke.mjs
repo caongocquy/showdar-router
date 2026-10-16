@@ -6,6 +6,7 @@ import { createServer as createProbeServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { npmInvocation } from "./lib/npm-invocation.mjs";
 
 // Repo root derived from this script's own location (scripts/) — never
 // process.cwd(), never a hardcoded absolute path.
@@ -114,7 +115,8 @@ process.once("SIGTERM", () => { emergencyStop(); process.exit(143); });
 
 try {
   if (!skipBuild) {
-    execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build"], {
+    const npm = npmInvocation(["run", "build"]);
+    execFileSync(npm.executable, npm.args, {
       cwd: repo,
       stdio: "inherit",
     });

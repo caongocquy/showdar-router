@@ -121,6 +121,14 @@ jobs:
         run: >-
           node scripts/package-release-bundle.mjs --tool "showdar-router" --bin-name "showdar-router" --package-name "showdar-router" --package-dir "cli" --entry "cli.js" --version "${{ needs.metadata.outputs.version }}" --ignore-install-scripts true
 
+      # Same authoritative functional smoke the dry-run workflow runs: bundled
+      # runtime --version, bundled server startup, /api/health and /api/version
+      # = 200, clean shutdown, no orphan listener. Archives are created below, so
+      # a bundle that cannot actually run never becomes an asset.
+      - name: Functional bundle smoke
+        shell: bash
+        run: node scripts/release-bundle-smoke.mjs --bundle .release/bundle --version "${{ needs.metadata.outputs.version }}"
+
       - name: Create tar.gz archive
         if: runner.os != 'Windows'
         shell: bash
@@ -166,6 +174,24 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.metadata.outputs.tag }}
+
+      # A backfilled tag may predate this verifier; take it from the default
+      # branch so the completeness gate always runs the current logic.
+      - name: Refresh release asset verifier for manual backfill
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$DEFAULT_BRANCH" --depth=1
+          mkdir -p scripts
+          git show FETCH_HEAD:scripts/verify-release-assets.mjs > scripts/verify-release-assets.mjs
+
       - name: Download platform artifacts
         uses: actions/download-artifact@v4
         with:
@@ -181,11 +207,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Verify every checksum matches its artifact before publishing.
-          for archive in release-assets/*.tar.gz release-assets/*.zip; do
-            [[ -e "$archive" ]] || continue
-            ( cd release-assets && sha256sum -c "$(basename "$archive").sha256" )
-          done
+          # Require exactly the four expected archives, each with one matching
+          # checksum, and verify every archive/checksum pair before publishing.
+          node scripts/verify-release-assets.mjs --dir release-assets
           found=0
           for attempt in {1..120}; do
             if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then

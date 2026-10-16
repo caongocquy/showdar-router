@@ -1,9 +1,10 @@
-name: Release Artifacts (dry run)
+name: Release Verification (dry run)
 
-# Non-publishing verification of the portable release bundles. Builds the real
-# platform bundles and runs a functional smoke (server readiness, endpoint,
-# clean shutdown, no orphan) WITHOUT publishing npm or creating/replacing any
-# GitHub Release. Never requires a release tag.
+# Non-publishing verification of the portable release bundles, the assembled
+# four-archive asset set and the Node compatibility floor. Builds the real
+# platform bundles and runs the SAME authoritative functional smoke the
+# production release workflow runs (release-bundle-smoke.mjs). Never publishes
+# npm, never creates/replaces a GitHub Release, never requires a release tag.
 on:
   workflow_dispatch:
   push:
@@ -23,15 +24,19 @@ jobs:
           - runner: macos-15
             platform: darwin
             arch: arm64
+            asset: showdar-router-darwin-arm64.tar.gz
           - runner: macos-15-intel
             platform: darwin
             arch: x64
+            asset: showdar-router-darwin-x64.tar.gz
           - runner: ubuntu-22.04
             platform: linux
             arch: x64
+            asset: showdar-router-linux-x64.tar.gz
           - runner: windows-2022
             platform: windows
             arch: x64
+            asset: showdar-router-windows-x64.zip
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
@@ -63,6 +68,100 @@ jobs:
         run: >-
           node scripts/package-release-bundle.mjs --tool "showdar-router" --bin-name "showdar-router" --package-name "showdar-router" --package-dir "cli" --entry "cli.js" --version "${{ steps.version.outputs.value }}" --ignore-install-scripts true
 
+      # Authoritative functional smoke, identical to the production release job.
       - name: Functional bundle smoke
         shell: bash
         run: node scripts/release-bundle-smoke.mjs --bundle .release/bundle --version "${{ steps.version.outputs.value }}"
+
+      - name: Create tar.gz archive
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          ASSET: ${{ matrix.asset }}
+        run: tar -C .release/bundle -czf "$ASSET" .
+
+      - name: Create zip archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ASSET: ${{ matrix.asset }}
+        run: Compress-Archive -Path '.release/bundle/*' -DestinationPath $env:ASSET -CompressionLevel Optimal
+
+      - name: Write SHA-256 checksum
+        env:
+          ASSET: ${{ matrix.asset }}
+        shell: bash
+        run: |
+          node -e '
+            const crypto = require("node:crypto");
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const file = process.env.ASSET;
+            const hash = crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+            fs.writeFileSync(`${file}.sha256`, `${hash}  ${path.basename(file)}\n`);
+          '
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            ${{ matrix.asset }}
+            ${{ matrix.asset }}.sha256
+          if-no-files-found: error
+          compression-level: 0
+
+  # Proves the executable archive set the production publish job will enforce:
+  # exactly four archives, one matching checksum each, all pairs verified.
+  verify-set:
+    name: Verify release asset set
+    needs: bundle-smoke
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify exactly four archives with matching checksums
+        run: node scripts/verify-release-assets.mjs --dir release-assets
+
+  node-compat:
+    name: Node ${{ matrix.node }} compatibility
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20.9.0", "22", "24"]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # vite is a test-only dependency and is intentionally NOT installed here:
+      # its own engine floor must not mask the runtime compatibility result.
+      - name: Install repository dependencies
+        run: |
+          npm install --no-package-lock --legacy-peer-deps
+          npm --prefix cli install --no-package-lock --ignore-scripts --legacy-peer-deps
+
+      - name: Build CLI package
+        run: npm --prefix cli run build
+
+      - name: CLI installation, entry and --version
+        env:
+          SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL: "1"
+        run: node scripts/npm-install-smoke.mjs
+
+      - name: Production server readiness, endpoints and shutdown
+        env:
+          SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL: "1"
+        run: node scripts/standalone-runtime-smoke.mjs
