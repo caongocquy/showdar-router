@@ -1,0 +1,26 @@
+# Release gate run by .github/workflows/release.yml.
+# Superset of the CI focused list plus Phase A/B/C routing, D1 latency and
+# D2A retry/fallback coverage so a release can never silently skip them.
+# tests/unit/showdar-router-daemon.test.mjs was deleted in bd78c872; its
+# intentional replacement coverage is cli-tray-behavioral.test.mjs.
+tests/unit/provider-model-discovery.test.js
+tests/unit/finish-reason-logging.test.js
+tests/unit/launcher-tray.test.mjs
+tests/unit/cli-tray-behavioral.test.mjs
+tests/unit/cli-source-parity.test.js
+tests/unit/donate-modal.test.js
+tests/unit/combo-autoswitch.test.js
+tests/unit/combo-cancellation.test.js
+tests/unit/combo-planner.test.js
+tests/unit/combo-fusion.test.js
+tests/unit/combo-routing.test.js
+tests/unit/fusion-strip-stream-options-3024.test.js
+tests/unit/retry-metadata.test.js
+tests/unit/route-health-state.test.js
+tests/unit/base-executor-retry.test.js
+tests/unit/antigravity-quota-routing.test.js
+tests/unit/antigravity-retry-hook.test.js
+tests/unit/qoder-billing.test.js
+tests/unit/d2a-retry-fallback.test.js
+tests/unit/error-taxonomy.test.js
+tests/unit/latency-trace.test.js

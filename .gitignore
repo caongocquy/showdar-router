@@ -23,6 +23,9 @@ product
 /build
 .idea/
 
+# release bundle output (scripts/package-release-bundle.mjs)
+/.release/
+
 # misc
 .DS_Store
 *.pem
