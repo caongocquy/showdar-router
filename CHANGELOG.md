@@ -1,3 +1,35 @@
+# Showdar Router v0.6.0 (2026-10-16)
+
+Showdar Router's own release line. Everything under the rule below is the
+inherited upstream changelog (`v0.5.69` is the newest *upstream* entry, not the
+latest Showdar Router release). Showdar Router's previous published release was
+`0.5.0`.
+
+## Features
+- **Router**: opt-in latency tracing for combo requests (`SHOWDAR_ROUTER_LATENCY_TRACE=1`); observability only, off by default. Deterministic replay benchmark in `tests/bench/latency-bench.bench.js`.
+
+## Fixes
+- **Router**: reduce futile retries before combo fallback. Deterministic-replay TTFT improved ~71% (16,851 → 4,844 ms median). Live small-sample verification (n=5) showed zero executor retries and trace-confirmed fallback; this is measured evidence from a short run, not a universal performance guarantee.
+- **Router**: capability classification now requires explicit OpenCode `FreeTierError` signatures — generic "upgrade to a paid plan" text no longer matches.
+- **Router**: correct error scopes and cooldown recovery.
+- **Translator**: preserve Responses terminal state and final usage.
+- **Stream**: prevent duplicate terminals and preserve real usage.
+- **OpenCode**: stabilize production sessions and harden free-tier request identity.
+- **Packaging**: invoke npm through Node on Windows; publish platform release artifacts.
+- **CI**: repair supervisor test execution, focused-gate integrity and the standalone runtime smoke; restore coverage via the current supervisor/tray tests.
+- **Cleanup**: remove unused dependencies and legacy utilities; verify generated CLI source parity during build.
+
+## Compatibility
+- **Node engines corrected to `>=20.9.0`** (previously advertised as `>=18.0.0`). The bundled dashboard/gateway runs Next.js 16.4, whose own manifest requires Node `>=20.9.0`, so Node 18 was never actually supported. This is a documented correction, not a silent platform drop (Node 18 reached end-of-life in April 2025). Verified on Node 22 and Node 24; the declared range starts at Node 20.9.
+
+## OpenCode Free tier
+The OpenCode free tier only accepts requests originating from within OpenCode; other clients receive a `FreeTierError`. Showdar Router classifies these as capability errors — credential-scoped and non-retryable — not as a generic rate limit or a paid-plan upgrade prompt. Health skipping and fallback treat them accordingly.
+
+## Notes
+- `SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL=1` disables the CLI's postinstall/runtime self-heal package installs (deterministic CI / offline); the server then uses the built-in `node:sqlite` driver on Node >= 22.5.
+
+---
+
 # v0.5.69 (2026-09-05)
 
 ## Features

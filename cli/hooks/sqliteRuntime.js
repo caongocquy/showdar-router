@@ -136,6 +136,11 @@ function isSqlJsWasmValid() {
 }
 
 function ensureSqliteRuntime({ silent = false } = {}) {
+  // Deterministic-CI / offline opt-out: skip every runtime package install.
+  // The server degrades to the built-in node:sqlite driver on Node >= 22.5.
+  if (process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL === "1") {
+    return { betterSqlite: false, sqlJs: isSqlJsWasmValid(), skipped: true };
+  }
   ensureRuntimeDir();
 
   let sqlJsOk = isSqlJsWasmValid();

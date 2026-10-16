@@ -177,9 +177,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.metadata.outputs.tag }}
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
+          # Verify every checksum matches its artifact before publishing.
+          for archive in release-assets/*.tar.gz release-assets/*.zip; do
+            [[ -e "$archive" ]] || continue
+            ( cd release-assets && sha256sum -c "$(basename "$archive").sha256" )
+          done
           found=0
           for attempt in {1..120}; do
             if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
@@ -193,4 +199,10 @@ jobs:
             echo "GitHub Release $TAG was not created in time" >&2
             exit 1
           }
-          gh release upload "$TAG" release-assets/* --repo "$GH_REPO" --clobber
+          # Tag pushes must not overwrite existing assets, so a partial upload
+          # stays detectable. Explicit backfill runs may replace assets on purpose.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            gh release upload "$TAG" release-assets/* --repo "$GH_REPO" --clobber
+          else
+            gh release upload "$TAG" release-assets/* --repo "$GH_REPO"
+          fi
