@@ -112,6 +112,7 @@ export function createSSEStream(options = {}) {
   let openAIResponsesTerminalSeen = false;
   let openAIResponsesDoneSent = false;
   let streamDoneSent = false;  // track duplicate [DONE] across transform + flush
+  let upstreamErrorSeen = false;  // in-band provider error frame; never synthesize success after it
   let finalized = false;
 
   // opencode cloak decoys in same-format passthrough: filter tool calls that
@@ -243,6 +244,10 @@ export function createSSEStream(options = {}) {
               const idFixed = fixInvalidId(parsed);
               const parsedFinishReason = parsed.choices?.[0]?.finish_reason;
               if (parsedFinishReason) finishReason = parsedFinishReason;
+              // A provider that reports a failure in-band did not complete the
+              // response; forwarding its frame and then appending [DONE] would
+              // tell the client the stream finished normally.
+              if (parsed?.error) upstreamErrorSeen = true;
 
               // Ensure OpenAI-required fields are present on streaming chunks (Letta compat)
               let fieldsInjected = false;
@@ -591,7 +596,7 @@ export function createSSEStream(options = {}) {
           // Without it they can hang until timeout and trigger failover.
           // Gemini-family clients (Antigravity, Vertex, Gemini) reject this sentinel with 400 syntax errors.
           const isGeminiFamily = provider === "antigravity" || provider === "gemini" || provider === "vertex";
-          if (!streamDoneSent && !isGeminiFamily) {
+          if (!streamDoneSent && !isGeminiFamily && !upstreamErrorSeen) {
             const doneOutput = "data: [DONE]\n\n";
             reqLogger?.appendConvertedChunk?.(doneOutput);
             controller.enqueue(sharedEncoder.encode(doneOutput));

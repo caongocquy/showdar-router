@@ -46,20 +46,25 @@ function scanSseText(buffer) {
 import { COMBO_FIRST_MEANINGFUL_TIMEOUT_MS } from "../config/runtimeConfig.js";
 
 function replayResponse(response, reader, bufferedChunks, closeAfterBuffer = false) {
+  let index = 0;
+  // Pull-driven on purpose: the validated prefix is handed to the client only
+  // as it reads, so a committed stream cannot drain the whole upstream into
+  // memory when the client is slow. It also lets a post-commit upstream error
+  // arrive after — never instead of — the bytes already promised to the client.
   const body = new ReadableStream({
-    async start(controller) {
-      try {
-        for (const chunk of bufferedChunks) controller.enqueue(chunk);
-        if (closeAfterBuffer) {
-          controller.close();
-          return;
-        }
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value?.length) controller.enqueue(value);
-        }
+    async pull(controller) {
+      if (index < bufferedChunks.length) {
+        controller.enqueue(bufferedChunks[index++]);
+        return;
+      }
+      if (closeAfterBuffer) {
         controller.close();
+        return;
+      }
+      try {
+        const { value, done } = await reader.read();
+        if (done) controller.close();
+        else if (value?.length) controller.enqueue(value);
       } catch (error) {
         controller.error(error);
       }
