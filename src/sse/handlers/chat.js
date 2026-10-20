@@ -14,7 +14,7 @@ import { handleChatCore } from "open-sse/handlers/chatCore.js";
 import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
 import { getTransform as getPxpipeTransform } from "@/lib/pxpipe/loader.js";
 import { appendPxpipeEvent } from "@/lib/pxpipe/events.js";
-import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
+import { errorResponse, unavailableResponse, createErrorResult } from "open-sse/utils/error.js";
 import { handleComboChat, handleFusionChat, detectRequiredCapabilities } from "open-sse/services/combo.js";
 import { createChatComboHealthHooks } from "../services/comboHealthHooks.js";
 import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActiveAdapterStrategy } from "open-sse/services/capacityAdapter.js";
@@ -291,8 +291,14 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   const excludeConnectionIds = new Set();
   let lastError = null;
   let lastStatus = null;
+  // Earliest upstream reset across exhausted accounts. The combo layer derives
+  // its client-facing Retry-After from this, so dropping it here would strand
+  // the hint even though route health knows it.
+  let exhaustedResetsAtMs = null;
 
   while (true) {
+    // A client that already left must not trigger another account dispatch.
+    if (signal?.aborted) return createErrorResult(499, "Request aborted").response;
     const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
 
     // All accounts unavailable
@@ -308,7 +314,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         return errorResponse(HTTP_STATUS.NOT_FOUND, `No active credentials for provider: ${provider}`);
       }
       log.warn("CHAT", "No more accounts available", { provider });
-      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable");
+      return createErrorResult(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable", exhaustedResetsAtMs).response;
     }
 
     // Account selection shown in the unified "▶" line (acc:...)
@@ -425,6 +431,10 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       excludeConnectionIds.add(credentials.connectionId);
       lastError = result.error;
       lastStatus = result.status;
+      const resetMs = Number(resetsAtMs);
+      if (Number.isFinite(resetMs) && (exhaustedResetsAtMs == null || resetMs < exhaustedResetsAtMs)) {
+        exhaustedResetsAtMs = resetMs;
+      }
       continue;
     }
 

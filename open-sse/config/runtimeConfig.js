@@ -31,8 +31,8 @@ export const MEMORY_CONFIG = {
   proxyDispatchersMaxSize: 20,
 };
 
-// Parse a positive integer env override, falling back to a default.
-function envMs(name, def) {
+// Parse a positive integer env override (ms, bytes), falling back to a default.
+function envInt(name, def) {
   const raw = process.env[name];
   if (raw == null || raw === "") return def;
   const n = parseInt(raw, 10);
@@ -50,27 +50,33 @@ export const SEARXNG_URL = envUrl("SEARXNG_URL", "http://localhost:8888/search")
 
 // Inter-chunk stall timeout (once tokens are flowing). Generous headroom so
 // slow reasoning models aren't aborted mid-stream. Env: STREAM_STALL_TIMEOUT_MS.
-export const STREAM_STALL_TIMEOUT_MS = envMs("STREAM_STALL_TIMEOUT_MS", 360 * 1000);
+export const STREAM_STALL_TIMEOUT_MS = envInt("STREAM_STALL_TIMEOUT_MS", 360 * 1000);
 
 // Time-to-first-token timeout (prompt prefill). Env: STREAM_FIRST_CHUNK_TIMEOUT_MS.
-export const STREAM_FIRST_CHUNK_TIMEOUT_MS = envMs("STREAM_FIRST_CHUNK_TIMEOUT_MS", 200 * 1000);
-export const COMBO_FIRST_MEANINGFUL_TIMEOUT_MS = envMs("COMBO_FIRST_MEANINGFUL_TIMEOUT_MS", 30 * 1000);
+export const STREAM_FIRST_CHUNK_TIMEOUT_MS = envInt("STREAM_FIRST_CHUNK_TIMEOUT_MS", 200 * 1000);
+export const COMBO_FIRST_MEANINGFUL_TIMEOUT_MS = envInt("COMBO_FIRST_MEANINGFUL_TIMEOUT_MS", 30 * 1000);
 
 // Fetch connect timeout: abort if upstream doesn't return response headers within this duration
-export const FETCH_CONNECT_TIMEOUT_MS = envMs("FETCH_CONNECT_TIMEOUT_MS", 60 * 1000);
+export const FETCH_CONNECT_TIMEOUT_MS = envInt("FETCH_CONNECT_TIMEOUT_MS", 60 * 1000);
 
 // Bound for reading an upstream error body before reporting the failure. The
 // error path runs before combo/account fallback can advance, so a stalled or
 // non-terminating error body must not hold the request on the failing route.
 // Env: ERROR_BODY_READ_TIMEOUT_MS.
-export const ERROR_BODY_READ_TIMEOUT_MS = envMs("ERROR_BODY_READ_TIMEOUT_MS", 5000);
+export const ERROR_BODY_READ_TIMEOUT_MS = envInt("ERROR_BODY_READ_TIMEOUT_MS", 5000);
+
+// Byte cap for that bounded read. Error payloads are tiny in practice (a few
+// KB); the cap only exists so a fast, endless error body cannot grow memory
+// while the deadline ticks down. Matches the executor's D2A classification
+// peek (64 KiB), which bounds the same hazard. Env: ERROR_BODY_MAX_BYTES.
+export const ERROR_BODY_MAX_BYTES = envInt("ERROR_BODY_MAX_BYTES", 64 * 1024);
 
 // Phase D1 latency trace: max bytes buffered by the meaningful-content scanner
 // per attempt/direction before giving up (mark unavailable, never block the stream).
 export const LATENCY_TRACE_SCAN_BUFFER_LIMIT = 64 * 1024;
 
 // Gemini native TTS fetch timeout: abort if Google does not return response headers in time.
-export const GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS = envMs("GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS", 45 * 1000);
+export const GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS = envInt("GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS", 45 * 1000);
 
 // Default token limits
 export const DEFAULT_MAX_TOKENS = 64000;

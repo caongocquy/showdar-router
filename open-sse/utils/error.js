@@ -1,5 +1,5 @@
 import { ERROR_TYPES, DEFAULT_ERROR_MESSAGES } from "../config/errorConfig.js";
-import { ERROR_BODY_READ_TIMEOUT_MS } from "../config/runtimeConfig.js";
+import { ERROR_BODY_READ_TIMEOUT_MS, ERROR_BODY_MAX_BYTES } from "../config/runtimeConfig.js";
 import { extractRetryDeadline } from "../services/retryMetadata.js";
 
 /**
@@ -7,8 +7,8 @@ import { extractRetryDeadline } from "../services/retryMetadata.js";
  * strand the request. chatCore awaits this before the combo loop can learn the
  * candidate failed, so an unbounded read blocks combo/account fallback on the
  * failing route instead of advancing to the next candidate. Mirrors the
- * executor's bounded D2A classification peek; on any shortfall the partial text
- * (possibly "") is used and the reader is cancelled.
+ * executor's bounded D2A classification peek: byte cap + deadline; on any
+ * shortfall the partial text (possibly "") is used and the reader is cancelled.
  */
 async function readErrorBodyBounded(response, signal) {
   if (!response?.body?.getReader) {
@@ -19,6 +19,7 @@ async function readErrorBodyBounded(response, signal) {
   const decoder = new TextDecoder();
   const stop = Symbol("error-body-stop");
   let text = "";
+  let bytes = 0;
   let timer = null;
   const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(stop), ERROR_BODY_READ_TIMEOUT_MS); });
   let onAbort = null;
@@ -30,7 +31,16 @@ async function readErrorBodyBounded(response, signal) {
       const next = await Promise.race([reader.read(), timeout, abort]);
       if (next === stop) break;
       if (next?.done) { text += decoder.decode(); break; }
-      if (next?.value?.byteLength) text += decoder.decode(next.value, { stream: true });
+      const value = next?.value;
+      if (!value?.byteLength) continue;
+      const remaining = ERROR_BODY_MAX_BYTES - bytes;
+      if (remaining <= 0) break;
+      // Slice before decoding so a fast body can never allocate past the cap;
+      // an incomplete UTF-8 sequence at the cut is dropped, not mangled.
+      const slice = value.byteLength > remaining ? value.subarray(0, remaining) : value;
+      bytes += slice.byteLength;
+      text += decoder.decode(slice, { stream: true });
+      if (bytes >= ERROR_BODY_MAX_BYTES) break;
     }
   } catch {
     /* shortfall → keep whatever arrived */
