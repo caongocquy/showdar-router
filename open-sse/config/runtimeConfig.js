@@ -59,6 +59,12 @@ export const COMBO_FIRST_MEANINGFUL_TIMEOUT_MS = envMs("COMBO_FIRST_MEANINGFUL_T
 // Fetch connect timeout: abort if upstream doesn't return response headers within this duration
 export const FETCH_CONNECT_TIMEOUT_MS = envMs("FETCH_CONNECT_TIMEOUT_MS", 60 * 1000);
 
+// Bound for reading an upstream error body before reporting the failure. The
+// error path runs before combo/account fallback can advance, so a stalled or
+// non-terminating error body must not hold the request on the failing route.
+// Env: ERROR_BODY_READ_TIMEOUT_MS.
+export const ERROR_BODY_READ_TIMEOUT_MS = envMs("ERROR_BODY_READ_TIMEOUT_MS", 5000);
+
 // Phase D1 latency trace: max bytes buffered by the meaningful-content scanner
 // per attempt/direction before giving up (mark unavailable, never block the stream).
 export const LATENCY_TRACE_SCAN_BUFFER_LIMIT = 64 * 1024;

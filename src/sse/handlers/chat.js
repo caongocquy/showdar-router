@@ -181,6 +181,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
         (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
         adapterAdded
       ),
+      requestSignal: request?.signal || null,
       log,
       comboName: modelStr,
       comboStrategy,
@@ -202,6 +203,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
         (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
         adapterAdded
       ),
+      requestSignal: request?.signal || null,
       log,
       comboName: modelStr,
       comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings)
@@ -262,6 +264,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
           (b, m, _isPanel, options = {}) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, options.signal, false, options.comboFallbackRemaining),
           adapterAdded
         ),
+        requestSignal: request?.signal || null,
         log,
         comboName: modelStr,
         comboStrategy,
