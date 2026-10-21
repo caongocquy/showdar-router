@@ -75,6 +75,11 @@ export const ERROR_BODY_MAX_BYTES = envInt("ERROR_BODY_MAX_BYTES", 64 * 1024);
 // per attempt/direction before giving up (mark unavailable, never block the stream).
 export const LATENCY_TRACE_SCAN_BUFFER_LIMIT = 64 * 1024;
 
+// Phase D1 latency trace: max characters emitted for a label (model, combo,
+// endpoint, skip reason). Client-controlled strings are bounded so one request
+// cannot produce an unbounded diagnostics line.
+export const LATENCY_TRACE_MAX_LABEL_LENGTH = 120;
+
 // Gemini native TTS fetch timeout: abort if Google does not return response headers in time.
 export const GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS = envInt("GEMINI_NATIVE_TTS_FETCH_TIMEOUT_MS", 45 * 1000);
 

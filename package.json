@@ -20,7 +20,7 @@
     "cli:publish": "npm --prefix cli run publish:cli",
     "test": "vitest run",
     "test:runtime": "node scripts/standalone-runtime-smoke.mjs",
-    "test:routing": "vitest run tests/unit/antigravity-quota-routing.test.js tests/unit/antigravity-retry-hook.test.js tests/unit/base-executor-retry.test.js tests/unit/combo-routing.test.js tests/unit/combo-fusion.test.js tests/unit/qoder-billing.test.js tests/unit/retry-metadata.test.js tests/unit/route-health-state.test.js tests/unit/sr01-combo-429-fallback.test.js tests/unit/sr02-retry-budget.test.js tests/unit/sr03-streaming-sse-contract.test.js tests/unit/sr04-cancellation-cleanup.test.js tests/unit/sr05-routing-health-matrix.test.js"
+    "test:routing": "vitest run tests/unit/antigravity-quota-routing.test.js tests/unit/antigravity-retry-hook.test.js tests/unit/base-executor-retry.test.js tests/unit/combo-routing.test.js tests/unit/combo-fusion.test.js tests/unit/qoder-billing.test.js tests/unit/retry-metadata.test.js tests/unit/route-health-state.test.js tests/unit/sr01-combo-429-fallback.test.js tests/unit/sr02-retry-budget.test.js tests/unit/sr03-streaming-sse-contract.test.js tests/unit/sr04-cancellation-cleanup.test.js tests/unit/sr05-routing-health-matrix.test.js tests/unit/sr06-routing-diagnostics.test.js tests/unit/latency-trace.test.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
