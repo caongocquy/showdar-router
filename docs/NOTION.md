@@ -64,14 +64,14 @@ Practical consequences:
 
 ## Work item rules
 
-- Work items use stable IDs `SR-01` through `SR-08`. Never renumber or reuse an
+- Work items use stable IDs `SR-01` through `SR-09`. Never renumber or reuse an
   ID.
 - Search Notion for the exact ID before creating anything. If a matching item
   exists, update it instead of creating another.
 - One work item represents one deliverable outcome. A sub-step, bug, or test gap
   discovered during the work belongs in the same item as a checklist entry or
   comment unless it can ship and be accepted independently.
-- New, independently deliverable follow-ups get new IDs after `SR-08`; do not
+- New, independently deliverable follow-ups get new IDs after `SR-09`; do not
   recycle closed IDs.
 - Keep acceptance criteria observable and testable. If scope changes, record the
   change and the reason; do not silently replace the original problem report.
@@ -201,6 +201,7 @@ before acting.
 | SR-06 | Backlog / P2 | `open-sse/utils/latencyTrace.js` (opt-in `SHOWDAR_ROUTER_LATENCY_TRACE=1`), sanitized failure enums, attempt/retry/health-skip records; `latency-trace` tests | **Implemented as opt-in diagnostics.** Not marked Done pending redaction review and end-to-end use. Depends on SR-01. |
 | SR-07 | Backlog / P2 | README client setup; `scripts/standalone-runtime-smoke.mjs` checks start-up, login and health only | **Missing the requested smoke.** No representative stream/non-stream tool-call, long-prefill, 429-fallback run. Depends on SR-03 and SR-05. |
 | SR-08 | In Progress / P2 | `docs/ARCHITECTURE.md` refreshed (SQLite, routing, health, retries, streaming, tracing, packaging); `docs/OPERATOR-RUNBOOK.md` added; release verification recorded | **Documentation complete; release gate NO-GO.** Release gate fails in `d2a-retry-fallback`; full suite has 107 failures; Risk A (omitted `stream`) and Risk B (default remote capacity pools) remain open. Notion status update pending because Notion MCP is unavailable. |
+| SR-09 | In Progress / P1 | `open-sse/services/capacityAdapter.js` gates all automatic adapter injection on `capacityAdapterAutoFallback` (default false) and no longer resolves empty pools to a hidden remote model; `settingsRepo` defaults all pools disabled; dashboard opt-in toggle; `tests/unit/sr09-capacity-opt-in.test.js` and routing smoke scenario H | **Implemented and locally verified.** Silent remote fallback removed; opt-in persisted and restart-tested; RED→GREEN unit + loopback integration evidence recorded. Notion update pending (MCP unavailable). |
 
 Overlap to watch:
 
@@ -260,6 +261,47 @@ Evidence needed before any fix:
 Do not mark this item Done or declare a cause until the behavior is reproduced
 with that evidence.
 
+### SR-09 — Require explicit opt-in for automatic remote capacity fallback
+
+**Status: implemented and locally verified (Notion MCP unavailable; paste this
+section into the Notion task when possible).**
+
+**Policy.** Automatic capacity-adapter fallback is disabled unless the operator
+sets the persisted setting `capacityAdapterAutoFallback: true`. Unknown/legacy
+settings are treated as `false`. A pool only contributes when it is enabled and
+lists models explicitly; an empty pool never resolves to a hidden endpoint.
+
+**Alternatives considered.**
+
+- *Remove only the hidden default.* Insufficient: a legacy persisted pool whose
+  models were auto-inserted by the old dashboard (`oc/mimo-v2.5-free` on last
+  model removal) would still dispatch remotely without fresh consent.
+- *Classify pool models as local vs remote.* Rejected: no reliable locality
+  signal (custom nodes can point anywhere), and it would need registry/base-URL
+  heuristics or a new provider layer. The chosen flag instead gates **all**
+  automatic adapter injection, which is a strict superset of "remote only".
+- *Global local-only switch.* Rejected as misleading: it would not block
+  intentionally configured remote providers or combo members, so it cannot back
+  a "local-only" guarantee.
+
+**Security implications.** Default installs, legacy configs, and opt-outs never
+auto-dispatch. After opt-in, only explicitly listed models are injected — but
+the router still cannot prove a listed model is local, so opt-in remains an
+operator trust decision and is not a hard egress control.
+
+**Compatibility.** No DB schema migration: `mergeWithDefaults` supplies the
+`false` default for existing installs and `updateSettings` persists the flag.
+Legacy `capacityAdapter` values are preserved but inert until opt-in. Explicit
+providers, explicit combo members, fusion, ordered/round-robin combos, direct
+models, and cancellation are unchanged.
+
+**Evidence.** RED→GREEN unit tests in `tests/unit/sr09-capacity-opt-in.test.js`
+(fresh defaults, legacy empty pool, no opt-in, opt-in + vision, opt-in + audio,
+empty pool with opt-in, ineligible pool model, explicit combo candidate,
+opt-in/opt-out restart persistence). Loopback integration scenario H in
+`scripts/routing-integration-smoke.mjs` (no default dispatch, opt-in dispatches
+only the listed model, opt-out stops).
+
 ### Work item links
 
 | ID | Notion page |
@@ -272,3 +314,4 @@ with that evidence.
 | SR-06 | https://app.notion.com/p/3ff02b8c13d081269e1cd727b04e722b |
 | SR-07 | https://app.notion.com/p/3ff02b8c13d081e69e61ed112a16aaf8 |
 | SR-08 | https://app.notion.com/p/3ff02b8c13d081d5a946feac7fd449cb |
+| SR-09 | https://app.notion.com/p/40002b8c13d08111adbcfe212aeec308 |

@@ -338,24 +338,27 @@ Hard capabilities are input modalities: `vision`, `pdf`, `audioInput`,
 rather than allowed to silently strip user data. Soft capabilities (for
 example `search`) only reorder candidates.
 
-The **capacity adapter** is a global fallback pool per hard capability. When
+The **capacity adapter** is a global fallback pool per hard capability. It is
+**off by default**. It runs only when the operator has explicitly opted in with
+the persisted setting `capacityAdapterAutoFallback: true` **and** the relevant
+pool is enabled with an explicit, non-empty `models` list. When it runs and
 none of the original candidates can satisfy a required capability, pool models
 that do satisfy it are prepended as priority candidates; the originals remain
-as fallback. Pool models also get history trimming to fit their context
-window.
+as fallback. Pool models also get history trimming to fit their context window.
 
 Defaults in `settingsRepo`:
 
-- `vision`: enabled, no models configured;
-- `audioInput`: enabled, no models configured;
-- `pdf`, `videoInput`: disabled.
+- `capacityAdapterAutoFallback`: `false`;
+- `vision`, `audioInput`, `pdf`, `videoInput` pools: disabled.
 
-An enabled pool with an empty `models` list is not a no-op: it falls back to
-the built-in `oc/mimo-v2.5-free` model. `oc` is the OpenCode Free provider,
-declared `noAuth: true` with base URL `https://opencode.ai`. This means default
-vision/audio requests that no configured model can handle may be sent to a
-remote third-party service. See `docs/OPERATOR-RUNBOOK.md` for opt-out
-instructions.
+There is no hidden fallback model. An enabled pool with an empty `models` list
+contributes nothing — it never resolves to a built-in remote endpoint. Because
+provider locality (local node vs remote service) cannot be determined reliably
+at this layer, the opt-in gates **all** automatic adapter injection, not only
+remote candidates: until the operator opts in, a request whose target cannot
+accept the input fails with a capability error instead of switching. Explicitly
+configured providers and explicitly selected combo members are never affected
+by this gate. See `docs/OPERATOR-RUNBOOK.md` for opt-in and opt-out steps.
 
 ## 8. Health, cooldown, and half-open
 
@@ -577,11 +580,14 @@ these checks is necessary but is not a product release decision.
 1. **Omitted `stream` field (Risk A).** Router streaming intent and forwarded
    OpenAI-compatible request bodies can disagree. Explicit `stream` values are
    required for reliable behavior until a separately scoped fix lands.
-2. **Default remote capacity pools (Risk B).** `vision` and `audioInput` pools
-   are enabled by default with an empty model list, which resolves to the
-   remote, no-auth `oc/mimo-v2.5-free` model. This is a privacy and
-   availability decision that needs an explicit product choice; the defaults
-   are not changed by this document.
+2. **Remote capacity fallback (Risk B — addressed by SR-09).** Automatic
+   capacity-adapter injection is off by default
+   (`capacityAdapterAutoFallback: false`), all pools ship disabled, and an
+   enabled pool with no models never resolves to a hidden endpoint. The
+   residual risk is operator-driven: after opting in, an explicitly listed
+   remote pool model can still send input to a third party. Provider locality
+   is not enforced, so constrain pools by configuration (and optionally host
+   firewall).
 3. **No single request budget.** Per-phase timeouts and per-candidate retries
    can compose into a long worst-case request.
 4. **Process-local round-robin state.** Rotation resets on restart and is not

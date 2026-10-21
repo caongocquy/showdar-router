@@ -614,7 +614,66 @@ async function scenarioG(nodeId) {
   pass("G", "hard modality filtering, no dispatch when ineligible, advisory tools preserved");
 }
 
-// ---- isolated OpenCode CLI probe (H) ---------------------------------------
+async function scenarioH(nodeId) {
+  const image = { type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } };
+  const visionModel = `${nodeId}/gpt-4o`;
+  const imageRequest = () => ({
+    model: "sr07-text-only",
+    messages: [{ role: "user", content: [{ type: "text", text: "describe" }, image] }],
+    stream: false,
+  });
+  const readFlag = async () => {
+    const res = await fetch(`${base}/api/settings`, { headers: { "x-9r-cli-token": harnessToken } });
+    assert.equal(res.status, 200);
+    return (await res.json()).capacityAdapterAutoFallback;
+  };
+
+  // 1. Legacy persisted posture: pool enabled, empty models, no opt-in.
+  await patchApi("/api/settings", {
+    capacityAdapterAutoFallback: false,
+    capacityAdapter: {
+      vision: { enabled: true, roundRobin: false, models: [] },
+      pdf: { enabled: false, roundRobin: false, models: [] },
+      audioInput: { enabled: false, roundRobin: false, models: [] },
+      videoInput: { enabled: false, roundRobin: false, models: [] },
+    },
+  });
+  let before = upstreamState.requests.length;
+  const denied = await chat(imageRequest());
+  assert.ok([400, 410, 503].includes(denied.status), `expected capability failure, got ${denied.status}`);
+  await denied.json();
+  assert.equal(upstreamState.requests.length - before, 0, "no automatic dispatch without opt-in");
+
+  // 2. Explicit opt-in plus an explicitly listed model: only that model dispatches.
+  await patchApi("/api/settings", {
+    capacityAdapterAutoFallback: true,
+    capacityAdapter: {
+      vision: { enabled: true, roundRobin: false, models: [visionModel] },
+      pdf: { enabled: false, roundRobin: false, models: [] },
+      audioInput: { enabled: false, roundRobin: false, models: [] },
+      videoInput: { enabled: false, roundRobin: false, models: [] },
+    },
+  });
+  assert.equal(await readFlag(), true, "opt-in is persisted and readable");
+  before = upstreamState.requests.length;
+  const allowed = await chat(imageRequest());
+  assert.equal(allowed.status, 200, "opted-in adapter request succeeds");
+  await allowed.json();
+  const dispatched = upstreamState.requests.slice(before).map((r) => r.model);
+  assert.deepEqual(dispatched, ["gpt-4o"], "only the explicitly listed pool model is dispatched");
+
+  // 3. Opt-out stops automatic dispatch and persists.
+  await patchApi("/api/settings", { capacityAdapterAutoFallback: false });
+  assert.equal(await readFlag(), false, "opt-out is persisted and readable");
+  before = upstreamState.requests.length;
+  const revoked = await chat(imageRequest());
+  assert.ok([400, 410, 503].includes(revoked.status), `expected capability failure after opt-out, got ${revoked.status}`);
+  await revoked.json();
+  assert.equal(upstreamState.requests.length - before, 0, "opt-out stops automatic dispatch");
+  pass("H", "capacity-adapter opt-in: no default dispatch, explicit opt-in dispatches, opt-out stops");
+}
+
+// ---- isolated OpenCode CLI probe -------------------------------------------
 
 async function opencodeProbe() {
   if (process.env.SHOWDAR_ROUTER_OPENCODE_SMOKE !== "1") {
@@ -764,12 +823,9 @@ try {
   await api("/api/providers", { provider: node.id, apiKey: "fixture", name: "sr07-fixture" });
   apiKey = (await api("/api/keys", { name: "sr07-smoke" })).key;
 
-  // Isolated runs must never reach a real provider: the default vision/audio
-  // capacity adapter falls back to a remote model, so disable every pool.
-  const disabledPool = { enabled: false, roundRobin: false, models: [] };
-  await patchApi("/api/settings", {
-    capacityAdapter: { vision: disabledPool, pdf: disabledPool, audioInput: disabledPool, videoInput: disabledPool },
-  });
+  // SR-09: automatic capacity fallback is off by default (pools disabled and
+  // `capacityAdapterAutoFallback: false`), so no isolation patch is needed here.
+  // Scenario H exercises the opt-in contract explicitly.
 
   const combos = {
     "sr07-basic": [modelOf(node.id, "text-model")],
@@ -793,6 +849,7 @@ try {
   await scenarioE();
   await scenarioF(node.id);
   await scenarioG(node.id);
+  await scenarioH(node.id);
   await opencodeProbe();
   await remoteLocalProbe();
 

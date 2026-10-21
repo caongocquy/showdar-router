@@ -267,27 +267,29 @@ Round-robin position is kept in memory and resets when the gateway restarts.
 ### Capacity adapter (vision/audio fallback pools)
 
 The capacity adapter adds global fallback models when no configured candidate
-supports a hard input modality. Defaults:
+supports a hard input modality. It is **disabled by default**:
 
-- `vision` and `audioInput` enabled;
-- `pdf` and `videoInput` disabled;
-- enabled pools with no models resolve to `oc/mimo-v2.5-free`, a remote
-  OpenCode Free model (`https://opencode.ai`, no auth).
+- `capacityAdapterAutoFallback: false` — automatic adapter injection is off;
+- every pool (`vision`, `pdf`, `audioInput`, `videoInput`) is disabled;
+- there is no hidden default model: an enabled pool with an empty `models` list
+  contributes nothing and never resolves to a remote endpoint.
 
-This means a default installation can send an image or audio request to a
-remote third party when the selected combo cannot handle it. Use this only if
-that is acceptable for your data.
+With the default configuration, an image or audio request whose target cannot
+read that input fails with a capability error instead of silently switching to
+another model or stripping the media. Explicitly configured providers and
+explicitly selected combo members are unaffected.
 
-To opt out of all remote capacity fallback, replace the whole
-`capacityAdapter` object from an authenticated dashboard session:
+To opt in, enable the relevant pool, list the exact models that may be used, and
+turn on automatic fallback:
 
 ```http
 PATCH /api/settings
 Content-Type: application/json
 
 {
+  "capacityAdapterAutoFallback": true,
   "capacityAdapter": {
-    "vision":    {"enabled": false, "roundRobin": false, "models": []},
+    "vision":    {"enabled": true, "roundRobin": false, "models": ["ollama/llava"]},
     "pdf":       {"enabled": false, "roundRobin": false, "models": []},
     "audioInput":{"enabled": false, "roundRobin": false, "models": []},
     "videoInput":{"enabled": false, "roundRobin": false, "models": []}
@@ -295,16 +297,29 @@ Content-Type: application/json
 }
 ```
 
-The settings update is a top-level merge: sending `capacityAdapter` replaces
-the entire object, so include every pool. Verify:
+Only the models you list are injected. The router cannot reliably tell a local
+model from a remote one, so the opt-in applies to **every** automatic adapter
+candidate: add only models you trust with the input data. To return to the safe
+default, set `"capacityAdapterAutoFallback": false` (and optionally disable the
+pools). The settings update is a top-level merge, so sending `capacityAdapter`
+replaces the entire object — include every pool.
+
+Verify:
 
 ```bash
 curl -fsS http://127.0.0.1:21298/api/settings
 ```
 
-There is no single "local-only" switch. To keep traffic local:
+Upgrading from an older release requires no migration: automatic fallback is
+simply off. Existing `capacityAdapter` values are preserved but stay inert until
+you opt in, so a legacy default-enabled pool can no longer send data anywhere on
+its own.
 
-1. disable every capacity pool as above;
+There is still no single "local-only" switch. The opt-in does not restrict
+intentionally configured remote providers or combo members; it only controls
+automatic injection. To keep traffic local:
+
+1. leave `capacityAdapterAutoFallback` false;
 2. configure only local provider nodes;
 3. use combos/direct models that reference only those nodes;
 4. confirm with the latency trace that `attempts[].model` never names a remote
@@ -450,8 +465,9 @@ npm run test:integration:routing
 
 The routing integration smoke covers non-streaming JSON, streaming framing,
 tool calls, 429 fallback, connect/prefill/stall timeouts, cancellation, hard
-modality filtering, and the sanitized latency trace. It disables capacity
-adapter pools so no remote egress can occur.
+modality filtering, the sanitized latency trace, and the capacity-adapter
+opt-in contract (SR-09). It runs against a loopback-only fake upstream and
+never performs remote egress.
 
 ## 12. Roll back an unsuccessful deployment
 
@@ -523,7 +539,7 @@ confirm the trace shows the expected model/candidate.
 | 502 empty stream | Upstream returned no meaningful content; check provider/model and stream mode |
 | SSE content type but JSON body | Client omitted `stream`; send `stream: true`/`false` explicitly |
 | Request hangs | Check connect/first-chunk/stall timeouts; check client abort |
-| Request goes to an unexpected remote model | Inspect trace candidates; disable capacity adapter pools |
+| Request goes to an unexpected remote model | Inspect trace candidates; turn off `capacityAdapterAutoFallback` and disable the capacity adapter pools |
 
 ## 14. Security and privacy checklist
 
@@ -534,8 +550,10 @@ confirm the trace shows the expected model/candidate.
   trusted-local reason.
 - Do not enable `ENABLE_REQUEST_LOGS=true` on shared or production hosts; it
   can capture full request headers and bodies.
-- Review capacity adapter pools before sending images/audio; defaults can
-  dispatch to a remote no-auth provider.
+- Automatic capacity fallback is off by default and never targets a hidden
+  endpoint. If you opt in, only the models you list are injected — the router
+  cannot tell local from remote, so review every pool model before sending
+  images/audio.
 - Rotate provider credentials and router API keys after suspected exposure.
 - Do not paste raw trace lines, database files, or `.env` contents into public
   issues.
