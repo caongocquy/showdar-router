@@ -12,6 +12,14 @@ Two published artifacts live in this one repo:
 
 The code lives in `src/` (Next.js app + dashboard/compat APIs), `open-sse/` (the provider-agnostic routing/translation engine), `cli/` (the launcher package), and `tests/`.
 
+## Planning & work items
+
+Roadmap, work items (`SR-01` through `SR-08`), decisions, and the working
+agreement live in Notion. See `docs/NOTION.md` for links, source-of-truth
+boundaries, and the evidence workflow. Notion says what should be true; the code
+and tests say what is true. Do not create duplicate Notion projects or work
+items, and do not mark an item Done without recorded verification evidence.
+
 ## Commands
 
 Dashboard/gateway (run from repo root):
@@ -73,11 +81,11 @@ Two authoritative docs already exist — read them before working in these areas
 - One file per provider. `providers/registry/index.js` is an **auto-generated** static import list — regenerate it with `scripts/migrate-registry.mjs` / `injectDisplayToRegistry.mjs`, don't hand-edit.
 - Add a provider: copy `providers/REGISTRY_TEMPLATE.js`, add models to `config/providerModels.js`. Only add an executor for non-OpenAI-compatible upstreams.
 
-### Persistence — IMPORTANT (ARCHITECTURE.md is stale here)
+### Persistence — IMPORTANT
 State is **no longer `db.json`**. It's a SQLite layer under `src/lib/db/` with an adapter fallback chain (`driver.js`): `bun:sqlite` → `better-sqlite3` (optional native dep) → `node:sqlite` (Node ≥22.5) → `sql.js` (pure-JS fallback, always works). `better-sqlite3` is deliberately in `optionalDependencies` so install never fails without build tools.
 - `src/lib/localDb.js` is a **backward-compat shim** re-exporting `src/lib/db/index.js`. New code should import from `@/lib/db/index.js`; per-entity logic lives in `src/lib/db/repos/*`. Schema/migrations in `src/lib/db/migrations/`.
-- DB file location resolves via `src/lib/db/paths.js` (`DATA_DIR`, else `~/.showdar-router/`).
-- Usage/logs (`src/lib/usageDb.js`, `usage.json` + `log.txt`) still live under `~/.showdar-router` and do **not** follow `DATA_DIR`.
+- DB file location resolves via `src/lib/db/paths.js`: `SHOWDAR_ROUTER_DATA_DIR` → `DATA_DIR` → `~/.showdar-router/` (`%APPDATA%\showdar-router` on Windows), at `db/data.sqlite`.
+- Usage and request details also live in that SQLite DB (`usageHistory`, `usageDaily`, `requestDetails`). `src/lib/usageDb.js` is a compatibility shim. Legacy `db.json`, `usage.json`, and `request-details.json` are one-time import sources only; there is no live `usage.json`/`log.txt` store.
 
 ### RTK token saver (`open-sse/rtk/`)
 Pre-translate hooks that compress `tool_result` content in-place to cut tokens. **Fail-open**: any error returns null and leaves the body untouched — never throw out of them. Skips `is_error`/`status:"error"` results to preserve traces.
@@ -86,6 +94,6 @@ Pre-translate hooks that compress `tool_result` content in-place to cut tokens. 
 
 - Plain JavaScript (ESM), no TypeScript. `@/*` path alias → `src/*` (`jsconfig.json`).
 - `custom-server.js` wraps the Next standalone server to derive client IP from the TCP socket and strip attacker-controlled `X-Forwarded-For` — trusting forwarding headers only from a loopback reverse proxy. Preserve this when touching request/IP/rate-limit code.
-- Security-sensitive env: `JWT_SECRET` (session cookie), `INITIAL_PASSWORD` (default `123456` — must override), `API_KEY_SECRET`, `MACHINE_ID_SALT`. Full env contract in `.env.example` and ARCHITECTURE.md's env matrix.
+- Security-sensitive env: `JWT_SECRET` (session cookie), `INITIAL_PASSWORD` (default `123456` — must override), `API_KEY_SECRET`, `MACHINE_ID_SALT`. Full env contract in `.env.example`; operational variables are summarized in `docs/OPERATOR-RUNBOOK.md`.
 - Binary/protobuf upstreams (kiro EventStream, cursor protobuf, commandcode NDJSON) don't round-trip through OpenAI — they're handled inside their own executor, not the translator.
 - Versioning: root and `cli/` are versioned independently; changes are logged in `CHANGELOG.md`. Commit style is Conventional Commits (`fix(translator): …`, `feat(...)`).

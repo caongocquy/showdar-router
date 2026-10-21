@@ -463,6 +463,17 @@ showdar-router
 
 Docker is not required for the supported Showdar Router runtime.
 
+## Project Planning
+
+Roadmap, work items, and decisions live in Notion. See
+[docs/NOTION.md](docs/NOTION.md) for the project links, the Git/Notion
+source-of-truth boundaries, and the evidence workflow agents must follow.
+
+System internals are documented in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); install, configuration,
+diagnostics, and rollback procedures are in
+[docs/OPERATOR-RUNBOOK.md](docs/OPERATOR-RUNBOOK.md).
+
 ## Environment
 
 Canonical Showdar Router environment variables include:
