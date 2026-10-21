@@ -190,7 +190,8 @@ describe("fusion combo", () => {
       onModelFailure: failures,
       log,
     });
-    expect(res.status).toBe(503);
+    // The parent signal owns the request: a cancellation is 499, never a panel outage.
+    expect(res.status).toBe(499);
     expect(failures).not.toHaveBeenCalled();
   });
 

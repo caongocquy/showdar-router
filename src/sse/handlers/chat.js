@@ -76,7 +76,11 @@ async function handleChatRequest(request, clientRawRequest = null) {
   let body;
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    // A client that disappears mid-body is a cancellation, not a malformed request.
+    if (request.signal?.aborted || error?.name === "AbortError") {
+      return errorResponse(499, "Request aborted");
+    }
     log.warn("CHAT", "Invalid JSON body");
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
   }

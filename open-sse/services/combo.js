@@ -810,6 +810,12 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }, { ...cfg, minPanel, parentSignal: requestSignal });
   log.info("FUSION", `fan-out collected in ${Date.now() - t0}ms`);
 
+  // Client cancellation owns the response: do not report a panel outage (503)
+  // or start a judge for a request that already went away.
+  if (requestSignal?.aborted) {
+    return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
+  }
+
   // 2. Collect successful answers.
   const answers = [];
   for (let i = 0; i < settled.length; i++) {

@@ -182,10 +182,16 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
     }
     // Convert remote image URLs to base64 for targets that can't fetch URLs.
+    // Runs before dispatch, so it must observe the client signal: an aborted
+    // request must not keep downloading images, nor go on to dispatch.
     try {
-      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
+      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: externalSignal });
       if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
-    } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
+    } catch (e) {
+      if (externalSignal?.aborted || e?.name === "AbortError") return createErrorResult(499, "Request aborted");
+      log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`);
+    }
+    if (externalSignal?.aborted) return createErrorResult(499, "Request aborted");
   }
 
   let translatedBody;
