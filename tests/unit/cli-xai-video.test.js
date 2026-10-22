@@ -109,7 +109,7 @@ describe("run (against a mock gateway)", () => {
         req.on("data", (c) => (body += c));
         req.on("end", () => {
           seen.createBody = JSON.parse(body);
-          res.writeHead(200, { "Content-Type": "application/json", "x-9router-connection-id": "conn-42" });
+          res.writeHead(200, { "Content-Type": "application/json", "x-showdar-router-connection-id": "conn-42" });
           res.end(JSON.stringify({ request_id: "job-1" }));
         });
         return;
