@@ -147,16 +147,22 @@ client = OpenAI(
 )
 ```
 
-### Always send `stream` explicitly
+### Streaming default
 
-Send `"stream": true` or `"stream": false` on every chat request.
+OpenAI-compatible Chat Completions requests that omit `stream` behave like
+`"stream": false` and return a complete JSON response. This matches the OpenAI
+API default and applies to direct routes, ordered combos, and nested combos.
 
-Omitting `stream` currently has a contract gap: the router may decide to stream
-internally while forwarding an OpenAI-compatible body without `stream: true`.
-The upstream can then return JSON while the router expects SSE. Combo routes
-can return HTTP 502; direct routes can return an SSE content type with a JSON
-body. This is a known release risk, not a supported mode. Add
-`"stream": false` for JSON clients and `"stream": true` for SSE clients.
+Explicit modes remain unambiguous:
+
+- `"stream": false` → complete JSON;
+- `"stream": true` → SSE;
+- omitted → complete JSON.
+
+You can still send the field explicitly. Some providers are configured to stream
+upstream regardless of the client request (`forceStream`); the router buffers
+their SSE and returns JSON to non-streaming clients. Other API surfaces, such as
+the Responses API, are not changed by this Chat Completions default.
 
 ## 5. Configure providers, accounts, and nodes
 
@@ -537,7 +543,7 @@ confirm the trace shows the expected model/candidate.
 | API returns 404 "No active credentials" | Provider connection missing, inactive, or not tested |
 | API returns 503 with `Retry-After` | All candidates/accounts cooling down; inspect `routeHealth` |
 | 502 empty stream | Upstream returned no meaningful content; check provider/model and stream mode |
-| SSE content type but JSON body | Client omitted `stream`; send `stream: true`/`false` explicitly |
+| SSE content type but JSON body | Unexpected for Chat Completions after SR-10; inspect the route/upstream and report it |
 | Request hangs | Check connect/first-chunk/stall timeouts; check client abort |
 | Request goes to an unexpected remote model | Inspect trace candidates; turn off `capacityAdapterAutoFallback` and disable the capacity adapter pools |
 

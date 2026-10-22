@@ -168,8 +168,26 @@ upstream = createServer((req, res) => {
     try { body = raw ? JSON.parse(raw) : {}; } catch { /* malformed fixture */ }
     const model = String(body.model || "");
     if (process.env.SR07_DEBUG) console.log(`[fixture] model=${model} stream=${!!body.stream} accept=${req.headers.accept || ""}`);
-    const record = { model, path: req.url, stream: !!body.stream, closed: false, startedAt: Date.now() };
+    const record = {
+      model,
+      path: req.url,
+      stream: !!body.stream,
+      hasStream: Object.prototype.hasOwnProperty.call(body, "stream"),
+      body,
+      accept: req.headers.accept || "",
+      responseStatus: null,
+      responseContentType: null,
+      closed: false,
+      startedAt: Date.now(),
+    };
     upstreamState.requests.push(record);
+    const writeHead = res.writeHead.bind(res);
+    res.writeHead = (...args) => {
+      const headers = args.find((arg) => arg && typeof arg === "object") || {};
+      record.responseStatus = args[0];
+      record.responseContentType = headers["content-type"] || headers["Content-Type"] || null;
+      return writeHead(...args);
+    };
     res.once("close", () => { record.closed = true; });
 
     const id = `chatcmpl-fixture-${++upstreamState.nextId}`;
@@ -673,6 +691,96 @@ async function scenarioH(nodeId) {
   pass("H", "capacity-adapter opt-in: no default dispatch, explicit opt-in dispatches, opt-out stops");
 }
 
+// ---- SR-10: omitted stream compatibility ----------------------------------
+
+async function assertJsonCompletion({ model, marker, tools = false, toolCalls = false, stream }) {
+  const before = upstreamState.requests.length;
+  const payload = { model, messages: user(marker), ...(stream === false ? { stream: false } : {}), ...(tools ? { tools: [{ type: "function", function: { name: "get_weather" } }] } : {}) };
+  const res = await chat(payload);
+  assert.equal(res.status, 200, `${marker}: expected JSON success, got ${res.status}`);
+  const contentType = res.headers.get("content-type") || "";
+  assert.match(contentType, /application\/json/, `${marker}: JSON content type`);
+  assert.doesNotMatch(contentType, /text\/event-stream/, `${marker}: JSON must not use SSE framing`);
+  const json = await res.json();
+  assert.equal(json.object, "chat.completion", `${marker}: complete JSON object`);
+  if (toolCalls) {
+    const calls = json.choices[0].message.tool_calls;
+    assert.equal(calls.length, 1, `${marker}: one tool call`);
+    assert.equal(calls[0].id, "call_weather_1", `${marker}: stable tool id`);
+    assert.equal(calls[0].function.name, "get_weather", `${marker}: stable tool name`);
+    assert.deepEqual(JSON.parse(calls[0].function.arguments), { city: "Paris" }, `${marker}: tool arguments`);
+    assert.equal(json.choices[0].finish_reason, "tool_calls", `${marker}: tool finish reason`);
+  } else {
+    assert.equal(json.choices[0].message.content, "hello from local fixture", `${marker}: assistant text`);
+    assert.equal(json.choices[0].finish_reason, "stop", `${marker}: text finish reason`);
+  }
+  const dispatched = upstreamState.requests.slice(before);
+  assert.equal(dispatched.length, 1, `${marker}: exactly one provider dispatch`);
+  const upstream = dispatched[0];
+  assert.equal(upstream.stream, false, `${marker}: upstream received non-streaming mode`);
+  assert.equal(upstream.hasStream, true, `${marker}: upstream body carries an explicit stream flag`);
+  assert.doesNotMatch(upstream.accept || "", /text\/event-stream/, `${marker}: upstream Accept must not request SSE`);
+  assert.match(upstream.responseContentType || "", /application\/json/, `${marker}: upstream answered JSON`);
+  return json;
+}
+
+async function assertSseCompletion({ model, marker, tools = false, toolCalls = false }) {
+  const before = upstreamState.requests.length;
+  const payload = { model, messages: user(marker), stream: true, ...(tools ? { tools: [{ type: "function", function: { name: "get_weather" } }] } : {}) };
+  const res = await chat(payload);
+  assert.equal(res.status, 200, `${marker}: expected SSE success, got ${res.status}`);
+  assert.match(res.headers.get("content-type") || "", /text\/event-stream/, `${marker}: SSE content type`);
+  const sse = await readSse(res);
+  assert.equal(sse.doneCount, 1, `${marker}: exactly one [DONE]`);
+  assert.equal(sse.events.at(-1), "data: [DONE]", `${marker}: DONE is terminal`);
+  if (toolCalls) {
+    const toolDeltas = sse.chunks.flatMap((c) => (c.choices || []).flatMap((ch) => ch.delta?.tool_calls || []));
+    assert.ok(toolDeltas.length >= 2, `${marker}: incremental tool deltas`);
+    assert.deepEqual([...new Set(toolDeltas.map((t) => t.id).filter(Boolean))], ["call_weather_1"], `${marker}: stable tool id`);
+    assert.deepEqual([...new Set(toolDeltas.map((t) => t.function?.name).filter(Boolean))], ["get_weather"], `${marker}: stable tool name`);
+    assert.deepEqual(JSON.parse(toolDeltas.map((t) => t.function?.arguments || "").join("")), { city: "Paris" }, `${marker}: tool arguments`);
+    assert.deepEqual(finishReasons(sse.chunks), ["tool_calls"], `${marker}: tool finish reason`);
+  } else {
+    assert.equal(contentOf(sse.chunks), "hello from local fixture", `${marker}: assistant text`);
+    assert.deepEqual(finishReasons(sse.chunks), ["stop"], `${marker}: text finish reason`);
+  }
+  const dispatched = upstreamState.requests.slice(before);
+  assert.equal(dispatched.length, 1, `${marker}: exactly one provider dispatch`);
+  const upstream = dispatched[0];
+  assert.equal(upstream.stream, true, `${marker}: upstream received streaming mode`);
+  assert.equal(upstream.hasStream, true, `${marker}: upstream body carries explicit stream:true`);
+  assert.match(upstream.accept || "", /text\/event-stream/, `${marker}: upstream Accept is SSE`);
+  assert.match(upstream.responseContentType || "", /text\/event-stream/, `${marker}: upstream answered SSE`);
+  return sse;
+}
+
+async function scenarioSR10(node) {
+  const direct = "sr10-direct";
+  const directTools = "sr10-direct-tools";
+  const combo = "sr10-combo";
+  const nested = "sr10-nested";
+
+  // Direct provider: true / false / omitted for assistant text and tool calls.
+  await assertSseCompletion({ model: direct, marker: "SR10 direct text true" });
+  await assertJsonCompletion({ model: direct, marker: "SR10 direct text false", stream: false });
+  await assertJsonCompletion({ model: direct, marker: "SR10 direct text omitted" });
+  await assertSseCompletion({ model: directTools, marker: "SR10 direct tool true", tools: true, toolCalls: true });
+  await assertJsonCompletion({ model: directTools, marker: "SR10 direct tool false", tools: true, toolCalls: true, stream: false });
+  await assertJsonCompletion({ model: directTools, marker: "SR10 direct tool omitted", tools: true, toolCalls: true });
+
+  // Ordered combo: true / false / omitted.
+  await assertSseCompletion({ model: combo, marker: "SR10 combo text true" });
+  await assertJsonCompletion({ model: combo, marker: "SR10 combo text false", stream: false });
+  await assertJsonCompletion({ model: combo, marker: "SR10 combo text omitted" });
+
+  // Nested combo: the inner combo must preserve the same contract.
+  await assertSseCompletion({ model: nested, marker: "SR10 nested text true" });
+  await assertJsonCompletion({ model: nested, marker: "SR10 nested text false", stream: false });
+  await assertJsonCompletion({ model: nested, marker: "SR10 nested text omitted" });
+
+  pass("SR10", "omitted stream is JSON; explicit true is SSE; direct, combo and nested combos consistent");
+}
+
 // ---- isolated OpenCode CLI probe -------------------------------------------
 
 async function opencodeProbe() {
@@ -839,6 +947,10 @@ try {
     "sr07-slow": [modelOf(node.id, "slow-progress")],
     "sr07-capable": [modelOf(node.id, "text-model"), modelOf(node.id, "gpt-4o")],
     "sr07-text-only": [modelOf(node.id, "text-model")],
+    "sr10-direct": [modelOf(node.id, "text-model")],
+    "sr10-direct-tools": [modelOf(node.id, "tool-model")],
+    "sr10-combo": [modelOf(node.id, "text-model"), modelOf(node.id, "gpt-4o")],
+    "sr10-nested": ["sr10-combo"],
   };
   for (const [name, models] of Object.entries(combos)) await api("/api/combos", { name, models });
 
@@ -850,6 +962,7 @@ try {
   await scenarioF(node.id);
   await scenarioG(node.id);
   await scenarioH(node.id);
+  await scenarioSR10(node);
   await opencodeProbe();
   await remoteLocalProbe();
 

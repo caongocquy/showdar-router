@@ -64,7 +64,7 @@ Practical consequences:
 
 ## Work item rules
 
-- Work items use stable IDs `SR-01` through `SR-09`. Never renumber or reuse an
+- Work items use stable IDs `SR-01` through `SR-12`. Never renumber or reuse an
   ID.
 - Search Notion for the exact ID before creating anything. If a matching item
   exists, update it instead of creating another.
@@ -200,8 +200,9 @@ before acting.
 | SR-05 | Backlog / P1 | `routeHealthState`, `comboPlanner`, combo health hooks, `accountFallback`; `route-health-state`, `combo-routing`, `antigravity-quota-routing`, `runtime-health-hardening` tests | **Partial matrix.** Individual behaviors are covered, but not one matrix spanning cooldown, half-open, exhausted account, capability, capacity and reset metadata. |
 | SR-06 | Backlog / P2 | `open-sse/utils/latencyTrace.js` (opt-in `SHOWDAR_ROUTER_LATENCY_TRACE=1`), sanitized failure enums, attempt/retry/health-skip records; `latency-trace` tests | **Implemented as opt-in diagnostics.** Not marked Done pending redaction review and end-to-end use. Depends on SR-01. |
 | SR-07 | Backlog / P2 | README client setup; `scripts/standalone-runtime-smoke.mjs` checks start-up, login and health only | **Missing the requested smoke.** No representative stream/non-stream tool-call, long-prefill, 429-fallback run. Depends on SR-03 and SR-05. |
-| SR-08 | In Progress / P2 | `docs/ARCHITECTURE.md` refreshed (SQLite, routing, health, retries, streaming, tracing, packaging); `docs/OPERATOR-RUNBOOK.md` added; release verification recorded | **Documentation complete; release gate NO-GO.** Release gate fails in `d2a-retry-fallback`; full suite has 107 failures; Risk A (omitted `stream`) and Risk B (default remote capacity pools) remain open. Notion status update pending because Notion MCP is unavailable. |
+| SR-08 | In Progress / P2 | `docs/ARCHITECTURE.md` refreshed (SQLite, routing, health, retries, streaming, tracing, packaging); `docs/OPERATOR-RUNBOOK.md` added; release verification recorded | **Documentation complete; release gate NO-GO.** Release gate fails in `d2a-retry-fallback`; full suite has 107 failures. Risk A (omitted `stream`) is addressed by SR-10; Risk B (default remote capacity pools) is addressed by SR-09. Notion status update pending because Notion MCP is unavailable. |
 | SR-09 | In Progress / P1 | `open-sse/services/capacityAdapter.js` gates all automatic adapter injection on `capacityAdapterAutoFallback` (default false) and no longer resolves empty pools to a hidden remote model; `settingsRepo` defaults all pools disabled; dashboard opt-in toggle; `tests/unit/sr09-capacity-opt-in.test.js` and routing smoke scenario H | **Implemented and locally verified.** Silent remote fallback removed; opt-in persisted and restart-tested; RED→GREEN unit + loopback integration evidence recorded. Notion update pending (MCP unavailable). |
+| SR-10 | In Progress / P0 | `chatCore` treats omitted `stream` as non-streaming for OpenAI Chat Completions and writes the effective mode into the forwarded OpenAI body; `tests/unit/sr10-omitted-stream-contract.test.js` and routing smoke scenario SR10 | **Implemented and locally verified.** Direct, ordered combo and nested combo omitted requests return JSON; explicit true remains SSE; `forceStream` upstreams are buffered for non-streaming clients. |
 
 Overlap to watch:
 
@@ -302,6 +303,32 @@ opt-in/opt-out restart persistence). Loopback integration scenario H in
 `scripts/routing-integration-smoke.mjs` (no default dispatch, opt-in dispatches
 only the listed model, opt-out stops).
 
+### SR-10 — Normalize omitted streaming mode
+
+**Status: implemented and locally verified.**
+
+**Policy.** For OpenAI-compatible Chat Completions, an omitted `stream` field
+behaves like `stream: false` and returns complete JSON. Explicit `stream: true`
+remains SSE. The effective mode is written into the forwarded OpenAI-format
+body so the upstream request, `Accept`, response `Content-Type`, validator, and
+client framing agree. Other source protocols, including the Responses API, are
+not changed by this rule. Providers with `forceStream: true` still stream
+upstream, but their SSE is buffered and translated to JSON for non-streaming
+clients.
+
+**Root cause.** Internal mode inference used `body.stream !== false`, so an
+omitted field selected streaming. Same-format OpenAI requests skip translation,
+so the forwarded body still lacked `stream`; a conforming upstream returned JSON
+while the router expected SSE. Direct routes returned SSE framing around JSON;
+combo validation rejected the missing SSE frames with HTTP 502.
+
+**Evidence.** RED→GREEN unit tests in
+`tests/unit/sr10-omitted-stream-contract.test.js` cover an OpenAI-format
+provider, explicit streaming, and `forceStream` buffering. Loopback integration
+scenario SR10 covers direct, ordered combo, and nested combo requests for text
+and tool calls, asserting forwarded body `stream`, upstream `Accept`, upstream
+and client `Content-Type`, status, framing, and exactly one dispatch.
+
 ### Work item links
 
 | ID | Notion page |
@@ -315,3 +342,4 @@ only the listed model, opt-out stops).
 | SR-07 | https://app.notion.com/p/3ff02b8c13d081e69e61ed112a16aaf8 |
 | SR-08 | https://app.notion.com/p/3ff02b8c13d081d5a946feac7fd449cb |
 | SR-09 | https://app.notion.com/p/40002b8c13d08111adbcfe212aeec308 |
+| SR-10 | https://app.notion.com/p/40002b8c13d0818f80c3e7b491d1c70c |

@@ -1,6 +1,6 @@
 # Showdar Router Architecture
 
-_Last updated: 2026-10-21_
+_Last updated: 2026-10-22_
 
 This document describes the architecture that exists in this repository. The
 code and tests are authoritative; this page is a map, not a specification for
@@ -446,27 +446,26 @@ short grace period and releases readers/timers.
 
 ### How streaming is chosen
 
-`chatCore` decides whether to request an upstream stream from:
+For OpenAI-compatible Chat Completions (`/v1/chat/completions`), `chatCore`
+uses the OpenAI default:
 
 - `body.stream === true` → streaming;
-- `body.stream === false` → JSON, unless the provider is marked
-  `forceStream`;
-- no `stream` field and no client `Accept` preference → the internal decision
-  is streaming (`body.stream !== false`);
+- `body.stream === false` → JSON;
+- no `stream` field → JSON (the same behavior as `stream: false`);
 - `Accept: application/json` without `text/event-stream` and no explicit
   `stream: true` → JSON.
 
-Some providers force streaming regardless of the client request (for example
-`oc` with `forceStream: true`). Their responses are translated back to the
-client's requested shape where supported.
+The effective mode is written into the forwarded OpenAI-format request body, so
+the upstream body, `Accept` header, validator, translator, response
+`Content-Type`, and client framing all agree.
 
-**Known contract gap:** when `stream` is omitted, the internal decision is
-streaming, but the request forwarded to an OpenAI-compatible target may still
-omit the `stream` field. The router sends `Accept: text/event-stream` while the
-upstream may return JSON. Combo routes can then fail with HTTP 502; direct
-routes can return an SSE content type with a JSON body. This is documented as
-Risk A in the SR-08 release report. Clients should send `stream: true` or
-`stream: false` explicitly.
+Other source protocols keep their existing inference. In particular, the
+Responses API contract is not changed by this Chat Completions rule.
+
+Some providers force streaming regardless of the client request (for example
+`openai` with `forceStream: true`). Their upstream SSE is buffered and translated
+back to the client's requested shape: SSE for `stream: true`, complete JSON for
+`stream: false` or omitted.
 
 ### Validation before commitment
 

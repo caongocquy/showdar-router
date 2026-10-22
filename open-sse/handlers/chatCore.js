@@ -138,7 +138,13 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
 
   const clientRequestedStreaming = body.stream === true || sourceFormat === FORMATS.ANTIGRAVITY || sourceFormat === FORMATS.GEMINI || sourceFormat === FORMATS.GEMINI_CLI;
   const providerRequiresStreaming = PROVIDERS[provider]?.forceStream === true;
-  let stream = providerRequiresStreaming ? true : (body.stream !== false);
+  // SR-10: OpenAI Chat Completions defaults to non-streaming when `stream` is
+  // omitted. Other source protocols keep their existing inference.
+  let stream = providerRequiresStreaming
+    ? true
+    : sourceFormat === FORMATS.OPENAI
+      ? body.stream === true
+      : (body.stream !== false);
 
   // Image generation models require non-streaming (Google v1internal:generateContent)
   const modelType = getModelType(alias, model);
@@ -326,6 +332,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Pin cache breakpoints to the final body — every saver above can reshape
   // system/tools/messages, and a stale anchor costs a full prefix rewrite.
   if (passthrough && clientTool === "claude") anchorClaudeCache(translatedBody);
+
+  // SR-10: same-format OpenAI requests skip translation, so make the effective
+  // mode explicit in the upstream body instead of leaving `stream` omitted.
+  if (finalFormat === FORMATS.OPENAI) translatedBody.stream = stream;
 
   const executor = getExecutor(provider);
   trackPendingRequest(model, provider, connectionId, true);
