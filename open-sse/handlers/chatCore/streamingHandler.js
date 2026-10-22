@@ -137,7 +137,7 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
     });
 
     // Persist stream usage to DB (no console line; the "📊 done" line below is authoritative)
-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, label: "STREAM USAGE", silent: true });
+    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, requestId: streamDetailId, label: "STREAM USAGE", silent: true });
     if (finishReason === "length") {
       log?.warn?.("CHAT", `Output limit reached · ${provider}/${model} · FINISH length`);
     }

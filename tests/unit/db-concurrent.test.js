@@ -45,6 +45,36 @@ describe("DB Concurrency — atomic safety", () => {
     expect(hist.length).toBe(N);
   });
 
+  it("deduplicates an explicit requestId without collapsing independent same-ms writes", async () => {
+    const base = Date.now();
+    await Promise.all([
+      db.saveRequestUsage({
+        requestId: "sr12-repeat", provider: "dedupe", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 },
+        timestamp: new Date(base).toISOString(), status: "ok",
+      }),
+      db.saveRequestUsage({
+        requestId: "sr12-repeat", provider: "dedupe", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 },
+        timestamp: new Date(base + 1).toISOString(), status: "ok",
+      }),
+    ]);
+    expect((await db.getUsageHistory({ provider: "dedupe" })).length).toBe(1);
+
+    const ts = new Date(base + 2).toISOString();
+    await Promise.all([
+      db.saveRequestUsage({
+        provider: "dedupe-independent", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 }, timestamp: ts, status: "ok",
+      }),
+      db.saveRequestUsage({
+        provider: "dedupe-independent", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 }, timestamp: ts, status: "ok",
+      }),
+    ]);
+    expect((await db.getUsageHistory({ provider: "dedupe-independent" })).length).toBe(2);
+  });
+
   it("200 parallel saveRequestDetail → all flushed", async () => {
     await db.updateSettings({ enableObservability: true, observabilityBatchSize: 10 });
 
