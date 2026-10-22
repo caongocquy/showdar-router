@@ -253,6 +253,12 @@ function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
       }
     }
   } else if (msg.role === ROLE.ASSISTANT) {
+    // OpenAI-compatible reasoning is part of the assistant turn. Preserve it
+    // as a thinking block so Claude-format providers keep the context.
+    if (typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()) {
+      blocks.push({ type: CLAUDE_BLOCK.THINKING, thinking: msg.reasoning_content });
+    }
+
     if (Array.isArray(msg.content)) {
       for (const part of msg.content) {
         if (part.type === OPENAI_BLOCK.TEXT && part.text) {
