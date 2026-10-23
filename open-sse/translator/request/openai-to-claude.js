@@ -253,8 +253,9 @@ function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
       }
     }
   } else if (msg.role === ROLE.ASSISTANT) {
-    // OpenAI-compatible reasoning is part of the assistant turn. Preserve it
-    // as a thinking block so Claude-format providers keep the context.
+    // OpenAI-compatible reasoning is part of the assistant turn. Keep it as an
+    // unsigned thinking block: native Claude drops it during preparation
+    // (Anthropic requires a signature), while compatible providers retain it.
     if (typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()) {
       blocks.push({ type: CLAUDE_BLOCK.THINKING, thinking: msg.reasoning_content });
     }

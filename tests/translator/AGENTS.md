@@ -69,6 +69,7 @@ Only add a dedicated test when a provider has a special format that does not rou
 - `kiro` (binary AWS EventStream), `cursor` (protobuf ConnectRPC), `commandcode` (NDJSON) → responses do NOT round-trip cleanly through openai; test via their executors, not just the translator.
 - Single-provider-two-formats (most fragile): `opencode-go` (minimax models → claude, others openai), `github` (escalates `/chat/completions` → `/responses` at runtime), `xiaomi-tokenplan` (claude alias).
 - `gemini`/`gemini-cli`: only the LAST system message is kept → earlier system messages are lost.
+- `reasoning_content` → Claude `thinking`: native `claude` drops the unsigned block (Anthropic requires a signature), `anthropic-compatible*` keeps it with the existing static compatibility signature placeholder, and `deepseek` keeps it unsigned. Native loss is intentional; the placeholder is not proof of reasoning provenance.
 
 ## 8. Current known bugs (currently `it.fails`)
 
@@ -86,7 +87,6 @@ Grouped per CLI/provider test file. Each row is an `it.fails` case.
 | Bug | Source |
 |---|---|
 | Always injects "You are Claude Code" system prompt | `request/openai-to-claude.js:124-134` |
-| `reasoning_content` not mapped to a thinking block | `request/openai-to-claude.js:268-273` |
 | `tool_choice:"none"` → `auto` | `request/openai-to-claude.js:298` |
 | `input_audio` dropped | `request/openai-to-claude.js` (no audio branch) |
 
