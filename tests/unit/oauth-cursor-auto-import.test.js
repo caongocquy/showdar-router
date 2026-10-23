@@ -85,7 +85,7 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
     expect(response.body.found).toBe(false);
     expect(response.body.error).toContain("Checked locations:");
-    expect(response.body.error).toContain("Library/Application Support/Cursor/User/globalStorage/state.vscdb");
+    expect(response.body.error.replaceAll("\\", "/")).toContain("Library/Application Support/Cursor/User/globalStorage/state.vscdb");
     expect(response.body.error).toContain("Cursor - Insiders");
   });
 
@@ -97,7 +97,7 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.found).toBe(false);
-    expect(response.body.error).toContain(".config/cursor/User/globalStorage/state.vscdb");
+    expect(response.body.error.replaceAll("\\", "/")).toContain(".config/cursor/User/globalStorage/state.vscdb");
     expect(response.body.error).not.toBe("Unsupported platform");
   });
 

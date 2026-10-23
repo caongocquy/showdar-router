@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { closeTestDbAdapter } from "../helpers/closeTestDbAdapter.js";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const originalDataDir = process.env.DATA_DIR;
@@ -29,7 +30,8 @@ describe("model routing", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await closeTestDbAdapter();
     vi.resetModules();
     vi.clearAllMocks();
     cleanup();

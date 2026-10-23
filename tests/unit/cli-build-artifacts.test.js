@@ -67,7 +67,7 @@ afterEach(() => {
 
 describe("CLI build server artifacts", () => {
   it("normalizes only exact build-root path boundaries and is idempotent", () => {
-    const root = "/repo/foo";
+    const root = path.resolve("/repo/foo").replace(/\\/g, "/");
     const source = [
       `const a = "${root}";`,
       `const b = "${root}/server/file.js";`,
@@ -87,18 +87,18 @@ describe("CLI build server artifacts", () => {
     assert.match(normalized, /const c = "\/repo\/foobar\/server\/file\.js"/);
     assert.match(normalized, /const d = "\/repo\/foo-other\/file\.js"/);
     assert.match(normalized, /const e = "\/repo\/foo2\/file\.js"/);
-    assert.match(normalized, /const f = "prefix\/repo\/foo\/file\.js"/);
+    assert.ok(normalized.includes(`const f = "prefix${root}/file.js"`));
     assert.match(normalized, /const g = "\.\/one"; const g2 = "\.\/two"/);
     assert.match(normalized, /fileURLToPath\("file:\/\/" \+ process\.cwd\(\) \+ "\/src\/entry\.js"\)/);
-    assert.match(normalized, /const i = "prefix \/repo\/foo text"/);
-    assert.match(normalized, /const j = "xfile:\/\/\/repo\/foo\/server\.js"/);
+    assert.ok(normalized.includes(`const i = "prefix ${root} text"`));
+    assert.ok(normalized.includes(`const j = "xfile://${root}/server.js"`));
     assert.equal(normalizeGeneratedText(normalized, root), normalized);
     assert.doesNotThrow(() => new vm.Script(normalized));
   });
 
   it("normalizes the observed escaped JSON path representation without changing keys", () => {
-    const root = "/repo/foo";
-    const input = '{"key":"\\/repo\\/foo\\/value","path":"/repo/foo/server.js"}';
+    const root = path.resolve("/repo/foo").replace(/\\/g, "/");
+    const input = JSON.stringify({ key: `${root}/value`, path: `${root}/server.js` }).replaceAll("/", "\\/");
     const escapedNormalized = normalizeGeneratedText(input, root);
     const normalized = normalizeGeneratedJson(escapedNormalized, root);
     const parsed = JSON.parse(normalized);
@@ -106,7 +106,7 @@ describe("CLI build server artifacts", () => {
     assert.equal(parsed.key, "./value");
     assert.equal(parsed.path, "./server.js");
     const structured = JSON.parse(normalizeGeneratedJson(
-      JSON.stringify({ "/repo/foo/key": "/repo/foo/value" }),
+      JSON.stringify({ [`${root}/key`]: `${root}/value` }),
       root,
     ));
     assert.equal(structured["./key"], "./value");
@@ -204,8 +204,10 @@ describe("CLI build server artifacts", () => {
   it("publishes required distribution output without machine-local artifacts or paths", () => {
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
     const packageDir = createTempDir();
-    const pack = JSON.parse(execFileSync("npm", [
-      "pack", "--json", "--ignore-scripts", "--pack-destination", packageDir,
+    const npmExe = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "npm";
+    const npmArgs = process.platform === "win32" ? ["/d", "/s", "/c", "npm"] : [];
+    const pack = JSON.parse(execFileSync(npmExe, [
+      ...npmArgs, "pack", "--json", "--ignore-scripts", "--pack-destination", packageDir,
     ], {
       cwd: path.join(repoRoot, "cli"),
       env: { ...process.env, npm_config_cache: createTempDir() },

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { closeTestDbAdapter } from "../helpers/closeTestDbAdapter.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const previousDataDir = process.env.DATA_DIR;
@@ -15,7 +16,8 @@ beforeAll(async () => {
   await db.initDb();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeTestDbAdapter();
   if (previousDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = previousDataDir;
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });

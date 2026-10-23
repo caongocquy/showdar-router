@@ -101,7 +101,7 @@ export async function scanRepository(root) {
   const violations = [];
 
   for (const file of await repositoryFiles(base)) {
-    const relativePath = relative(base, file);
+    const relativePath = relative(base, file).replace(/\\/g, "/");
     if (BINARY_EXTENSIONS.has(extname(file).toLowerCase())) continue;
     const buffer = await readFile(file);
     if (buffer.includes(0)) continue;
