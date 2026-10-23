@@ -1,11 +1,6 @@
 name: Windows Track B (non-publishing)
 
-# Branch-scoped push trigger permits exact-SHA CI validation without tags,
-# releases, or deployment. Remove this temporary trigger before merging.
 on:
-  push:
-    branches:
-      - fix/rc-02-full-suite
   workflow_dispatch:
 
 permissions:
