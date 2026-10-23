@@ -1,0 +1,119 @@
+name: Windows Track B (non-publishing)
+
+# Branch-scoped push trigger permits exact-SHA CI validation without tags,
+# releases, or deployment. Remove this temporary trigger before merging.
+on:
+  push:
+    branches:
+      - fix/rc-02-full-suite
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-track-b-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-track-b:
+    name: Windows 2022 / Node 22.23.3
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SHOWDAR_ROUTER_LIVE_MIMO: "0"
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22.23.3
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          architecture: x64
+
+      - name: Verify toolchain
+        run: |
+          if ((node --version).Trim() -ne "v22.23.3") {
+            throw "Wrong Node version: $(node --version)"
+          }
+          npm install --global npm@11.5.1
+          if ($LASTEXITCODE -ne 0) { throw "npm bootstrap failed" }
+          node --version
+          npm --version
+          git rev-parse HEAD
+          Write-Output "Windows runner arch: $env:PROCESSOR_ARCHITECTURE"
+
+      - name: Install project and CLI dependencies
+        run: |
+          npm install --no-package-lock --legacy-peer-deps
+          if ($LASTEXITCODE -ne 0) { throw "Root install failed" }
+          npm install --no-package-lock --legacy-peer-deps --no-save vite@8.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Vite install failed" }
+          npm --prefix cli install --no-package-lock --ignore-scripts --legacy-peer-deps
+          if ($LASTEXITCODE -ne 0) { throw "CLI install failed" }
+
+      - name: Build CLI before artifact-dependent tests
+        run: |
+          npm --prefix cli run build
+          if ($LASTEXITCODE -ne 0) { throw "CLI build failed" }
+
+      - name: Run exact release regression gate
+        run: |
+          node scripts/verify-test-files.mjs --list scripts/test-lists/release.txt
+          if ($LASTEXITCODE -ne 0) { throw "Release gate failed" }
+
+      - name: Run routing regression tests
+        run: |
+          npm run test:routing
+          if ($LASTEXITCODE -ne 0) { throw "Routing tests failed" }
+
+      - name: Run full Vitest and Node runner
+        run: |
+          npm test
+          if ($LASTEXITCODE -ne 0) { throw "Full tests failed" }
+
+      - name: Run loopback routing integration
+        run: |
+          npm run test:integration:routing
+          if ($LASTEXITCODE -ne 0) { throw "Integration smoke failed" }
+
+      - name: Build production app
+        run: |
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw "Production build failed" }
+
+      - name: Standalone runtime smoke
+        env:
+          STANDALONE_SMOKE_SKIP_BUILD: "1"
+        run: |
+          npm run test:runtime
+          if ($LASTEXITCODE -ne 0) { throw "Runtime smoke failed" }
+
+      - name: Validate CLI package (dry run only)
+        working-directory: cli
+        run: |
+          $packPath = Join-Path $env:RUNNER_TEMP "showdar-windows-track-b-pack.json"
+          npm pack --dry-run --json | Set-Content -Path $packPath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw "npm pack --dry-run failed" }
+          $pack = (Get-Content -Raw $packPath | ConvertFrom-Json)[0]
+          $paths = @($pack.files | ForEach-Object { $_.path })
+          $required = @("cli.js", "app/custom-server.js", "app/server.js", "assets/showdar-router-banner.png", "assets/showdar-router-terminal.png", "README.md", "LICENSE")
+          foreach ($requiredPath in $required) {
+            if ($paths -notcontains $requiredPath) { throw "Missing packed file: $requiredPath" }
+          }
+          if ($pack.version -ne "0.6.0") { throw "Unexpected package version: $($pack.version)" }
+          Write-Output "Package validated: $($pack.name)@$($pack.version), $($pack.entryCount) files"
+
+      - name: Isolated npm install smoke
+        run: |
+          node scripts/npm-install-smoke.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Isolated install smoke failed" }
+
+      - name: Record exact HEAD and non-publishing evidence
+        run: |
+          git rev-parse HEAD
+          Write-Output "Windows Track B checks completed; no publishing or deployment actions."
