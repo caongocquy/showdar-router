@@ -37,6 +37,9 @@ jobs:
           npm install --no-package-lock --legacy-peer-deps --no-save vite@8.2.2
           npm --prefix cli install --no-package-lock --ignore-scripts --legacy-peer-deps
 
+      - name: Run full test suite and Node runner
+        run: npm test
+
       - name: Run routing tests
         run: npm run test:routing
 
