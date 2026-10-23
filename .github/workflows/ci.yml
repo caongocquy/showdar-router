@@ -47,8 +47,8 @@ jobs:
       # filters that match no file, so include/config drift could drop a
       # required suite while the remaining suites keep this step green.
       # Assert per file: collected, >0 executed tests, zero failures.
-      - name: Run regression and focused release tests
-        run: node scripts/verify-test-files.mjs --list scripts/test-lists/ci-focused.txt
+      - name: Run exact release regression gate
+        run: node scripts/verify-test-files.mjs --list scripts/test-lists/release.txt
 
       - name: Build root production app
         run: npm run build
