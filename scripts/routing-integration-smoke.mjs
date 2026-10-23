@@ -876,7 +876,11 @@ async function remoteLocalProbe() {
 
 try {
   if (!skipBuild) {
-    execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build"], { cwd: repo, stdio: "inherit" });
+    // Node 22+ cannot launch Windows .cmd shims via execFileSync without a shell.
+    // Use cmd.exe explicitly for this fixed, non-user-controlled build command.
+    const npmExe = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "npm";
+    const npmArgs = process.platform === "win32" ? ["/d", "/s", "/c", "npm", "run", "build"] : ["run", "build"];
+    execFileSync(npmExe, npmArgs, { cwd: repo, stdio: "inherit" });
   }
   assertArtifacts();
 
