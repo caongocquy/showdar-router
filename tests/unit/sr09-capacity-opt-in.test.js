@@ -96,21 +96,36 @@ describe("SR-09 automatic capacity fallback opt-in", () => {
   });
 });
 
+// Resetting Vitest's module graph alone does not close the global SQLite
+// adapter. Explicitly close it before simulating a process restart or removing
+// its temporary database directory (Windows keeps open files locked).
+async function resetPersistenceAdapter() {
+  const state = globalThis._dbAdapter;
+  try {
+    if (state?.initPromise) await state.initPromise;
+    if (state?.instance) state.instance.close();
+  } finally {
+    delete globalThis._dbAdapter;
+    vi.resetModules();
+  }
+}
+
 describe("SR-09 opt-in persistence across restart", () => {
   let tempDir;
   let originalDataDir;
 
   beforeEach(async () => {
+    await resetPersistenceAdapter();
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "sr09-cap-"));
     originalDataDir = process.env.DATA_DIR;
     process.env.DATA_DIR = tempDir;
-    vi.resetModules();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Close DB handles before unlinking the SQLite file on Windows.
+    await resetPersistenceAdapter();
     if (originalDataDir === undefined) delete process.env.DATA_DIR;
     else process.env.DATA_DIR = originalDataDir;
-    vi.resetModules();
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
@@ -118,13 +133,13 @@ describe("SR-09 opt-in persistence across restart", () => {
     const first = await import("../../src/lib/db/repos/settingsRepo.js");
     expect((await first.getSettings()).capacityAdapterAutoFallback).toBe(false);
     await first.updateSettings({ capacityAdapterAutoFallback: true });
-    vi.resetModules(); // fresh module graph + fresh DB connection == restart
+    await resetPersistenceAdapter(); // real close + fresh adapter on the same DB file
 
     const restarted = await import("../../src/lib/db/repos/settingsRepo.js");
     expect((await restarted.getSettings()).capacityAdapterAutoFallback).toBe(true);
 
     await restarted.updateSettings({ capacityAdapterAutoFallback: false });
-    vi.resetModules();
+    await resetPersistenceAdapter();
     const optedOut = await import("../../src/lib/db/repos/settingsRepo.js");
     expect((await optedOut.getSettings()).capacityAdapterAutoFallback).toBe(false);
   });
