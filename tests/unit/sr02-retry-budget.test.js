@@ -94,7 +94,7 @@ vi.mock("../../open-sse/services/projectId.js", () => ({ getProjectIdForConnecti
 
 const { handleChat } = await import("@/sse/handlers/chat.js");
 const { validateChatComboResponse } = await import("../../open-sse/services/chatComboResponseValidator.js");
-const { parseUpstreamError } = await import("../../open-sse/utils/error.js");
+const { parseUpstreamError, createErrorResult } = await import("../../open-sse/utils/error.js");
 const { ERROR_BODY_MAX_BYTES } = await import("../../open-sse/config/runtimeConfig.js");
 
 const enc = (s) => new TextEncoder().encode(s);
@@ -423,5 +423,67 @@ describe("SR-02 bounded error-body memory", () => {
     expect(statusCode).toBe(429);
     expect(Date.now() - t0).toBeLessThan(1000);
     expect(tracker.cancelled).toBe(1);
+  }, 10000);
+});
+
+// ---------------------------------------------------------------------------
+// PR #24 review finding P2: reset metadata must never advertise a bogus
+// deadline. `Number(null) === 0` and `Number.isFinite(0)` previously let a
+// missing/expired reset through as X-RateLimit-Reset "null" / "0".
+// ---------------------------------------------------------------------------
+
+describe("RC-02 review: reset metadata validity", () => {
+  const resetHeader = async (resetsAtMs) => {
+    const body = await createErrorResult(429, "rate limited", resetsAtMs).response.json();
+    return body.error?.metadata?.headers?.["X-RateLimit-Reset"];
+  };
+
+  it.each([
+    ["missing (null)", null],
+    ["missing (undefined)", undefined],
+    ["zero", 0],
+    ["negative", -1],
+    ["not a number", "not-a-deadline"],
+    ["NaN", Number.NaN],
+    ["infinite", Number.POSITIVE_INFINITY],
+    ["expired", Date.now() - 1_000],
+  ])("omits the reset hint for %s", async (_label, value) => {
+    expect(await resetHeader(value)).toBeUndefined();
+  });
+
+  it("preserves a valid future reset timestamp exactly", async () => {
+    const future = Date.now() + 120_000;
+    expect(await resetHeader(future)).toBe(String(future));
+  });
+
+  it("does not advertise a reset when the account chain has none", async () => {
+    combo();
+    h.state.combos = {};
+    h.fetchMock.mockImplementationOnce(async () => rateLimited());
+
+    const res = await runChat({ model: "gemini/gemini-2.5-pro" });
+    const body = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(body.error?.metadata?.headers?.["X-RateLimit-Reset"]).toBeUndefined();
+  }, 10000);
+
+  it("advertises the earliest valid reset across exhausted accounts", async () => {
+    combo();
+    h.state.combos = {};
+    h.state.connections = [h.conn("conn-1", "A"), h.conn("conn-2", "B")];
+    h.fetchMock
+      .mockImplementationOnce(async () => rateLimited({ "retry-after": "600" }))
+      .mockImplementationOnce(async () => rateLimited({ "retry-after": "120" }));
+
+    const res = await runChat({ model: "gemini/gemini-2.5-pro" });
+    const body = await res.json();
+    const reset = Number(body.error?.metadata?.headers?.["X-RateLimit-Reset"]);
+
+    expect(res.status).toBe(429);
+    expect(h.state.calls.map((c) => c.conn)).toEqual(["conn-1", "conn-2"]);
+    expect(Number.isFinite(reset)).toBe(true);
+    expect(reset).toBeGreaterThan(Date.now() + 100_000);
+    expect(reset).toBeLessThanOrEqual(Date.now() + 121_000);
   }, 10000);
 });

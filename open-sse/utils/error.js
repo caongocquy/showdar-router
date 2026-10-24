@@ -170,8 +170,12 @@ export async function parseUpstreamError(response, executor = null, signal = nul
  * @returns {{ success: false, status: number, error: string, response: Response, resetsAtMs?: number }}
  */
 export function createErrorResult(statusCode, message, resetsAtMs) {
-  const metadata = Number.isFinite(Number(resetsAtMs))
-    ? { headers: { "X-RateLimit-Reset": String(resetsAtMs) } }
+  // Number(null) === 0, so a finite-only check advertises a missing deadline as
+  // "null"/"0". Only a real future timestamp is a trustworthy client hint.
+  const resetMs = resetsAtMs == null ? NaN : Number(resetsAtMs);
+  const validReset = Number.isFinite(resetMs) && resetMs > Date.now();
+  const metadata = validReset
+    ? { headers: { "X-RateLimit-Reset": String(resetMs) } }
     : null;
   return {
     success: false,

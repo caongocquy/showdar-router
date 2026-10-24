@@ -435,8 +435,11 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       excludeConnectionIds.add(credentials.connectionId);
       lastError = result.error;
       lastStatus = result.status;
-      const resetMs = Number(resetsAtMs);
-      if (Number.isFinite(resetMs) && (exhaustedResetsAtMs == null || resetMs < exhaustedResetsAtMs)) {
+      // Only a real future deadline is a usable hint. Number(null) === 0 and
+      // Number.isFinite(0) is true, so a bare finite check would advertise an
+      // exhausted/absent reset as a valid one.
+      const resetMs = resetsAtMs == null ? NaN : Number(resetsAtMs);
+      if (Number.isFinite(resetMs) && resetMs > Date.now() && (exhaustedResetsAtMs == null || resetMs < exhaustedResetsAtMs)) {
         exhaustedResetsAtMs = resetMs;
       }
       continue;
