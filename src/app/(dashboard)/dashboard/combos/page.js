@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,6 +9,7 @@ import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ConfirmModa
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
+import { createAutoFallbackWriter } from "@/shared/utils/autoFallback";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -55,6 +56,8 @@ export default function CombosPage() {
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const { copied, copy } = useCopyToClipboard();
+  const autoFallbackWriter = useRef(null);
+  if (autoFallbackWriter.current === null) autoFallbackWriter.current = createAutoFallbackWriter();
 
   useEffect(() => {
     fetchData();
@@ -105,16 +108,18 @@ export default function CombosPage() {
   };
 
   const handleSetAutoFallback = async (value) => {
+    const previous = autoFallback;
     setAutoFallback(value);
-    try {
-      await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ capacityAdapterAutoFallback: value }),
-      });
-    } catch (error) {
-      console.log("Error updating capacity adapter opt-in:", error);
+    const result = await autoFallbackWriter.current(value);
+    if (result.stale) return; // a newer toggle owns the UI state
+    if (result.ok) {
+      if (result.persisted !== undefined) setAutoFallback(result.persisted);
+      return;
     }
+    // Roll back to server truth (or the last UI value when it is unreachable)
+    // so a failed OFF write cannot leave the toggle claiming OFF.
+    setAutoFallback(result.persisted ?? previous);
+    alert("Could not save automatic fallback. The saved setting was restored; check your connection and try again.");
   };
 
   const handleCreate = async (data) => {
