@@ -70,7 +70,7 @@ function textFromContent(content) {
     .join("\n");
 }
 
-function isAgentTextRequest(body) {
+export function isAgentTextRequest(body) {
   // Many compatible clients always attach their built-in tool schemas, even
   // for a normal text turn. Cursor's retired ChatService rejects those
   // requests; AgentService can still answer the text turn, so ignore schemas
@@ -95,7 +95,7 @@ function encodeHistoryMessage(message) {
   return agentMessage(1, agentMessage(1, agentMessage(1, text)));
 }
 
-function buildAgentRunFrame(messages, model) {
+export function buildAgentRunFrame(messages, model) {
   const system = messages
     .filter((message) => message?.role === "system")
     .map((message) => textFromContent(message.content))

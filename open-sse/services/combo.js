@@ -367,7 +367,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     // Phase D1: one attempt record per loop iteration (ordinal = configured order).
-    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(modelStr), model: modelStr }) || null;
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(modelStr), model: modelStr, probe: !!healthDecision?.probe }) || null;
     // Phase D2A: tell the executor whether a usable fallback candidate
     // remains so capacity statuses fall through instead of burning same-URL
     // retries. Plan-time health is already baked into rotatedModels; when
@@ -755,7 +755,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       }
     }
     // Phase D1: one attempt record per panel invocation (concurrent → ALS-scoped).
-    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(model), model }) || null;
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(model), model, probe: !!healthDecision?.probe }) || null;
     let result;
     try {
       result = await runWithAttempt(attempt, () => handleSingleModel(panelBody, model, true, { signal }));
@@ -810,6 +810,12 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }, { ...cfg, minPanel, parentSignal: requestSignal });
   log.info("FUSION", `fan-out collected in ${Date.now() - t0}ms`);
 
+  // Client cancellation owns the response: do not report a panel outage (503)
+  // or start a judge for a request that already went away.
+  if (requestSignal?.aborted) {
+    return new Response(JSON.stringify({ error: { message: "Request aborted" } }), { status: 499, headers: { "Content-Type": "application/json" } });
+  }
+
   // 2. Collect successful answers.
   const answers = [];
   for (let i = 0; i < settled.length; i++) {
@@ -853,7 +859,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
       continue;
     }
     // Phase D1: judge attempt (ordinal -1 for an external judge model).
-    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(candidate), model: candidate }) || null;
+    const attempt = trace?.beginAttempt({ ordinal: models.indexOf(candidate), model: candidate, probe: !!decision?.probe }) || null;
     let result;
     try {
       result = await runWithAttempt(attempt, () => handleSingleModel(judgeBody, candidate, undefined, { signal: requestSignal }));

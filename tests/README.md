@@ -24,6 +24,21 @@ Or run vitest directly with npx:
 npx vitest run --reporter=verbose --config ./vitest.config.js
 ```
 
+## Runner and optional-dependency policy
+
+- **Vitest** owns `tests/**/*.test.{js,mjs}`. Root `npm test` runs Vitest, then
+  `npm run test:node`.
+- **Node's test runner** owns `tests/**/*.node-test.mjs`. These files use
+  `node:test` and are excluded from Vitest so they are not collected twice.
+- **Optional cloud tree:** `unit/embeddings.cloud.test.js` is skipped when
+  `cloud/src/handlers/embeddings.js` is absent. `cloud/` is an optional
+  deployment artifact, not required for the router release.
+- **Benchmark-only dependency:** `unit/db-benchmark.test.js` is skipped when
+  `lowdb` is not installed. Production persistence uses SQLite.
+- **Live upstream checks:** `unit/mimo-free.live.test.js` is skipped unless
+  `SHOWDAR_ROUTER_LIVE_MIMO=1` is set. Deterministic offline coverage stays in
+  `unit/mimo-free.test.js`.
+
 ## Test Files
 
 | File | What it tests |

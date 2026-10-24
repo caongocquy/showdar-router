@@ -194,12 +194,11 @@ describe("D2A bounded structured-error inspection", () => {
     const ctrl = new AbortController();
     const t0 = Date.now();
     setTimeout(() => ctrl.abort(), 30);
-    const out = await ex.execute({
+    await expect(ex.execute({
       model: "m", body: {}, stream: false, credentials: creds,
       signal: ctrl.signal,
-    });
+    })).rejects.toMatchObject({ name: "AbortError" });
     const elapsed = Date.now() - t0;
-    expect(out.response.status).toBe(503);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(elapsed).toBeLessThan(3000); // abort cut the 500ms stall and the 10s backoff
   }, 10000);
@@ -329,14 +328,13 @@ describe("D2A cancellation-aware backoff", () => {
     const t0 = Date.now();
     // abort mid-backoff
     setTimeout(() => ctrl.abort(), 50);
-    const out = await ex.execute({
+    await expect(ex.execute({
       model: "m", body: {}, stream: false, credentials: creds,
       signal: ctrl.signal,
       comboFallbackRemaining: false,
-    });
+    })).rejects.toMatchObject({ name: "AbortError" });
     const elapsed = Date.now() - t0;
-    // returned the 503 rather than sleeping out 30s
-    expect(out.response.status).toBe(503);
+    // cancellation surfaces as AbortError rather than sleeping out 30s
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(elapsed).toBeLessThan(5000);
   });
@@ -421,13 +419,13 @@ describe("D2A abort listener lifecycle (fake timers)", () => {
       model: "m", body: {}, stream: false, credentials: creds,
       signal: ctrl.signal, comboFallbackRemaining: false,
     });
+    const rejection = expect(p).rejects.toMatchObject({ name: "AbortError" });
     await vi.advanceTimersByTimeAsync(0); // fetch + peek + backoff setup
     await vi.advanceTimersByTimeAsync(2500);
     expect(vi.getTimerCount()).toBeGreaterThan(0); // backoff pending
     ctrl.abort();
     await vi.advanceTimersByTimeAsync(0);
-    const out = await p;
-    expect(out.response.status).toBe(503);
+    await rejection;
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -437,11 +435,10 @@ describe("D2A abort listener lifecycle (fake timers)", () => {
     fetchMock.mockImplementation(() => Promise.resolve(res(503, "")));
     const ctrl = new AbortController();
     ctrl.abort();
-    const out = await ex.execute({
+    await expect(ex.execute({
       model: "m", body: {}, stream: false, credentials: creds,
       signal: ctrl.signal, comboFallbackRemaining: false,
-    });
-    expect(out.response.status).toBe(503);
+    })).rejects.toMatchObject({ name: "AbortError" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
   });

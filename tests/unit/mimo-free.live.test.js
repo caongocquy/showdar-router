@@ -43,7 +43,10 @@ async function chatWith(jwt, ua) {
   return proxyAwareFetch(CHAT_URL, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
-describe("MiMo Free bootstrap (live)", () => {
+// Live upstream checks are opt-in; offline coverage lives in mimo-free.test.js.
+const LIVE_MIMO = process.env.SHOWDAR_ROUTER_LIVE_MIMO === "1";
+
+describe.skipIf(!LIVE_MIMO)("MiMo Free bootstrap (live)", () => {
   it("bootstrap returns 200 with JWT", async () => {
     const { status, jwt } = await bootstrapWith(CHROME_UA);
     expect(status).toBe(200);
@@ -51,7 +54,7 @@ describe("MiMo Free bootstrap (live)", () => {
   });
 });
 
-describe("MiMo Free anti-abuse gate (live)", () => {
+describe.skipIf(!LIVE_MIMO)("MiMo Free anti-abuse gate (live)", () => {
   it("chat WITH Chrome User-Agent → 200", async () => {
     const { jwt } = await bootstrapWith(CHROME_UA);
     const r = await chatWith(jwt, CHROME_UA);

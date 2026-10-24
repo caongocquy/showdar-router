@@ -7,12 +7,17 @@
  * combo.js's existing reorderByCapabilities then floats a capable pool model to the
  * front only when none of the original models can handle the request — so this
  * never overrides a combo that already has a member covering the capability.
+ *
+ * SR-09: pool models are only injected when the operator has explicitly enabled
+ * automatic fallback (`settings.capacityAdapterAutoFallback === true`). Provider
+ * locality (local vs remote) cannot be determined reliably here, so nothing is
+ * injected automatically by default. Pool models must also be listed explicitly:
+ * an enabled pool with no models never resolves to a hidden default endpoint.
  */
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 
 const CAPABILITY_KEYS = ["vision", "pdf", "audioInput", "videoInput"];
 const HARD_CAPS = new Set(CAPABILITY_KEYS);
-const DEFAULT_FALLBACK_MODEL = "oc/mimo-v2.5-free";
 
 // Normalize a capability entry to { enabled, roundRobin, models }. Backward-compat:
 // accept the legacy array form [{model, enabled}] (treated as enabled, fallback).
@@ -30,14 +35,10 @@ function normalizeCapEntry(entry) {
   return { enabled: false, roundRobin: false, models: [] };
 }
 
-// Resolve one capability's full config. Enabled pools with no models fall back
-// to DEFAULT_FALLBACK_MODEL so the toggle is never a no-op.
+// Resolve one capability's full config. No implicit model is ever added: an
+// enabled pool with an empty `models` list simply contributes nothing.
 export function getCapacityAdapterConfig(cap, settings) {
-  const entry = normalizeCapEntry(settings?.capacityAdapter?.[cap]);
-  if (entry.enabled && entry.models.length === 0) {
-    return { ...entry, models: [DEFAULT_FALLBACK_MODEL] };
-  }
-  return entry;
+  return normalizeCapEntry(settings?.capacityAdapter?.[cap]);
 }
 
 // Flatten enabled models across all capability pools, in priority order, deduped.
@@ -90,6 +91,9 @@ function modelSatisfies(modelStr, requiredHard) {
 // original list already covers it (combo.js's reorderByCapabilities handles
 // that case via autoSwitch).
 export function augmentModelsWithCapacityAdapter(models, requiredCapabilities, settings) {
+  // SR-09: no automatic capacity injection without an explicit, persisted opt-in.
+  if (settings?.capacityAdapterAutoFallback !== true) return models;
+
   const hard = [...(requiredCapabilities || [])].filter((c) => HARD_CAPS.has(c));
   if (hard.length === 0 || !Array.isArray(models) || models.length === 0) return models;
   if (models.some((m) => modelSatisfies(m, hard))) return models;

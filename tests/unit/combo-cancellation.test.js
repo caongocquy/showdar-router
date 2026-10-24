@@ -61,7 +61,8 @@ describe("fusion cancellation and reuse", () => {
       log,
       tuning: { maxConcurrent: 4, panelHardTimeoutMs: 5000 },
     });
-    expect(result.status).toBe(503);
+    // Parent cancellation owns the response (499), not a panel outage.
+    expect(result.status).toBe(499);
     expect(Date.now() - t0).toBeLessThan(1000);
     expect(started).toEqual(["p/a", "p/b", "p/c", "p/d"]);
   });

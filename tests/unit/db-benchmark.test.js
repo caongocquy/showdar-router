@@ -5,6 +5,16 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, beforeAll, afterAll, vi } from "vitest";
 
+// lowdb is benchmark-only; production uses SQLite. Treat it as an optional
+// local dependency and skip explicitly instead of failing collection.
+let lowdbAvailable = true;
+try {
+  await import("lowdb");
+  await import("lowdb/node");
+} catch {
+  lowdbAvailable = false;
+}
+
 const N_ITEMS = 500;
 const N_QUERIES = 200;
 
@@ -25,6 +35,7 @@ async function bench(label, fn) {
 }
 
 beforeAll(async () => {
+  if (!lowdbAvailable) return;
   // SQLite setup
   tempSqlite = fs.mkdtempSync(path.join(os.tmpdir(), "showdar-router-bench-sqlite-"));
   process.env.DATA_DIR = tempSqlite;
@@ -49,7 +60,7 @@ afterAll(() => {
   else process.env.DATA_DIR = originalDataDir;
 });
 
-describe("DB Benchmark — SQLite vs Lowdb", () => {
+describe.skipIf(!lowdbAvailable)("DB Benchmark — SQLite vs Lowdb", () => {
   it(`INSERT ${N_ITEMS} provider connections`, async () => {
     console.log(`\n[INSERT ${N_ITEMS}]`);
 

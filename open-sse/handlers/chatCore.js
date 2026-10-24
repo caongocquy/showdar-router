@@ -138,7 +138,13 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
 
   const clientRequestedStreaming = body.stream === true || sourceFormat === FORMATS.ANTIGRAVITY || sourceFormat === FORMATS.GEMINI || sourceFormat === FORMATS.GEMINI_CLI;
   const providerRequiresStreaming = PROVIDERS[provider]?.forceStream === true;
-  let stream = providerRequiresStreaming ? true : (body.stream !== false);
+  // SR-10: OpenAI Chat Completions defaults to non-streaming when `stream` is
+  // omitted. Other source protocols keep their existing inference.
+  let stream = providerRequiresStreaming
+    ? true
+    : sourceFormat === FORMATS.OPENAI
+      ? body.stream === true
+      : (body.stream !== false);
 
   // Image generation models require non-streaming (Google v1internal:generateContent)
   const modelType = getModelType(alias, model);
@@ -182,10 +188,16 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
     }
     // Convert remote image URLs to base64 for targets that can't fetch URLs.
+    // Runs before dispatch, so it must observe the client signal: an aborted
+    // request must not keep downloading images, nor go on to dispatch.
     try {
-      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
+      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: externalSignal });
       if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
-    } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
+    } catch (e) {
+      if (externalSignal?.aborted || e?.name === "AbortError") return createErrorResult(499, "Request aborted");
+      log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`);
+    }
+    if (externalSignal?.aborted) return createErrorResult(499, "Request aborted");
   }
 
   let translatedBody;
@@ -320,6 +332,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Pin cache breakpoints to the final body — every saver above can reshape
   // system/tools/messages, and a stale anchor costs a full prefix rewrite.
   if (passthrough && clientTool === "claude") anchorClaudeCache(translatedBody);
+
+  // SR-10: same-format OpenAI requests skip translation, so make the effective
+  // mode explicit in the upstream body instead of leaving `stream` omitted.
+  if (finalFormat === FORMATS.OPENAI) translatedBody.stream = stream;
 
   const executor = getExecutor(provider);
   trackPendingRequest(model, provider, connectionId, true);
@@ -493,7 +509,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Provider returned error
   if (!providerResponse.ok) {
     trackPendingRequest(model, provider, connectionId, false, true);
-    const { statusCode, message, resetsAtMs } = await parseUpstreamError(providerResponse, executor);
+    const { statusCode, message, resetsAtMs } = await parseUpstreamError(providerResponse, executor, streamController.signal);
     appendRequestLog({ model, provider, connectionId, status: `FAILED ${statusCode}` }).catch(() => { });
     saveRequestDetail(buildRequestDetail({
       provider, model, connectionId,

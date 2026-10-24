@@ -175,6 +175,9 @@ describe("openaiToClaudeResponse", () => {
       id: "chatcmpl-test",
       model: "gpt-test",
       choices: [{
+        // Tool arguments are buffered until finish_reason so they can be
+        // sanitized as one complete JSON object.
+        finish_reason: "tool_calls",
         delta: {
           tool_calls: [{
             index: 0,

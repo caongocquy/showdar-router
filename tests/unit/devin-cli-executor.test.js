@@ -397,9 +397,11 @@ describe("DevinCliExecutor ACP session/new", () => {
     }
   });
 
-  it("does not set XDG_CONFIG_HOME when DEVIN_MCP_SERVERS is absent", async () => {
+  it("does not replace XDG_CONFIG_HOME when DEVIN_MCP_SERVERS is absent", async () => {
     const { child } = await runExecute();
-    expect(child.opts.env.XDG_CONFIG_HOME).toBeUndefined();
+    // The child inherits the parent environment; absence of MCP config must
+    // leave an existing XDG_CONFIG_HOME untouched (CI sets it on Linux).
+    expect(child.opts.env.XDG_CONFIG_HOME).toBe(process.env.XDG_CONFIG_HOME);
   });
 
   it("exposes body.tools as an MCP server (sets XDG_CONFIG_HOME + writes script)", async () => {
