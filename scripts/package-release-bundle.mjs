@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { npmInvocation } from "./lib/npm-invocation.mjs";
 
 function fail(message) {
   console.error(message);
@@ -22,12 +23,12 @@ function parseArgs(argv) {
 }
 
 function commandInvocation(command, args) {
-  if (process.platform === "win32" && command === "npm") {
-    const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-    if (!fs.existsSync(npmCli)) fail(`npm CLI not found next to Node runtime: ${npmCli}`);
-    return { executable: process.execPath, args: [npmCli, ...args] };
+  if (command !== "npm") return { executable: command, args };
+  try {
+    return npmInvocation(args);
+  } catch (error) {
+    fail(error.message);
   }
-  return { executable: command, args };
 }
 
 function run(command, args, options = {}) {
