@@ -26,12 +26,22 @@ const SPECIALIZED = new Set([
 // Sanitize header: khử token + field thời gian động (kimi X-Msh-Device-Id) để snapshot ổn định.
 function sanitize(headers) {
   const out = {};
+  const platformHeaders = {
+    "X-PLATFORM": "<PLATFORM>",
+    "X-PLATFORM-VERSION": "<NODE_VERSION>",
+    "X-Msh-Device-Model": "<DEVICE_MODEL>",
+    "X-Msh-Device-Name": "<DEVICE_NAME>",
+  };
   for (const [k, v] of Object.entries(headers)) {
-    out[k] = typeof v === "string"
-      ? v.replace(/Bearer .+/, "Bearer <TOK>")
-          .replace(/sk-test-APIKEY|tok-test-ACCESS/g, "<CRED>")
-          .replace(/kimi-\d{10,}/g, "kimi-<TS>")
-      : v;
+    if (platformHeaders[k]) {
+      out[k] = platformHeaders[k];
+    } else {
+      out[k] = typeof v === "string"
+        ? v.replace(/Bearer .+/, "Bearer <TOK>")
+            .replace(/sk-test-APIKEY|tok-test-ACCESS/g, "<CRED>")
+            .replace(/kimi-\d{10,}/g, "kimi-<TS>")
+        : v;
+    }
   }
   return out;
 }

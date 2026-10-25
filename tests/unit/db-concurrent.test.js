@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { closeTestDbAdapter } from "../helpers/closeTestDbAdapter.js";
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 const originalDataDir = process.env.DATA_DIR;
@@ -17,7 +18,8 @@ beforeAll(async () => {
   await db.initDb();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeTestDbAdapter();
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
@@ -43,6 +45,36 @@ describe("DB Concurrency — atomic safety", () => {
 
     const hist = await db.getUsageHistory({ provider: "openai" });
     expect(hist.length).toBe(N);
+  });
+
+  it("deduplicates an explicit requestId without collapsing independent same-ms writes", async () => {
+    const base = Date.now();
+    await Promise.all([
+      db.saveRequestUsage({
+        requestId: "sr12-repeat", provider: "dedupe", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 },
+        timestamp: new Date(base).toISOString(), status: "ok",
+      }),
+      db.saveRequestUsage({
+        requestId: "sr12-repeat", provider: "dedupe", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 },
+        timestamp: new Date(base + 1).toISOString(), status: "ok",
+      }),
+    ]);
+    expect((await db.getUsageHistory({ provider: "dedupe" })).length).toBe(1);
+
+    const ts = new Date(base + 2).toISOString();
+    await Promise.all([
+      db.saveRequestUsage({
+        provider: "dedupe-independent", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 }, timestamp: ts, status: "ok",
+      }),
+      db.saveRequestUsage({
+        provider: "dedupe-independent", model: "m", connectionId: "c",
+        tokens: { prompt_tokens: 7, completion_tokens: 3 }, timestamp: ts, status: "ok",
+      }),
+    ]);
+    expect((await db.getUsageHistory({ provider: "dedupe-independent" })).length).toBe(2);
   });
 
   it("200 parallel saveRequestDetail → all flushed", async () => {

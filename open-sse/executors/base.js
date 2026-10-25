@@ -256,7 +256,9 @@ export class BaseExecutor {
           }
         });
       }
-      if (signal?.aborted) return false;
+      // A cancelled request terminates here: returning the failed response
+      // would record it as a provider failure and cooldown the credential.
+      if (signal?.aborted) throw Object.assign(new Error("Request aborted"), { name: "AbortError" });
       // Phase D1: retry will re-dispatch on the same attempt (counted, not a new attempt).
       noteRetryDispatch();
       return true;
@@ -314,6 +316,9 @@ export class BaseExecutor {
           log?.debug?.("RETRY", `Error on ${url}, trying fallback ${urlIndex + 1}`);
           continue;
         }
+        // Internal connect timeout is a provider failure (502), never a client
+        // AbortError: the caller must retry/fall back and may cooldown.
+        if (isConnectTimeout) throw Object.assign(new Error(`fetch connect timeout after ${timeoutMs}ms`), { name: "TimeoutError", status: HTTP_STATUS.BAD_GATEWAY, cause: error });
         throw error;
       }
     }

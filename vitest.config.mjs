@@ -15,6 +15,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.{js,mjs}"],
-    exclude: ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/build/**"],
+    exclude: ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/build/**", "**/*.node-test.mjs"],
   },
 });

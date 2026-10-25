@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,6 +9,7 @@ import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ConfirmModa
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
+import { createAutoFallbackWriter } from "@/shared/utils/autoFallback";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -21,8 +22,7 @@ const CAPACITY_ADAPTER_CAPS = [
   // pdf, videoInput temporarily hidden — no translator support yet for those blocks.
   { key: "audioInput", label: "Audio", icon: "graphic_eq", desc: "Audio input" },
 ];
-const DEFAULT_FALLBACK_MODEL = "oc/mimo-v2.5-free";
-const EMPTY_CAP_ENTRY = { enabled: true, roundRobin: false, models: [] };
+const EMPTY_CAP_ENTRY = { enabled: false, roundRobin: false, models: [] };
 const EMPTY_CAPACITY_ADAPTER = {
   vision: { ...EMPTY_CAP_ENTRY },
   pdf: { ...EMPTY_CAP_ENTRY },
@@ -52,9 +52,12 @@ export default function CombosPage() {
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
+  const [autoFallback, setAutoFallback] = useState(false);
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const { copied, copy } = useCopyToClipboard();
+  const autoFallbackWriter = useRef(null);
+  if (autoFallbackWriter.current === null) autoFallbackWriter.current = createAutoFallbackWriter();
 
   useEffect(() => {
     fetchData();
@@ -83,6 +86,7 @@ export default function CombosPage() {
         normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key]);
       }
       setCapacityAdapter(normalized);
+      setAutoFallback(settingsData.capacityAdapterAutoFallback === true);
     } catch (error) {
       console.log("Error fetching data:", error);
     } finally {
@@ -101,6 +105,21 @@ export default function CombosPage() {
     } catch (error) {
       console.log("Error updating capacity adapter:", error);
     }
+  };
+
+  const handleSetAutoFallback = async (value) => {
+    const previous = autoFallback;
+    setAutoFallback(value);
+    const result = await autoFallbackWriter.current(value);
+    if (result.stale) return; // a newer toggle owns the UI state
+    if (result.ok) {
+      if (result.persisted !== undefined) setAutoFallback(result.persisted);
+      return;
+    }
+    // Roll back to server truth (or the last UI value when it is unreachable)
+    // so a failed OFF write cannot leave the toggle claiming OFF.
+    setAutoFallback(result.persisted ?? previous);
+    alert("Could not save automatic fallback. The saved setting was restored; check your connection and try again.");
   };
 
   const handleCreate = async (data) => {
@@ -249,6 +268,8 @@ export default function CombosPage() {
       <CapacityAdapterSection
         capacityAdapter={capacityAdapter}
         onChange={handleSetCapacityAdapter}
+        autoFallback={autoFallback}
+        onAutoFallbackChange={handleSetAutoFallback}
         activeProviders={activeProviders}
         getCaps={getCaps}
       />
@@ -409,14 +430,14 @@ function ComboCard({ combo, getCaps, activeProviders = [], copied, onCopy, onEdi
   );
 }
 
-function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, getCaps }) {
+function CapacityAdapterSection({ capacityAdapter, onChange, autoFallback, onAutoFallbackChange, activeProviders, getCaps }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-medium">Vision Adapter</p>
           <p className="text-xs text-text-muted mt-0.5">
-            Your model can&apos;t read image/audio? Auto-switches to a model in the pool below.
+            Your model can&apos;t read image/audio? When automatic fallback is on, the router auto-switches to a model in the pool below.
           </p>
           <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
             <li><span className="font-medium text-text-main">Vision</span> — images (png, jpg, webp, …)</li>
@@ -424,6 +445,24 @@ function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, ge
           </ul>
         </div>
       </div>
+      <Card padding="sm">
+        <div className="flex items-start gap-2.5">
+          <Toggle
+            checked={autoFallback}
+            onChange={onAutoFallbackChange}
+            aria-label="Allow automatic capacity fallback"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Allow automatic fallback (off by default)</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              When off, the router never picks a pool model for you: a request whose target cannot
+              read the image/audio fails instead of switching. When on, an enabled pool with
+              explicitly listed models may be selected automatically, and your input can be sent to
+              a remote provider. Only add models you trust with that data.
+            </p>
+          </div>
+        </div>
+      </Card>
       <div className="flex flex-col gap-4">
         {CAPACITY_ADAPTER_CAPS.map((cap) => (
           <CapacityAdapterCap
@@ -452,8 +491,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
   };
 
   const handleRemove = (index) => {
-    const next = models.filter((_, i) => i !== index);
-    patch({ models: next.length === 0 ? [DEFAULT_FALLBACK_MODEL] : next });
+    patch({ models: models.filter((_, i) => i !== index) });
   };
 
   const handleMove = (index, delta) => {

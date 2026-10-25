@@ -34,7 +34,7 @@ const ALLOWLIST = [
   { path: "open-sse/executors/zed.js", reason: "upstream Zed client user-agent contract" },
   { path: "open-sse/shared/clineAuth.js", reason: "upstream Cline client header contract" },
   { path: "tests/translator/__snapshots__/golden-url-header.test.js.snap", reason: "upstream client header snapshots" },
-  { path: "tests/auth/saml.test.js", reason: "SAML issuer compatibility fixture" },
+  { path: "tests/auth/saml.node-test.mjs", reason: "SAML issuer compatibility fixture" },
   { path: "tests/unit/saml.test.js", reason: "SAML issuer compatibility fixture" },
   { path: "tests/unit/cursor-agent-proto.test.js", reason: "upstream cursor protocol fixture" },
   { path: "tests/unit/launcher-tray.test.mjs", reason: "legacy-name absence assertion" },
@@ -101,7 +101,7 @@ export async function scanRepository(root) {
   const violations = [];
 
   for (const file of await repositoryFiles(base)) {
-    const relativePath = relative(base, file);
+    const relativePath = relative(base, file).replace(/\\/g, "/");
     if (BINARY_EXTENSIONS.has(extname(file).toLowerCase())) continue;
     const buffer = await readFile(file);
     if (buffer.includes(0)) continue;

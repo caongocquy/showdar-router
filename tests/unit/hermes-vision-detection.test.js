@@ -82,6 +82,7 @@ describe("Hermes Vision Image Detection", () => {
     };
     const reqCaps = detectRequiredCapabilities(body);
     const settings = {
+      capacityAdapterAutoFallback: true,
       capacityAdapter: {
         vision: {
           enabled: true,

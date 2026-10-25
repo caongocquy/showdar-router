@@ -4,10 +4,13 @@ import "./registerAll.js";
 import { translateRequest } from "../../open-sse/translator/index.js";
 import { FORMATS } from "../../open-sse/translator/formats.js";
 import { prepareClaudeRequest } from "../../open-sse/translator/formats/claude.js";
+import { DEFAULT_THINKING_CLAUDE_SIGNATURE } from "../../open-sse/config/defaultThinkingSignature.js";
+
+const TWithProvider = (provider, body) =>
+  translateRequest(FORMATS.OPENAI, FORMATS.CLAUDE, "m", body, true, null, provider);
 
 // anthropic-compatible provider so prepareClaudeRequest runs the openai→claude path
-const T = (body) =>
-  translateRequest(FORMATS.OPENAI, FORMATS.CLAUDE, "m", body, true, null, "anthropic-compatible-x");
+const T = (body) => TWithProvider("anthropic-compatible-x", body);
 
 describe("OpenAI → Claude context mapping", () => {
   // openai-to-claude.js:124-134 — always injects CLAUDE_SYSTEM_PROMPT ("You are Claude Code")
@@ -31,6 +34,36 @@ describe("OpenAI → Claude context mapping", () => {
       type: "thinking",
       thinking: "my hidden reasoning",
     }));
+  });
+
+  it("native Claude drops unsigned reasoning_content instead of sending an invalid thinking block", () => {
+    const out = TWithProvider("claude", {
+      messages: [
+        { role: "user", content: "q" },
+        { role: "assistant", content: "a", reasoning_content: "my hidden reasoning" },
+        { role: "user", content: "next" },
+      ],
+    });
+    const assistant = out.messages.find((m) => m.role === "assistant");
+    expect(JSON.stringify(out)).not.toContain("my hidden reasoning");
+    expect(assistant.content.some((block) => block.type === "thinking")).toBe(false);
+    expect(assistant.content).toContainEqual(expect.objectContaining({ type: "text", text: "a" }));
+  });
+
+  it("compatible Claude keeps reasoning_content with the existing signature placeholder", () => {
+    const out = T({
+      messages: [
+        { role: "user", content: "q" },
+        { role: "assistant", content: "a", reasoning_content: "my hidden reasoning" },
+        { role: "user", content: "next" },
+      ],
+    });
+    const assistant = out.messages.find((m) => m.role === "assistant");
+    expect(assistant.content[0]).toEqual({
+      type: "thinking",
+      thinking: "my hidden reasoning",
+      signature: DEFAULT_THINKING_CLAUDE_SIGNATURE,
+    });
   });
 
   // openai-to-claude.js:298 — tool_choice "none" mapped to {type:"auto"} (loses "do not call" intent)

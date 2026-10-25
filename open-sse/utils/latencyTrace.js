@@ -8,7 +8,7 @@
 //  - fail-open: every public method swallows its own errors;
 //  - classified failure enums only — no raw error text, ids, keys or bodies.
 import { AsyncLocalStorage } from "node:async_hooks";
-import { LATENCY_TRACE_SCAN_BUFFER_LIMIT } from "../config/runtimeConfig.js";
+import { LATENCY_TRACE_MAX_LABEL_LENGTH, LATENCY_TRACE_SCAN_BUFFER_LIMIT } from "../config/runtimeConfig.js";
 
 const TRACE_PREFIX = "[showdar-latency] ";
 
@@ -247,6 +247,15 @@ function round1(v) {
   return Math.round(v * 10) / 10;
 }
 
+// Labels are operator-facing, never payload: cap client-controlled strings so a
+// single request cannot emit an unbounded trace line.
+function boundLabel(v) {
+  if (typeof v !== "string") return null;
+  return v.length > LATENCY_TRACE_MAX_LABEL_LENGTH
+    ? v.slice(0, LATENCY_TRACE_MAX_LABEL_LENGTH) + "…"
+    : v;
+}
+
 function emit(trace, kind) {
   try {
     console.error(TRACE_PREFIX + JSON.stringify(buildPayload(trace, kind)));
@@ -258,11 +267,11 @@ function buildPayload(trace, kind) {
 
   const attempts = trace.attempts.map((rec) => ({
     ordinal: rec.ordinal,
-    model: rec.model,
+    model: boundLabel(rec.model),
     startMs: rel(rec.startMs),
     endMs: rel(rec.endMs),
     result: rec.result,
-    reason: rec.reason,
+    reason: rec.reason == null ? null : boundLabel(rec.reason),
     status: rec.status,
     networkAttempt: !!rec.networkAttempt,
     dispatchedMs: rel(rec.dispatchedMs),
@@ -272,14 +281,15 @@ function buildPayload(trace, kind) {
     meaningfulMs: rel(rec.meaningfulMs),
     retryDispatches: rec.retryDispatches | 0,
     authRefresh: !!rec.authRefresh,
+    probe: !!rec.probe,
   }));
 
   const candidates = trace.candidates.map((c) => ({
     ordinal: c.ordinal,
-    model: c.model,
+    model: boundLabel(c.model),
     eligible: c.eligible !== false,
     healthSkip: !!c.healthSkip,
-    healthSkipReason: c.healthSkip ? (c.healthSkipReason || "route unhealthy") : null,
+    healthSkipReason: c.healthSkip ? boundLabel(c.healthSkipReason || "route unhealthy") : null,
     networkAttempts: attempts.filter((a) => a.networkAttempt && a.ordinal === c.ordinal && a.model === c.model).length,
   }));
 
@@ -335,9 +345,9 @@ function buildPayload(trace, kind) {
   return {
     v: 1,
     kind,
-    endpoint: trace.endpoint,
+    endpoint: boundLabel(trace.endpoint),
     marks: { t0: 0, t1, t2, t3, t3m, t4, t4m, t5 },
-    combo: trace.combo ? { name: trace.combo.name, strategy: trace.combo.strategy ?? null } : null,
+    combo: trace.combo ? { name: boundLabel(trace.combo.name), strategy: trace.combo.strategy ?? null } : null,
     candidates,
     attempts,
     winner,
@@ -428,11 +438,12 @@ export function createLatencyTrace({ endpoint = null } = {}) {
         return this.planCandidate(ordinal, model, {});
       },
 
-      beginAttempt({ ordinal = -1, model = null } = {}) {
+      beginAttempt({ ordinal = -1, model = null, probe = false } = {}) {
         try {
           const rec = {
             ordinal,
             model,
+            probe: !!probe,
             startMs: now(),
             endMs: null,
             inExecute: false,

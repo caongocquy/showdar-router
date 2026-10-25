@@ -11,7 +11,9 @@ import { openaiToKiroRequest } from "../../open-sse/translator/request/openai-to
 
 const contentOf = (result) =>
   result.conversationState.currentMessage.userInputMessage.content;
-const systemPromptOf = (result) => result.systemPrompt || "";
+// Kiro no longer carries a top-level systemPrompt; system text is folded into
+// the current user content by the request translator.
+const systemPromptOf = (result) => contentOf(result) || "";
 
 describe("openaiToKiroRequest", () => {
   describe("basic message conversion", () => {
@@ -582,9 +584,12 @@ describe("openaiToKiroRequest", () => {
         {}
       );
 
-      expect(first.systemPrompt).toBe(second.systemPrompt);
-      expect(first.systemPrompt).not.toContain("Current time");
-      expect(first.conversationState.currentMessage.userInputMessage.content).toContain("Current time");
+      expect(first.systemPrompt).toBeUndefined();
+      expect(second.systemPrompt).toBeUndefined();
+      expect(contentOf(first)).toContain("<thinking_mode>enabled</thinking_mode>");
+      expect(contentOf(second)).toContain("<thinking_mode>enabled</thinking_mode>");
+      expect(contentOf(first)).toContain("Current time");
+      expect(contentOf(second)).toContain("Current time");
     });
 
     it("replays frozen msg0 for explicit Kiro sessions while keeping current time fresh", () => {
