@@ -122,7 +122,7 @@ describe("CLI API client auth file lookup", () => {
     expect(await getConsistentMachineId("9r-cli-auth")).toBe(clientToken);
   });
 
-  it("creates a missing cli-secret in the primary dir with 0600", () => {
+  it("creates a missing cli-secret in the primary dir with 0600 on POSIX", () => {
     const primary = tempDir();
     const legacy = tempDir();
     writeMachineId(primary, "primary-machine");
@@ -134,7 +134,10 @@ describe("CLI API client auth file lookup", () => {
     const secret = fs.readFileSync(secretPath, "utf8").trim();
 
     expect(token).toBe(expectedToken("primary-machine", secret));
-    expect(fs.statSync(secretPath).mode & 0o777).toBe(0o600);
+    // Windows has no POSIX mode bits; fs reports 0666 regardless of the mode option.
+    if (process.platform !== "win32") {
+      expect(fs.statSync(secretPath).mode & 0o777).toBe(0o600);
+    }
     expect(fs.existsSync(path.join(legacy, "auth", "cli-secret"))).toBe(false);
   });
 });
