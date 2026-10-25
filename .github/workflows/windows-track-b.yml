@@ -46,7 +46,7 @@ jobs:
         run: |
           npm install --no-package-lock --legacy-peer-deps
           if ($LASTEXITCODE -ne 0) { throw "Root install failed" }
-          npm install --no-package-lock --legacy-peer-deps --no-save vite@8.2.2
+          npm install --no-package-lock --legacy-peer-deps --no-save vite@8.2.4
           if ($LASTEXITCODE -ne 0) { throw "Vite install failed" }
           npm --prefix cli install --no-package-lock --ignore-scripts --legacy-peer-deps
           if ($LASTEXITCODE -ne 0) { throw "CLI install failed" }
