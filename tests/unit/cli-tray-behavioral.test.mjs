@@ -144,7 +144,9 @@ describe("Behavioral tests - Fixed implementation matches upstream", () => {
       timeout: 20000,
     });
     expect(out).toContain(pkg.version);
-  });
+    // Cold Windows runners can spend >5s on the spawn; keep it under the
+    // execFileSync timeout instead of vitest's default 5s.
+  }, 30000);
 });
 
 describe("Showdar-specific differences preserved", () => {
