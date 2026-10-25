@@ -1,6 +1,6 @@
 {
   "name": "showdar-router",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Showdar Router web dashboard and AI routing gateway",
   "private": true,
   "engines": {
@@ -50,7 +50,7 @@
     "react-dom": "19.2.4",
     "recharts": "^3.7.0",
     "sql.js": "^1.14.1",
-    "undici": "^7.19.2",
+    "undici": "^7.30.1",
     "uuid": "^13.0.0",
     "zustand": "^5.0.10"
   },

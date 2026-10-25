@@ -6,17 +6,33 @@
 const { ensureSqliteRuntime } = require("./sqliteRuntime");
 const { ensureTrayRuntime } = require("./trayRuntime");
 
-try {
-  ensureSqliteRuntime({ silent: false });
-  console.log("[Showdar Router] runtime SQLite deps ready");
-} catch (e) {
-  console.warn(`[Showdar Router] runtime warm-up skipped: ${e.message}`);
+const PERMISSION_HINT = "[Showdar Router] If this is a permission error, set DATA_DIR to a user-writable path; do not use sudo.";
+
+function runWarmup({
+  sqlite = ensureSqliteRuntime,
+  tray = ensureTrayRuntime,
+  log = console.log,
+  warn = console.warn,
+} = {}) {
+  try {
+    sqlite({ silent: false });
+    log("[Showdar Router] runtime SQLite deps ready");
+  } catch (e) {
+    warn(`[Showdar Router] runtime warm-up skipped: ${e.message}`);
+    warn(PERMISSION_HINT);
+  }
+
+  try {
+    tray({ silent: false });
+  } catch (e) {
+    warn(`[Showdar Router] tray runtime skipped: ${e.message}`);
+    warn(PERMISSION_HINT);
+  }
 }
 
-try {
-  ensureTrayRuntime({ silent: false });
-} catch (e) {
-  console.warn(`[Showdar Router] tray runtime skipped: ${e.message}`);
+if (require.main === module) {
+  runWarmup();
+  process.exit(0);
 }
 
-process.exit(0);
+module.exports = { runWarmup };

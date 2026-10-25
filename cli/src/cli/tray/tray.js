@@ -25,8 +25,7 @@ function getIconBase64() {
  * Check if system tray is supported on current OS
  * Supported: macOS, Windows, Linux (with GUI)
  */
-function isTraySupported() {
-  const platform = process.platform;
+function isTraySupported(platform = process.platform) {
   if (!["darwin", "win32", "linux"].includes(platform)) {
     return false;
   }
@@ -36,21 +35,46 @@ function isTraySupported() {
   return true;
 }
 
+const TRAY_READY_TIMEOUT_MS = 10000;
+
+function trayFailure(message, cause) {
+  return { ok: false, error: cause instanceof Error ? cause : new Error(message) };
+}
+
+function withTimeout(promise, ms, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    timer.unref?.();
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
 /**
- * Initialize system tray with menu
+ * Initialize system tray with menu.
+ * Resolves only after the platform tray confirms readiness, so callers never
+ * announce a tray that failed to appear.
  * @param {Object} options - { port, onQuit, onOpenDashboard }
- * @returns {Object|null} tray instance or null if not supported/failed
+ * @param {Object} [deps] - test seams: { platform, resolveSystrayFn, readyTimeoutMs }
+ * @returns {Promise<{ok: boolean, error?: Error}>}
  */
-function initTray(options) {
-  if (!isTraySupported()) {
-    return null;
+async function initTray(options, deps = {}) {
+  const platform = deps.platform || process.platform;
+  if (!isTraySupported(platform)) {
+    return trayFailure(
+      platform === "linux"
+        ? "System tray needs a graphical session (DISPLAY is not set)"
+        : `System tray is not supported on ${platform}`
+    );
   }
 
   // Windows uses PowerShell NotifyIcon (AV-safe), others use systray
-  if (process.platform === "win32") {
+  if (platform === "win32") {
     return initWindowsTray(options);
   }
-  return initUnixTray(options);
+  return initUnixTray(options, deps);
 }
 
 /**
@@ -107,7 +131,7 @@ function initWindowsTray(options) {
     const iconPath = path.join(__dirname, "icon.ico");
     const items = buildMenuItems(port, options.running !== false);
 
-    trayInstance = initWinTray({
+    const instance = initWinTray({
       iconPath,
       tooltip: `Showdar Router - Port ${port}`,
       items,
@@ -115,11 +139,13 @@ function initWindowsTray(options) {
         handleClick(index, options);
       }
     });
+    if (!instance) return trayFailure("Windows tray initialization returned no instance");
 
+    trayInstance = instance;
     isWinTray = true;
-    return trayInstance;
+    return { ok: true };
   } catch (err) {
-    return null;
+    return trayFailure("Windows tray initialization failed", err);
   }
 }
 
@@ -170,11 +196,17 @@ function chmodTrayBin(pkgName) {
   } catch (e) {}
 }
 
-function initUnixTray(options) {
+async function initUnixTray(options, deps = {}) {
   const { port } = options;
+  const resolveFn = deps.resolveSystrayFn || resolveSystray;
+  const timeoutMs = deps.readyTimeoutMs || TRAY_READY_TIMEOUT_MS;
   try {
-    const resolved = resolveSystray();
-    if (!resolved) return null;
+    const resolved = resolveFn();
+    if (!resolved) {
+      return trayFailure(
+        "System tray binary is not installed (systray2 missing from the runtime dir)"
+      );
+    }
     const { mod: SysTray, isV2 } = resolved;
 
     chmodTrayBin(isV2 ? "systray2" : "systray");
@@ -192,29 +224,35 @@ function initUnixTray(options) {
       items
     };
 
-    trayInstance = new SysTray({ menu, debug: false, copyDir: true });
+    const instance = new SysTray({ menu, debug: false, copyDir: true });
+    trayInstance = instance;
     isWinTray = false;
 
-    trayInstance.onClick((action) => {
+    instance.onClick((action) => {
       handleClick(action, options);
     });
 
-    if (isV2) {
-      // systray2 exposes a ready() promise instead of onReady/onError. Surface
-      // failures (binary crash, EACCES, etc.) so users can see why the icon
-      // didn't appear instead of getting a misleading "running in tray" log.
-      trayInstance.ready().catch((err) => {
-        process.stderr.write(`[showdar-router] tray failed to start: ${err && err.message ? err.message : err}\n`);
-      });
-    } else {
-      trayInstance.onReady(() => {});
-      trayInstance.onError(() => {});
+    // Wait for the real readiness signal. Without this the caller could print
+    // "running in system tray" while the Go binary crashed (bad binary, EACCES,
+    // no GUI session) and no icon ever appeared.
+    const readyPromise = isV2
+      ? Promise.resolve(instance.ready())
+      : new Promise((resolve, reject) => {
+          instance.onReady(resolve);
+          instance.onError(reject);
+        });
+    try {
+      await withTimeout(readyPromise, timeoutMs, `Tray not ready after ${timeoutMs}ms`);
+    } catch (err) {
+      // Never leave a half-started tray process behind.
+      try { await killTray(); } catch (e) {}
+      return trayFailure("System tray failed to start", err);
     }
 
-    return trayInstance;
+    return { ok: true };
   } catch (err) {
-    process.stderr.write(`[showdar-router] tray init error: ${err.message}\n`);
-    return null;
+    try { await killTray(); } catch (e) {}
+    return trayFailure("System tray initialization failed", err);
   }
 }
 

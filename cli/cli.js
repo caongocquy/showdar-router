@@ -688,10 +688,10 @@ function startServer(updatePromise) {
   });
 
   // Initialize tray icon (runs alongside TUI)
-  const initTrayIcon = () => {
+  const initTrayIcon = async () => {
     try {
       const { initTray } = require("./src/cli/tray/tray");
-      initTray({
+      return await initTray({
         port,
         onQuit: () => {
           isShuttingDown = true;
@@ -702,8 +702,15 @@ function startServer(updatePromise) {
         onOpenDashboard: () => openBrowser(url)
       });
     } catch (err) {
-      // Tray not available - continue without it
+      return { ok: false, error: err };
     }
+  };
+
+  const reportTrayFailure = (tray) => {
+    const message = tray?.error?.message || "unknown error";
+    console.error(`\n⚠️  System tray unavailable: ${message}`);
+    console.error("   Fix the runtime install/permissions above (do not use sudo),");
+    console.error("   or set DATA_DIR to a user-writable path, then restart.");
   };
 
   // Tray-only mode: no TUI, just tray icon
@@ -715,8 +722,17 @@ function startServer(updatePromise) {
     console.log(`\n🚀 ${pkg.name} v${pkg.version}`);
     console.log(`Server: http://${displayHost}:${port}`);
 
-    waitServerReady(port).then(() => {
-      initTrayIcon();
+    waitServerReady(port).then(async () => {
+      const tray = await initTrayIcon();
+      if (!tray.ok) {
+        reportTrayFailure(tray);
+        console.error("   Tray-only mode (--tray) cannot continue without a tray icon.");
+        console.error("   Run without --tray to use the interactive menu instead.");
+        isShuttingDown = true;
+        cleanup();
+        setTimeout(() => process.exit(1), 100);
+        return;
+      }
       console.log("\n💡 Router is now running in system tray. Close this terminal if you want.");
       console.log("   Right-click tray icon to open dashboard or quit.\n");
     });
@@ -728,8 +744,10 @@ function startServer(updatePromise) {
   waitServerReady(port).then(async () => {
     // Resolve parallel update check (already running); don't block server start on it.
     const latestVersion = await latestVersionPromise;
-    // Start tray icon alongside TUI
-    initTrayIcon();
+    // Start tray icon alongside TUI (never blocks the menu on tray readiness)
+    initTrayIcon().then((tray) => {
+      if (!tray.ok) reportTrayFailure(tray);
+    });
 
     try {
       while (true) {

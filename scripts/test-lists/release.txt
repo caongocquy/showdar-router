@@ -7,6 +7,8 @@ tests/unit/provider-model-discovery.test.js
 tests/unit/finish-reason-logging.test.js
 tests/unit/launcher-tray.test.mjs
 tests/unit/cli-tray-behavioral.test.mjs
+tests/unit/tray-failure-modes.test.js
+tests/unit/translator-editor-security.test.js
 tests/unit/cli-source-parity.test.js
 tests/unit/donate-modal.test.js
 tests/unit/combo-autoswitch.test.js
@@ -24,3 +26,7 @@ tests/unit/qoder-billing.test.js
 tests/unit/d2a-retry-fallback.test.js
 tests/unit/error-taxonomy.test.js
 tests/unit/latency-trace.test.js
+tests/unit/verify-release-assets.test.js
+tests/unit/windows-spawn-safety.test.js
+tests/unit/sqlite-runtime-selfheal.test.js
+tests/unit/release-tooling-deps.test.js

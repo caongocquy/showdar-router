@@ -85,7 +85,14 @@ function isBetterSqliteBinaryValid() {
 function summarizeNpmError(stderr = "") {
   const text = String(stderr);
   if (/ENOTFOUND|ETIMEDOUT|EAI_AGAIN|network|getaddrinfo/i.test(text)) return "No internet connection or registry unreachable";
-  if (/EACCES|EPERM|permission denied/i.test(text)) return "Permission denied (check folder permissions)";
+  if (/EACCES|EPERM|permission denied/i.test(text)) {
+    // Surface the exact failing path: a bare "check permissions" leaves macOS
+    // users guessing which prefix is root-owned.
+    const quoted = text.match(/(?:EACCES|EPERM)[^\n]*?'([^']+)'/);
+    const pathLine = text.match(/^npm ERR! path (.+)$/m);
+    const target = quoted?.[1] || pathLine?.[1]?.trim();
+    return `Permission denied${target ? `: ${target}` : ""} — use a user-writable directory (set DATA_DIR or an npm prefix you own); do not use sudo.`;
+  }
   if (/ENOSPC|no space/i.test(text)) return "Not enough disk space";
   if (/node-gyp|gyp ERR|python|MSBuild|Visual Studio|Xcode/i.test(text)) return "Missing build tools (Xcode CLT / Python / VS Build Tools)";
   if (/ETARGET|version.*not found/i.test(text)) return "Package version not found on registry";
@@ -95,10 +102,10 @@ function summarizeNpmError(stderr = "") {
   return lastLine ? lastLine.slice(0, 200) : "Unknown error";
 }
 
-function runNpmInstall({ cwd, pkgs, extraArgs = [], timeout = 180000 }) {
+function runNpmInstall({ cwd, pkgs, extraArgs = [], timeout = 180000, spawn = spawnSync }) {
   const args = ["install", ...pkgs, "--no-audit", "--no-fund", "--prefer-online", ...extraArgs];
   const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-  const res = spawnSync(npmCmd, args, {
+  const res = spawn(npmCmd, args, {
     cwd,
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
