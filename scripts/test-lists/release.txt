@@ -26,3 +26,7 @@ tests/unit/qoder-billing.test.js
 tests/unit/d2a-retry-fallback.test.js
 tests/unit/error-taxonomy.test.js
 tests/unit/latency-trace.test.js
+tests/unit/verify-release-assets.test.js
+tests/unit/windows-spawn-safety.test.js
+tests/unit/sqlite-runtime-selfheal.test.js
+tests/unit/release-tooling-deps.test.js

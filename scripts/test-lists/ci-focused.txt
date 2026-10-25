@@ -12,3 +12,7 @@ tests/unit/combo-autoswitch.test.js
 tests/unit/combo-cancellation.test.js
 tests/unit/combo-planner.test.js
 tests/unit/fusion-strip-stream-options-3024.test.js
+tests/unit/verify-release-assets.test.js
+tests/unit/windows-spawn-safety.test.js
+tests/unit/sqlite-runtime-selfheal.test.js
+tests/unit/release-tooling-deps.test.js

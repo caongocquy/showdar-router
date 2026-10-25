@@ -1,3 +1,40 @@
+# Showdar Router v0.7.0 (2026-10-25)
+
+Release candidate prepared from router hardening PR #24 and release-readiness
+PR #29. This entry describes the candidate, not a completed publication.
+
+## Router and protocol
+- Harden direct/combo routing, provider-specific retry and fallback decisions,
+  health/capacity selection, cancellation, request timeouts, SSE framing and
+  usage-accounting deduplication. Auto-fallback remains opt-in.
+- Preserve omitted `stream` as non-stream and add deterministic regression
+  cases for routing and OpenAI-to-Claude thinking translation.
+
+## Install, packaging and CI
+- Pin patched Vite 8.2.4 across CI/release workflows and require Undici 7.30.1
+  or later within its 7.x range.
+- Diagnose denied macOS runtime writes and failed system-tray readiness without
+  falsely reporting a running tray. Document user-writable npm prefixes.
+- Add Windows-safe npm CLI invocation for release tooling, deterministic
+  four-platform asset/checksum integrity gates, and non-publishing complete-set
+  release verification.
+- Raise exact release regression coverage from 21 to 27 test files and verify
+  root, CLI and packed-version agreement without hardcoded versions.
+
+## Known limitations and release gates
+- Monaco's bundled DOMPurify advisory remains unresolved upstream. The current
+  translator mounts only plaintext/JSON editor content; that limits apparent
+  reachability but does not by itself prove the absence of XSS.
+- node-forge has a still-unpatched RSA signature-verification advisory.
+  Observed router code signs local CA/leaf certificates; owner security
+  disposition is required before public release.
+- On another Mac with restricted permissions, npm global installation can
+  fail EACCES; the Homebrew tray issue on that machine remains unverified.
+- This candidate must pass final exact-SHA CI and receive explicit security
+  and release approvals before pushing any `v0.7.0` tag.
+
+---
+
 # Showdar Router v0.6.0 (2026-10-16)
 
 Showdar Router's own release line. Everything under the rule below is the
