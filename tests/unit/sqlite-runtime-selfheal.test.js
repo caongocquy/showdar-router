@@ -15,7 +15,8 @@ const { afterEach, describe, it } = testApi;
 
 const require = createRequire(import.meta.url);
 const sqliteRuntime = require("../../cli/hooks/sqliteRuntime.js");
-const { ensureSqliteRuntime, getRuntimeDir, summarizeNpmError } = sqliteRuntime;
+const { ensureTrayRuntime } = require("../../cli/hooks/trayRuntime.js");
+const { ensureSqliteRuntime, getRuntimeDir, getRuntimeNodeModules, summarizeNpmError } = sqliteRuntime;
 
 const tempDirs = [];
 function tempDir(prefix = "showdar-sqlite-selfheal-") {
@@ -40,11 +41,17 @@ function stubNpm({ exitCode = 1, stderr = "npm ERR! network getaddrinfo ENOTFOUN
   return dir;
 }
 
-const savedEnv = { DATA_DIR: process.env.DATA_DIR, PATH: process.env.PATH, SKIP: process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL };
+const savedEnv = {
+  DATA_DIR: process.env.DATA_DIR,
+  SHOWDAR_ROUTER_DATA_DIR: process.env.SHOWDAR_ROUTER_DATA_DIR,
+  PATH: process.env.PATH,
+  SKIP: process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL,
+};
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
   if (savedEnv.DATA_DIR === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = savedEnv.DATA_DIR;
+  if (savedEnv.SHOWDAR_ROUTER_DATA_DIR === undefined) delete process.env.SHOWDAR_ROUTER_DATA_DIR; else process.env.SHOWDAR_ROUTER_DATA_DIR = savedEnv.SHOWDAR_ROUTER_DATA_DIR;
   if (savedEnv.PATH === undefined) delete process.env.PATH; else process.env.PATH = savedEnv.PATH;
   if (savedEnv.SKIP === undefined) delete process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL; else process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL = savedEnv.SKIP;
 });
@@ -88,5 +95,57 @@ describe("sqlite runtime self-heal", () => {
     assert.match(summarizeNpmError("gyp ERR! find VS MSBuild"), /build tools/i);
     assert.match(summarizeNpmError("npm ERR! code ETARGET\nNo matching version"), /version not found/i);
     assert.equal(typeof summarizeNpmError(""), "string");
+  });
+});
+
+describe("runtime data dir precedence", () => {
+  it("prefers SHOWDAR_ROUTER_DATA_DIR when both variables are set", () => {
+    const primary = tempDir();
+    const legacy = tempDir();
+    process.env.SHOWDAR_ROUTER_DATA_DIR = primary;
+    process.env.DATA_DIR = legacy;
+
+    assert.equal(getRuntimeDir(), path.join(primary, "runtime"));
+    assert.equal(getRuntimeNodeModules(), path.join(primary, "runtime", "node_modules"));
+  });
+
+  it("honours SHOWDAR_ROUTER_DATA_DIR alone", () => {
+    const dir = tempDir();
+    process.env.SHOWDAR_ROUTER_DATA_DIR = dir;
+    delete process.env.DATA_DIR;
+
+    assert.equal(getRuntimeDir(), path.join(dir, "runtime"));
+  });
+
+  it("still honours DATA_DIR alone for existing installations", () => {
+    const dir = tempDir();
+    process.env.DATA_DIR = dir;
+    delete process.env.SHOWDAR_ROUTER_DATA_DIR;
+
+    assert.equal(getRuntimeDir(), path.join(dir, "runtime"));
+  });
+
+  it("falls back to the home runtime when neither variable is set", () => {
+    delete process.env.DATA_DIR;
+    delete process.env.SHOWDAR_ROUTER_DATA_DIR;
+
+    assert.equal(getRuntimeDir(), path.join(os.homedir(), ".showdar-router", "runtime"));
+  });
+
+  it("degrades without throwing when the configured dir is not writable", () => {
+    if (typeof process.getuid === "function" && process.getuid() === 0) return;
+    const dir = tempDir();
+    process.env.SHOWDAR_ROUTER_DATA_DIR = dir;
+    process.env.DATA_DIR = dir;
+    delete process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL;
+    fs.chmodSync(dir, 0o500);
+
+    try {
+      const result = ensureTrayRuntime({ silent: true, platform: "darwin" });
+      assert.equal(result.systray, false);
+      assert.equal(result.error?.code, "EACCES");
+    } finally {
+      fs.chmodSync(dir, 0o700);
+    }
   });
 });
