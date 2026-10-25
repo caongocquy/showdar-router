@@ -18,7 +18,10 @@ const CLI_TOKEN_SALT = "9r-cli-auth";
 const APP_NAME = "showdar-router";
 
 function getDataDir() {
-  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  // SHOWDAR_ROUTER_DATA_DIR wins over DATA_DIR, matching src/lib/dataDir.js so
+  // the CLI reads machine-id/cli-secret from the same directory as the server.
+  const configured = process.env.SHOWDAR_ROUTER_DATA_DIR || process.env.DATA_DIR;
+  if (configured) return configured;
   if (process.platform === "win32") {
     return path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), APP_NAME);
   }
@@ -496,6 +499,10 @@ async function disableTunnel() {
 
 module.exports = {
   configure,
+
+  // Auth internals (used by regression tests)
+  getDataDir,
+  getCliToken,
   
   // Providers
   getProviders,
