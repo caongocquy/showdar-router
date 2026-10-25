@@ -16,7 +16,10 @@ const BETTER_SQLITE3_VERSION = USE_NAPI_BUILD ? "13.0.3" : "12.6.2";
 const SQL_JS_VERSION = "1.14.1";
 
 function getDataDir() {
-  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  // SHOWDAR_ROUTER_DATA_DIR wins over DATA_DIR, matching src/lib/dataDir.js so
+  // the tray runtime lands in the same directory the server uses.
+  const configured = process.env.SHOWDAR_ROUTER_DATA_DIR || process.env.DATA_DIR;
+  if (configured) return configured;
   return process.platform === "win32"
     ? path.join(process.env.APPDATA || os.homedir(), "showdar-router")
     : path.join(os.homedir(), ".showdar-router");
