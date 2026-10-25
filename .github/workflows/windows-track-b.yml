@@ -100,7 +100,10 @@ jobs:
           foreach ($requiredPath in $required) {
             if ($paths -notcontains $requiredPath) { throw "Missing packed file: $requiredPath" }
           }
-          if ($pack.version -ne "0.6.0") { throw "Unexpected package version: $($pack.version)" }
+          $cliVersion = (Get-Content -Raw "package.json" | ConvertFrom-Json).version
+          $rootVersion = (Get-Content -Raw "../package.json" | ConvertFrom-Json).version
+          if ($rootVersion -ne $cliVersion) { throw "Root/CLI version mismatch: root $rootVersion, cli $cliVersion" }
+          if ($pack.version -ne $cliVersion) { throw "Unexpected package version: packed $($pack.version), cli $cliVersion" }
           Write-Output "Package validated: $($pack.name)@$($pack.version), $($pack.entryCount) files"
 
       - name: Isolated npm install smoke

@@ -88,7 +88,8 @@ function npmInstall(pkgs, { silent = false } = {}) {
 
 // Public: ensure systray2 is installed on macOS/Linux only.
 // Windows skips entirely (uses PowerShell tray).
-function ensureTrayRuntime({ silent = false, install = npmInstall } = {}) {
+// Inject the platform for cross-platform failure-path tests; production uses the actual OS.
+function ensureTrayRuntime({ silent = false, install = npmInstall, platform = process.platform } = {}) {
   // Deterministic-CI / offline opt-out: never install or touch tray runtimes.
   if (process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL === "1") {
     return { systray: false, skipped: true };
@@ -98,7 +99,7 @@ function ensureTrayRuntime({ silent = false, install = npmInstall } = {}) {
     // modern macOS and an AV false-positive on Windows.
     cleanupLegacySystray({ silent });
 
-    if (process.platform === "win32") {
+    if (platform === "win32") {
       return { systray: false, skipped: true };
     }
     if (hasSystray()) {

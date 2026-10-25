@@ -126,8 +126,17 @@ describe("tray runtime install failures are reported, not swallowed", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it("skips systray runtime installation on Windows", () => {
+    const install = vi.fn(() => { throw new Error("Windows must not install systray"); });
+    const result = ensureTrayRuntime({ silent: true, platform: "win32", install });
+    expect(result).toEqual({ systray: false, skipped: true });
+    expect(install).not.toHaveBeenCalled();
+  });
+
   it("returns systray:false when npm install fails", () => {
-    const result = ensureTrayRuntime({ silent: true, install: () => false });
+    const install = vi.fn(() => false);
+    const result = ensureTrayRuntime({ silent: true, platform: "darwin", install });
+    expect(install).toHaveBeenCalledOnce();
     expect(result.systray).toBe(false);
   });
 
@@ -137,7 +146,7 @@ describe("tray runtime install failures are reported, not swallowed", () => {
       new Error("EACCES: permission denied, mkdir '/opt/homebrew/lib/node_modules/showdar-router/runtime'"),
       { code: "EACCES" },
     );
-    const result = ensureTrayRuntime({ silent: true, install: () => { throw denied; } });
+    const result = ensureTrayRuntime({ silent: true, platform: "darwin", install: () => { throw denied; } });
     expect(result.systray).toBe(false);
     expect(result.error).toBeInstanceOf(Error);
     expect(result.error.message).toMatch(/EACCES|EPERM|permission/i);
