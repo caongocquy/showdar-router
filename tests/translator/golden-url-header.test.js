@@ -23,9 +23,11 @@ const SPECIALIZED = new Set([
   "xiaomi-tokenplan", "mimo-free",
 ]);
 
-// Sanitize header: khử token + field thời gian động (kimi X-Msh-Device-Id) để snapshot ổn định.
+// Sanitize credentials, platform-specific values and valid semver header fields.
+// Keeping a version literal in golden snapshots would break every release bump.
 function sanitize(headers) {
   const out = {};
+  const versionHeaders = new Set(["X-CLIENT-VERSION", "X-CORE-VERSION", "X-Msh-Version"]);
   const platformHeaders = {
     "X-PLATFORM": "<PLATFORM>",
     "X-PLATFORM-VERSION": "<NODE_VERSION>",
@@ -35,6 +37,10 @@ function sanitize(headers) {
   for (const [k, v] of Object.entries(headers)) {
     if (platformHeaders[k]) {
       out[k] = platformHeaders[k];
+    } else if (versionHeaders.has(k) && typeof v === "string" && /^\d+\.\d+\.\d+$/.test(v)) {
+      out[k] = "<VERSION>";
+    } else if (k === "User-Agent" && typeof v === "string" && /^9Router\/\d+\.\d+\.\d+$/.test(v)) {
+      out[k] = "9Router/<VERSION>";
     } else {
       out[k] = typeof v === "string"
         ? v.replace(/Bearer .+/, "Bearer <TOK>")
