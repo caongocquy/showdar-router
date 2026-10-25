@@ -11,7 +11,7 @@ try {
   if (error.code !== "ERR_MODULE_NOT_FOUND") throw error;
   testApi = await import("node:test");
 }
-const { afterEach, describe, it } = testApi;
+const { afterEach, describe, it, vi } = testApi;
 
 const require = createRequire(import.meta.url);
 const sqliteRuntime = require("../../cli/hooks/sqliteRuntime.js");
@@ -44,6 +44,7 @@ function stubNpm({ exitCode = 1, stderr = "npm ERR! network getaddrinfo ENOTFOUN
 const savedEnv = {
   DATA_DIR: process.env.DATA_DIR,
   SHOWDAR_ROUTER_DATA_DIR: process.env.SHOWDAR_ROUTER_DATA_DIR,
+  APPDATA: process.env.APPDATA,
   PATH: process.env.PATH,
   SKIP: process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL,
 };
@@ -52,6 +53,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
   if (savedEnv.DATA_DIR === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = savedEnv.DATA_DIR;
   if (savedEnv.SHOWDAR_ROUTER_DATA_DIR === undefined) delete process.env.SHOWDAR_ROUTER_DATA_DIR; else process.env.SHOWDAR_ROUTER_DATA_DIR = savedEnv.SHOWDAR_ROUTER_DATA_DIR;
+  if (savedEnv.APPDATA === undefined) delete process.env.APPDATA; else process.env.APPDATA = savedEnv.APPDATA;
   if (savedEnv.PATH === undefined) delete process.env.PATH; else process.env.PATH = savedEnv.PATH;
   if (savedEnv.SKIP === undefined) delete process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL; else process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL = savedEnv.SKIP;
 });
@@ -125,27 +127,59 @@ describe("runtime data dir precedence", () => {
     assert.equal(getRuntimeDir(), path.join(dir, "runtime"));
   });
 
-  it("falls back to the home runtime when neither variable is set", () => {
+  it("falls back to the platform default runtime when neither variable is set", () => {
     delete process.env.DATA_DIR;
     delete process.env.SHOWDAR_ROUTER_DATA_DIR;
 
-    assert.equal(getRuntimeDir(), path.join(os.homedir(), ".showdar-router", "runtime"));
+    const expected = process.platform === "win32"
+      ? path.join(process.env.APPDATA || os.homedir(), "showdar-router", "runtime")
+      : path.join(os.homedir(), ".showdar-router", "runtime");
+
+    assert.equal(getRuntimeDir(), expected);
   });
 
-  it("degrades without throwing when the configured dir is not writable", () => {
-    if (typeof process.getuid === "function" && process.getuid() === 0) return;
+  it("uses APPDATA on Windows and ignores it elsewhere", () => {
+    delete process.env.DATA_DIR;
+    delete process.env.SHOWDAR_ROUTER_DATA_DIR;
+    const appData = tempDir();
+    process.env.APPDATA = appData;
+
+    const expected = process.platform === "win32"
+      ? path.join(appData, "showdar-router", "runtime")
+      : path.join(os.homedir(), ".showdar-router", "runtime");
+
+    assert.equal(getRuntimeDir(), expected);
+  });
+
+  it("degrades without throwing when the runtime dir cannot be created", () => {
+    // Fault injection instead of chmod: chmod does not deny writes on Windows.
+    if (!vi) return; // node:test fallback has no spy support
     const dir = tempDir();
     process.env.SHOWDAR_ROUTER_DATA_DIR = dir;
     process.env.DATA_DIR = dir;
     delete process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL;
-    fs.chmodSync(dir, 0o500);
+    const denied = Object.assign(new Error(`EACCES: permission denied, mkdir '${path.join(dir, "runtime")}'`), { code: "EACCES" });
+    const spy = vi.spyOn(fs, "mkdirSync").mockImplementation(() => { throw denied; });
 
     try {
       const result = ensureTrayRuntime({ silent: true, platform: "darwin" });
       assert.equal(result.systray, false);
       assert.equal(result.error?.code, "EACCES");
     } finally {
-      fs.chmodSync(dir, 0o700);
+      spy.mockRestore();
     }
+  });
+
+  it("degrades without throwing when the runtime path is a file", () => {
+    const dir = tempDir();
+    process.env.SHOWDAR_ROUTER_DATA_DIR = dir;
+    process.env.DATA_DIR = dir;
+    delete process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL;
+    fs.writeFileSync(path.join(dir, "runtime"), "not a directory");
+
+    const result = ensureTrayRuntime({ silent: true, platform: "darwin" });
+
+    assert.equal(result.systray, false);
+    assert.equal(typeof result.error?.code, "string");
   });
 });
