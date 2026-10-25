@@ -79,33 +79,46 @@ function npmInstall(pkgs, { silent = false } = {}) {
     const reason = summarizeNpmError(res.stderr);
     console.warn("⚠️  System tray install failed — tray disabled");
     console.warn(`   Reason: ${reason}`);
+    console.warn(`   Runtime dir: ${cwd}`);
     console.warn(`   Retry:  cd "${cwd}" && npm install ${pkgs.join(" ")}`);
+    console.warn("   If this is a permission error, use a user-writable DATA_DIR; do not use sudo.");
   }
   return res.ok;
 }
 
 // Public: ensure systray2 is installed on macOS/Linux only.
 // Windows skips entirely (uses PowerShell tray).
-function ensureTrayRuntime({ silent = false } = {}) {
+function ensureTrayRuntime({ silent = false, install = npmInstall } = {}) {
   // Deterministic-CI / offline opt-out: never install or touch tray runtimes.
   if (process.env.SHOWDAR_ROUTER_SKIP_RUNTIME_INSTALL === "1") {
     return { systray: false, skipped: true };
   }
-  // Always evict the legacy `systray` package — its binary is broken on
-  // modern macOS and an AV false-positive on Windows.
-  cleanupLegacySystray({ silent });
+  try {
+    // Always evict the legacy `systray` package — its binary is broken on
+    // modern macOS and an AV false-positive on Windows.
+    cleanupLegacySystray({ silent });
 
-  if (process.platform === "win32") {
-    return { systray: false, skipped: true };
+    if (process.platform === "win32") {
+      return { systray: false, skipped: true };
+    }
+    if (hasSystray()) {
+      chmodSystrayBin({ silent });
+      if (!silent) console.log("✅ System tray ready");
+      return { systray: true };
+    }
+    const ok = install([`${SYSTRAY_PKG}@${SYSTRAY_VERSION}`], { silent });
+    if (ok) chmodSystrayBin({ silent });
+    return { systray: ok && hasSystray() };
+  } catch (error) {
+    // A denied runtime write must not crash install/startup; report the path so
+    // the user can pick a writable DATA_DIR without reaching for sudo.
+    if (!silent) {
+      console.warn(`⚠️  System tray runtime unavailable: ${error.message}`);
+      console.warn(`   Runtime dir: ${getRuntimeDir()}`);
+      console.warn("   Fix the path/permissions above (do not use sudo), then restart Showdar Router.");
+    }
+    return { systray: false, error };
   }
-  if (hasSystray()) {
-    chmodSystrayBin({ silent });
-    if (!silent) console.log("✅ System tray ready");
-    return { systray: true };
-  }
-  const ok = npmInstall([`${SYSTRAY_PKG}@${SYSTRAY_VERSION}`], { silent });
-  if (ok) chmodSystrayBin({ silent });
-  return { systray: ok && hasSystray() };
 }
 
 module.exports = { ensureTrayRuntime };

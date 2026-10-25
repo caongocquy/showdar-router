@@ -32,6 +32,20 @@ Install globally:
 npm install -g showdar-router
 ```
 
+If npm fails with `EACCES: permission denied, mkdir '.../lib/node_modules/showdar-router'`,
+your global prefix is root-owned. Point npm at a directory you own — do **not**
+use `sudo npm -g`:
+
+```bash
+npm config set prefix "$HOME/.npm-global"
+export PATH="$HOME/.npm-global/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
+npm install -g showdar-router
+```
+
+Showdar Router keeps its runtime deps in `~/.showdar-router/runtime` (override
+with `DATA_DIR`). If that directory is not writable, startup prints the exact
+path; choose a writable `DATA_DIR` instead of changing system directory owners.
+
 Launch:
 
 ```bash
